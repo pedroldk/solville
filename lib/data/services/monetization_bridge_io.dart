@@ -204,7 +204,7 @@ class PlatformMonetizationBridge {
         _completePendingPurchase(MonetizationResult.cancelled);
       }
 
-      return completer.future.timeout(
+      return await completer.future.timeout(
         const Duration(minutes: 3),
         onTimeout: () {
           _completePendingPurchase(MonetizationResult.cancelled);
