@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../domain/models/catalog.dart';
 import '../theme/solville_theme.dart';
 import '../view_models/solville_controller.dart';
+import '../widgets/solville_pill_button.dart';
 
 /// Adaptive top HUD displaying Coins, Water charges, Stacked Crates, Day/Sun
 /// progress, Hot Market Boom ticker, Soothing Soundscape selector, and modals.
@@ -15,6 +16,7 @@ class TopStatusBar extends StatelessWidget {
     required this.onOpenTrophies,
     required this.onOpenAudio,
     required this.onOpenHelp,
+    this.onOpenSunPass,
   });
 
   final SolvilleController controller;
@@ -23,6 +25,7 @@ class TopStatusBar extends StatelessWidget {
   final VoidCallback onOpenTrophies;
   final VoidCallback onOpenAudio;
   final VoidCallback onOpenHelp;
+  final VoidCallback? onOpenSunPass;
 
   String _bgmShortTitle(BgmTrack track, {required bool compact}) {
     if (compact) return 'Audio';
@@ -105,34 +108,54 @@ class TopStatusBar extends StatelessWidget {
                   runSpacing: 6,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: <Widget>[
-                    _HudActionButton(
+                    SolvillePillButton(
                       emoji: '📈',
                       label: compact
                           ? 'Market $boomEmojis'
                           : 'Market 🔥 $boomEmojis (${state.market.stallCrates.length}/8)',
-                      color: const Color(0xFFFFF8E1),
+                      backgroundColor: const Color(0xFFFFF8E1),
                       onTap: onOpenMarket,
                     ),
-                    _HudActionButton(
+                    SolvillePillButton(
                       emoji: '🛒',
                       label: 'Shop',
-                      color: const Color(0xFFE8F5E9),
+                      backgroundColor: const Color(0xFFE8F5E9),
                       onTap: onOpenShop,
                     ),
-                    _HudActionButton(
+                    if (!controller.entitlements.isFullEditionBuild &&
+                        onOpenSunPass != null)
+                      SolvillePillButton(
+                        emoji: controller.entitlements.hasLifetimePass
+                            ? '👑'
+                            : (controller.entitlements.hasAnnualPass
+                                  ? '🌻'
+                                  : '☀️'),
+                        label: compact
+                            ? (controller.isSunPassActive ? 'Pass ✓' : 'Pass')
+                            : controller.entitlements.statusPillText(
+                                controller.nowUtc,
+                              ),
+                        tooltip:
+                            'Solville Sun Pass (24h–48h Ad Pass or 2,99€/yr)',
+                        backgroundColor: controller.isSunPassActive
+                            ? const Color(0xFFFFE082)
+                            : const Color(0xFFFFF3E0),
+                        onTap: onOpenSunPass!,
+                      ),
+                    SolvillePillButton(
                       emoji: '🏆',
                       label:
                           '${state.unlockedTrophies.length}/${SolvilleCatalog.trophies.length}',
-                      color: const Color(0xFFFFECB3),
+                      backgroundColor: const Color(0xFFFFECB3),
                       onTap: onOpenTrophies,
                     ),
-                    _HudActionButton(
+                    SolvillePillButton(
                       emoji: controller.bgmTrack.shortEmoji,
                       label: _bgmShortTitle(
                         controller.bgmTrack,
                         compact: compact,
                       ),
-                      color: const Color(0xFFE1F5FE),
+                      backgroundColor: const Color(0xFFE1F5FE),
                       onTap: onOpenAudio,
                     ),
                     IconButton(
@@ -278,54 +301,6 @@ class _DayWeatherChip extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _HudActionButton extends StatelessWidget {
-  const _HudActionButton({
-    required this.emoji,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  final String emoji;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: color,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: SolvilleTheme.timberBorder, width: 1.4),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Text(emoji, style: const TextStyle(fontSize: 14)),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: SolvilleTheme.timberDark,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 12.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

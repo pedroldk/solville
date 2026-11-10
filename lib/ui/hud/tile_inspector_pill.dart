@@ -29,6 +29,9 @@ class TileInspectorPill extends StatelessWidget {
 
     final showDismiss =
         controller.hoveredTile == null && controller.inspectedTile != null;
+    final canQuickUntill = showDismiss && pos.y > 0 && tile.canQuickUntill;
+    final isSunPassPaused =
+        tile.structure.requiresSunPass && !controller.isSunPassActive;
 
     return Padding(
       padding: const EdgeInsets.only(top: 4, left: 16, right: 16),
@@ -43,7 +46,9 @@ class TileInspectorPill extends StatelessWidget {
           children: <Widget>[
             Flexible(
               child: Text(
-                summary,
+                isSunPassPaused
+                    ? '$summary • ☀️ Sun Pass Paused'
+                    : summary,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
@@ -53,6 +58,58 @@ class TileInspectorPill extends StatelessWidget {
                 ),
               ),
             ),
+            if (isSunPassPaused) ...<Widget>[
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: controller.openSunPassModal,
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFE082),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: SolvilleTheme.timberBorder),
+                  ),
+                  child: const Text(
+                    '☀️ Unlock',
+                    style: TextStyle(
+                      color: SolvilleTheme.timberDark,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            if (canQuickUntill) ...<Widget>[
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () => controller.untillTile(pos),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F5E9),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: SolvilleTheme.timberBorder),
+                  ),
+                  child: const Text(
+                    '🌿 Untill',
+                    style: TextStyle(
+                      color: SolvilleTheme.timberDark,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ),
+            ],
             if (showDismiss) ...<Widget>[
               const SizedBox(width: 6),
               InkWell(
@@ -155,7 +212,7 @@ class TileInspectorPill extends StatelessWidget {
     if (tile.ground == GroundType.soil) {
       final moistPct = (tile.moisture * 100).round();
       final compostTag = tile.fertilized ? ' • ✨ Composted (+35%)' : '';
-      return '🌱 Tilled Garden Bed (${pos.x}, ${pos.y}) • 💧 $moistPct%$compostTag';
+      return '🌱 Tilled Garden Bed (${pos.x}, ${pos.y}) • 💧 $moistPct%$compostTag • Tool 7 to untill to grass';
     }
 
     if (tile.ground == GroundType.weeds) {

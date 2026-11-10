@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.solville.game.solville"
+    namespace = "pt.solal.solville"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -15,14 +15,17 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.solville.game.solville"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        applicationId = "pt.solal.solville"
+        // google_mobile_ads requires minSdk >= 23.
+        minSdk = maxOf(flutter.minSdkVersion, 23)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // Solville AdMob App ID (overrideable via ADMOB_APP_ID env var).
+        manifestPlaceholders["admobAppId"] =
+            System.getenv("ADMOB_APP_ID")?.takeIf { it.isNotBlank() }
+                ?: "ca-app-pub-3113832650326844~3293995632"
     }
 
     buildTypes {

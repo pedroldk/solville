@@ -12,6 +12,37 @@ abstract final class SolvilleTheme {
   static const Color skyWater = Color(0xFF0288D1);
   static const Color terracotta = Color(0xFFD84315);
 
+  static const Color _defaultPanelColor = Color(0xF2FFFDF6);
+
+  static const List<BoxShadow> _panelShadow = <BoxShadow>[
+    BoxShadow(color: Color(0x29000000), blurRadius: 10, offset: Offset(0, 4)),
+  ];
+
+  static const Border _defaultPanelBorder = Border.fromBorderSide(
+    BorderSide(color: timberBorder, width: 2.2),
+  );
+
+  static const BoxDecoration _panelR16 = BoxDecoration(
+    color: _defaultPanelColor,
+    borderRadius: BorderRadius.all(Radius.circular(16)),
+    border: _defaultPanelBorder,
+    boxShadow: _panelShadow,
+  );
+
+  static const BoxDecoration _panelR18 = BoxDecoration(
+    color: _defaultPanelColor,
+    borderRadius: BorderRadius.all(Radius.circular(18)),
+    border: _defaultPanelBorder,
+    boxShadow: _panelShadow,
+  );
+
+  static const BoxDecoration _panelR22 = BoxDecoration(
+    color: _defaultPanelColor,
+    borderRadius: BorderRadius.all(Radius.circular(22)),
+    border: _defaultPanelBorder,
+    boxShadow: _panelShadow,
+  );
+
   static ThemeData buildTheme() {
     return ThemeData(
       useMaterial3: true,
@@ -34,21 +65,22 @@ abstract final class SolvilleTheme {
   }
 
   static BoxDecoration panelDecoration({
-    Color color = const Color(0xF2FFFDF6),
+    Color color = _defaultPanelColor,
     Color borderColor = timberBorder,
     double radius = 18,
   }) {
+    if (color == _defaultPanelColor && borderColor == timberBorder) {
+      if (radius == 18) return _panelR18;
+      if (radius == 22) return _panelR22;
+      if (radius == 16) return _panelR16;
+    }
     return BoxDecoration(
       color: color,
       borderRadius: BorderRadius.circular(radius),
-      border: Border.all(color: borderColor, width: 2.2),
-      boxShadow: const <BoxShadow>[
-        BoxShadow(
-          color: Color(0x29000000),
-          blurRadius: 10,
-          offset: Offset(0, 4),
-        ),
-      ],
+      border: borderColor == timberBorder
+          ? _defaultPanelBorder
+          : Border.all(color: borderColor, width: 2.2),
+      boxShadow: _panelShadow,
     );
   }
 }

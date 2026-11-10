@@ -1,6 +1,5 @@
 import '../../domain/models/catalog.dart';
-import 'steam_bridge_stub.dart'
-    if (dart.library.ffi) 'steam_bridge_io.dart';
+import 'steam_bridge_stub.dart' if (dart.library.ffi) 'steam_bridge_io.dart';
 
 /// Unified achievement bridge syncing Solville's Milestone Trophies to Steam
 /// Achievements on PC (when Steamworks is active) and maintaining local sync.

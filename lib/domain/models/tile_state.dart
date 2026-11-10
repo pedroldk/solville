@@ -1,12 +1,6 @@
 import 'catalog.dart';
 
-enum GroundType {
-  grass,
-  weeds,
-  soil,
-  stonePath,
-  cobbleLane;
-}
+enum GroundType { grass, weeds, soil, stonePath, cobbleLane }
 
 enum StructureType {
   none,
@@ -51,6 +45,38 @@ enum StructureType {
     lantern ||
     flowerArch => true,
     none || farmhouse || well || barn || marketStall => false,
+  };
+
+  int get sprinklerRadius => switch (this) {
+    sprinklerRotary => 1,
+    sprinklerSolar => 2,
+    _ => 0,
+  };
+
+  double get charmBonus => switch (this) {
+    lantern => 0.03,
+    flowerArch => 0.06,
+    lemonTree => 0.02,
+    _ => 0.0,
+  };
+
+  /// Whether this placed structure belongs to the Sun Pass tier (pauses new
+  /// production cycles gracefully when the Sun Pass is inactive).
+  bool get requiresSunPass => switch (this) {
+    sprinklerSolar ||
+    lemonTree ||
+    artisanPress ||
+    beehive ||
+    cowPaddock ||
+    flowerArch => true,
+    none ||
+    farmhouse ||
+    well ||
+    barn ||
+    marketStall ||
+    sprinklerRotary ||
+    henhouse ||
+    lantern => false,
   };
 }
 
@@ -193,6 +219,34 @@ class TileState {
     GroundType.grass || GroundType.soil => 1.0,
   };
 
+  /// Whether this tile currently has ripe produce or a crate ready for collection.
+  bool get isReadyToHarvest =>
+      (crop != null && crop!.isRipe) ||
+      (animal != null && animal!.readyCrates > 0) ||
+      producerCrates > 0 ||
+      droppedCrate != null;
+
+  /// Whether this tile is a growing soil plot in need of watering.
+  bool get isThirstyPlot =>
+      ground == GroundType.soil &&
+      crop != null &&
+      !crop!.isRipe &&
+      moisture < 0.65;
+
+  /// Whether this tile can be restored to grass or have its structure removed.
+  bool get canUntillOrRemove =>
+      structure.isRemovable ||
+      (structure == StructureType.none &&
+          (ground == GroundType.soil ||
+              ground == GroundType.stonePath ||
+              ground == GroundType.weeds ||
+              crop != null));
+
+  /// Whether this tile is an open soil or stone-path plot eligible for one-tap untilling.
+  bool get canQuickUntill =>
+      structure == StructureType.none &&
+      (ground == GroundType.soil || ground == GroundType.stonePath);
+
   TileState copyWith({
     GroundType? ground,
     StructureType? structure,
@@ -254,10 +308,8 @@ class TileState {
       droppedCrate: json['droppedCrate'] != null
           ? ProductId.values.byName(json['droppedCrate'] as String)
           : null,
-      sprinklerCooldown:
-          (json['sprinklerCooldown'] as num?)?.toDouble() ?? 2.0,
-      producerProgress:
-          (json['producerProgress'] as num?)?.toDouble() ?? 0.0,
+      sprinklerCooldown: (json['sprinklerCooldown'] as num?)?.toDouble() ?? 2.0,
+      producerProgress: (json['producerProgress'] as num?)?.toDouble() ?? 0.0,
       producerCrates: json['producerCrates'] as int? ?? 0,
       producerActive: json['producerActive'] as bool? ?? false,
     );

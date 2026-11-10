@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../domain/models/catalog.dart';
 import '../../domain/models/game_state.dart';
-import '../../domain/models/grid_pos.dart';
-import '../../domain/models/tile_state.dart';
 import '../../game/solville_game.dart';
 import '../theme/solville_theme.dart';
 import '../view_models/solville_controller.dart';
+import '../widgets/solville_pill_button.dart';
 
 /// Thumb-friendly adaptive bottom dock for Android & PC/Steam:
 /// - Action Queue status pill (`Clear Queue`) + one-tap `Harvest Ripe` & `Water Dry`
@@ -24,55 +23,14 @@ class BottomToolDock extends StatelessWidget {
   final SolvilleGame game;
   final VoidCallback onOpenShop;
 
-  int _countReadyHarvests(GameState state) {
-    var count = 0;
-    for (var y = 1; y < state.gridSize; y++) {
-      for (var x = 0; x < state.gridSize; x++) {
-        final pos = GridPos(x, y);
-        final tile = state.tileAt(pos);
-        final ready =
-            (tile.crop != null && tile.crop!.isRipe) ||
-            (tile.animal != null && tile.animal!.readyCrates > 0) ||
-            tile.producerCrates > 0 ||
-            tile.droppedCrate != null;
-        if (!ready) continue;
-        if (state.actionQueue.any((a) => a.target == pos)) continue;
-        count++;
-      }
-    }
-    return count;
-  }
-
-  int _countThirstyPlots(GameState state) {
-    var count = 0;
-    for (var y = 1; y < state.gridSize; y++) {
-      for (var x = 0; x < state.gridSize; x++) {
-        final pos = GridPos(x, y);
-        final tile = state.tileAt(pos);
-        if (tile.ground != GroundType.soil ||
-            tile.crop == null ||
-            tile.crop!.isRipe ||
-            tile.moisture >= 0.65) {
-          continue;
-        }
-        final alreadyQueued = state.actionQueue.any(
-          (a) => a.target == pos && a.kind == ActionKind.water,
-        );
-        if (alreadyQueued) continue;
-        count++;
-      }
-    }
-    return count;
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = controller.state;
     final showSeeds =
         state.activeTool == ToolMode.smart || state.activeTool == ToolMode.seed;
     final showBuild = state.activeTool == ToolMode.build;
-    final readyHarvests = _countReadyHarvests(state);
-    final thirstyPlots = _countThirstyPlots(state);
+    final readyHarvests = state.readyHarvestCount;
+    final thirstyPlots = state.thirstyPlotCount;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
@@ -136,19 +94,31 @@ class BottomToolDock extends StatelessWidget {
                     ),
                   ),
                 if (readyHarvests > 0)
-                  _QuickBatchButton(
+                  SolvillePillButton(
                     emoji: '🌾',
                     label: 'Harvest Ripe ($readyHarvests)',
                     tooltip: 'Queue all ripe harvests & crates (Hotkey: H)',
-                    background: const Color(0xFFE8F5E9),
+                    backgroundColor: const Color(0xFFE8F5E9),
+                    borderRadius: 18,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 11,
+                      vertical: 6,
+                    ),
+                    fontSize: 12,
                     onTap: controller.queueAllReadyHarvests,
                   ),
                 if (thirstyPlots > 0)
-                  _QuickBatchButton(
+                  SolvillePillButton(
                     emoji: '💧',
                     label: 'Water Dry ($thirstyPlots)',
                     tooltip: 'Queue watering on thirsty garden beds',
-                    background: const Color(0xFFE1F5FE),
+                    backgroundColor: const Color(0xFFE1F5FE),
+                    borderRadius: 18,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 11,
+                      vertical: 6,
+                    ),
+                    fontSize: 12,
                     onTap: controller.queueAllThirstyPlots,
                   ),
                 Container(
@@ -261,8 +231,9 @@ class BottomToolDock extends StatelessWidget {
                       ),
                       _ToolSlotButton(
                         hotkey: '7',
-                        emoji: '🧹',
-                        label: 'Clear',
+                        emoji: '🌿',
+                        label: 'Untill',
+                        subLabel: 'Clear',
                         selected: state.activeTool == ToolMode.remove,
                         onTap: () => controller.selectTool(ToolMode.remove),
                       ),
@@ -273,59 +244,6 @@ class BottomToolDock extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _QuickBatchButton extends StatelessWidget {
-  const _QuickBatchButton({
-    required this.emoji,
-    required this.label,
-    required this.tooltip,
-    required this.background,
-    required this.onTap,
-  });
-
-  final String emoji;
-  final String label;
-  final String tooltip;
-  final Color background;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: background,
-        borderRadius: BorderRadius.circular(18),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: SolvilleTheme.timberBorder, width: 1.5),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Text(emoji, style: const TextStyle(fontSize: 14)),
-                const SizedBox(width: 5),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: SolvilleTheme.timberDark,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -363,9 +281,14 @@ class _SeedSelectorStrip extends StatelessWidget {
                 child: ChoiceChip(
                   selected: state.selectedSeed == crop.id,
                   selectedColor: const Color(0xFFFFE082),
-                  backgroundColor: SolvilleTheme.parchment,
+                  backgroundColor:
+                      (crop.requiresSunPass && !controller.isSunPassActive)
+                      ? const Color(0xFFFFF3E0)
+                      : SolvilleTheme.parchment,
                   label: Text(
-                    '${crop.emoji} ${crop.name.split(' ').last} (${crop.seedCost}☀️)',
+                    crop.requiresSunPass && !controller.isSunPassActive
+                        ? '${crop.emoji} ${crop.name.split(' ').last} (☀️ Pass)'
+                        : '${crop.emoji} ${crop.name.split(' ').last} (${crop.seedCost}☀️)',
                     style: const TextStyle(
                       color: SolvilleTheme.timberDark,
                       fontWeight: FontWeight.w700,
@@ -406,6 +329,13 @@ class _BuildSelectorStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = controller.state;
+    final expTier = state.upgradeTier(UpgradeTrack.farmExpansion);
+    final nextExp = SolvilleCatalog.nextUpgradeFor(
+      UpgradeTrack.farmExpansion,
+      expTier,
+    );
+    final nextSize = SolvilleCatalog.gridSizeForExpansionTier(expTier + 1);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: SolvilleTheme.panelDecoration(radius: 16),
@@ -414,15 +344,43 @@ class _BuildSelectorStrip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
+            if (nextExp != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: ActionChip(
+                  backgroundColor:
+                      (nextExp.requiresSunPass && !controller.isSunPassActive)
+                      ? const Color(0xFFFFF3E0)
+                      : (state.coins >= nextExp.cost
+                            ? const Color(0xFFFFE082)
+                            : const Color(0xFFFFF8E1)),
+                  label: Text(
+                    nextExp.requiresSunPass && !controller.isSunPassActive
+                        ? '🏝️ Expand Isle ${state.gridSize}×${state.gridSize}→$nextSize×$nextSize (☀️ Sun Pass)'
+                        : '🏝️ Expand Isle ${state.gridSize}×${state.gridSize}→$nextSize×$nextSize (${nextExp.cost}☀️)',
+                    style: const TextStyle(
+                      color: SolvilleTheme.timberDark,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                    ),
+                  ),
+                  onPressed: controller.expandIsle,
+                ),
+              ),
             for (final def in SolvilleCatalog.buildItems.values)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 3),
                 child: ChoiceChip(
                   selected: state.selectedBuildItem == def.type,
                   selectedColor: const Color(0xFFB3E5FC),
-                  backgroundColor: SolvilleTheme.parchment,
+                  backgroundColor:
+                      (def.requiresSunPass && !controller.isSunPassActive)
+                      ? const Color(0xFFFFF3E0)
+                      : SolvilleTheme.parchment,
                   label: Text(
-                    '${def.emoji} ${def.name} (${def.cost}☀️)',
+                    def.requiresSunPass && !controller.isSunPassActive
+                        ? '${def.emoji} ${def.name} (☀️ Pass)'
+                        : '${def.emoji} ${def.name} (${def.cost}☀️)',
                     style: const TextStyle(
                       color: SolvilleTheme.timberDark,
                       fontWeight: FontWeight.w700,

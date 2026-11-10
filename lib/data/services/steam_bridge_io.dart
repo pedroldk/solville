@@ -13,14 +13,10 @@ typedef _SteamRunCallbacksDart = void Function();
 typedef _SteamUserStatsNative = ffi.Pointer<ffi.Void> Function();
 typedef _SteamUserStatsDart = ffi.Pointer<ffi.Void> Function();
 
-typedef _SetAchievementNative = ffi.Bool Function(
-  ffi.Pointer<ffi.Void> self,
-  ffi.Pointer<Utf8> pchName,
-);
-typedef _SetAchievementDart = bool Function(
-  ffi.Pointer<ffi.Void> self,
-  ffi.Pointer<Utf8> pchName,
-);
+typedef _SetAchievementNative =
+    ffi.Bool Function(ffi.Pointer<ffi.Void> self, ffi.Pointer<Utf8> pchName);
+typedef _SetAchievementDart =
+    bool Function(ffi.Pointer<ffi.Void> self, ffi.Pointer<Utf8> pchName);
 
 typedef _StoreStatsNative = ffi.Bool Function(ffi.Pointer<ffi.Void> self);
 typedef _StoreStatsDart = bool Function(ffi.Pointer<ffi.Void> self);
@@ -55,10 +51,9 @@ class PlatformSteamBridge {
       }
 
       final lib = ffi.DynamicLibrary.open(dllPath);
-      final initFn = lib
-          .lookupFunction<_SteamApiInitNative, _SteamApiInitDart>(
-            'SteamAPI_Init',
-          );
+      final initFn = lib.lookupFunction<_SteamApiInitNative, _SteamApiInitDart>(
+        'SteamAPI_Init',
+      );
       if (!initFn()) {
         return;
       }
@@ -76,10 +71,9 @@ class PlatformSteamBridge {
           .lookupFunction<_SetAchievementNative, _SetAchievementDart>(
             'SteamAPI_ISteamUserStats_SetAchievement',
           );
-      _storeStats = lib
-          .lookupFunction<_StoreStatsNative, _StoreStatsDart>(
-            'SteamAPI_ISteamUserStats_StoreStats',
-          );
+      _storeStats = lib.lookupFunction<_StoreStatsNative, _StoreStatsDart>(
+        'SteamAPI_ISteamUserStats_StoreStats',
+      );
       isSteamConnected = true;
     } catch (_) {
       isSteamConnected = false;

@@ -99,12 +99,13 @@ class VillageRequest {
 }
 
 class MarketState {
-  const MarketState({
+  MarketState({
     required this.trends,
     required this.stallCrates,
     this.pricing = PricingStance.fair,
     this.saleCooldown = 3.5,
     this.dailyRequest,
+    this.sunnySurgeActive = false,
   });
 
   static const int maxStallSlots = 8;
@@ -115,20 +116,25 @@ class MarketState {
   final double saleCooldown;
   final VillageRequest? dailyRequest;
 
+  /// True when the daily "Sunny Surge" (+25% Golden Market Boost) is active today.
+  final bool sunnySurgeActive;
+
   MarketTrend trendFor(ProductId id) => trends[id] ?? MarketTrend.steady;
 
   int unitPriceFor(ProductId id, {double charmBonus = 0.0}) {
     final base = SolvilleCatalog.productBaseValues[id] ?? 20;
     final trendMult = trendFor(id).multiplier;
     final stanceMult = pricing.priceFactor;
-    final total = base * trendMult * stanceMult * (1.0 + charmBonus);
+    final surgeMult = sunnySurgeActive ? 1.25 : 1.0;
+    final total =
+        base * trendMult * stanceMult * surgeMult * (1.0 + charmBonus);
     return total.round().clamp(1, 9999);
   }
 
-  List<ProductId> get boomProducts => trends.entries
-      .where((e) => e.value == MarketTrend.boom)
-      .map((e) => e.key)
-      .toList();
+  /// Cached list of products currently experiencing a Market Boom (`+45%`).
+  late final List<ProductId> boomProducts = List<ProductId>.unmodifiable(
+    trends.entries.where((e) => e.value == MarketTrend.boom).map((e) => e.key),
+  );
 
   MarketState copyWith({
     Map<ProductId, MarketTrend>? trends,
@@ -136,6 +142,7 @@ class MarketState {
     PricingStance? pricing,
     double? saleCooldown,
     VillageRequest? dailyRequest,
+    bool? sunnySurgeActive,
   }) {
     return MarketState(
       trends: trends ?? this.trends,
@@ -143,6 +150,7 @@ class MarketState {
       pricing: pricing ?? this.pricing,
       saleCooldown: saleCooldown ?? this.saleCooldown,
       dailyRequest: dailyRequest ?? this.dailyRequest,
+      sunnySurgeActive: sunnySurgeActive ?? this.sunnySurgeActive,
     );
   }
 
@@ -154,6 +162,7 @@ class MarketState {
     'pricing': pricing.name,
     'saleCooldown': saleCooldown,
     if (dailyRequest != null) 'dailyRequest': dailyRequest!.toJson(),
+    'sunnySurgeActive': sunnySurgeActive,
   };
 
   factory MarketState.fromJson(Map<String, dynamic> json) {
@@ -177,6 +186,7 @@ class MarketState {
               json['dailyRequest'] as Map<String, dynamic>,
             )
           : null,
+      sunnySurgeActive: json['sunnySurgeActive'] as bool? ?? false,
     );
   }
 }

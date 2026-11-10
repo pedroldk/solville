@@ -39,26 +39,29 @@ void main() {
   group('AStarPathfinder', () {
     const pathfinder = AStarPathfinder();
 
-    test('navigates cleanly around solid structures without clipping corners', () {
-      final blocked = <GridPos>{
-        const GridPos(3, 2),
-        const GridPos(3, 3),
-        const GridPos(3, 4),
-      };
-      final path = pathfinder.findPath(
-        start: const GridPos(1, 3),
-        goal: const GridPos(5, 3),
-        gridSize: 8,
-        isWalkable: (p) => !blocked.contains(p),
-      );
+    test(
+      'navigates cleanly around solid structures without clipping corners',
+      () {
+        final blocked = <GridPos>{
+          const GridPos(3, 2),
+          const GridPos(3, 3),
+          const GridPos(3, 4),
+        };
+        final path = pathfinder.findPath(
+          start: const GridPos(1, 3),
+          goal: const GridPos(5, 3),
+          gridSize: 8,
+          isWalkable: (p) => !blocked.contains(p),
+        );
 
-      expect(path, isNotEmpty);
-      expect(path.first, equals(const GridPos(1, 3)));
-      expect(path.last, equals(const GridPos(5, 3)));
-      for (final step in path) {
-        expect(blocked.contains(step), isFalse);
-      }
-    });
+        expect(path, isNotEmpty);
+        expect(path.first, equals(const GridPos(1, 3)));
+        expect(path.last, equals(const GridPos(5, 3)));
+        for (final step in path) {
+          expect(blocked.contains(step), isFalse);
+        }
+      },
+    );
 
     test('routes to adjacent walkable neighbor when goal is a solid Well', () {
       const well = GridPos(2, 3);
@@ -72,5 +75,22 @@ void main() {
       expect(path, isNotEmpty);
       expect(path.last.manhattanDistanceTo(well), equals(1));
     });
+
+    test(
+      'computes long paths across a 35x35 island in sub-millisecond time',
+      () {
+        final path = pathfinder.findPath(
+          start: const GridPos(0, 0),
+          goal: const GridPos(34, 34),
+          gridSize: 35,
+          isWalkable: (p) => !(p.x == 17 && p.y < 30),
+          stepCost: (_, to) => to.y == 0 ? 0.7 : 1.0,
+        );
+
+        expect(path, isNotEmpty);
+        expect(path.first, equals(const GridPos(0, 0)));
+        expect(path.last, equals(const GridPos(34, 34)));
+      },
+    );
   });
 }

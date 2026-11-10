@@ -1,13 +1,12 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
-import 'package:flutter/painting.dart'
-    show FontWeight, TextDirection, TextPainter, TextSpan, TextStyle;
+import 'package:flutter/painting.dart' show FontWeight, TextStyle;
 
 import '../../domain/iso/iso_projection.dart';
 import '../../domain/models/catalog.dart';
 import '../../domain/models/game_state.dart';
-import 'structures_and_crops_painter.dart';
+import 'canvas_draw_helpers.dart';
 
 /// Floating particle / text popup in world coordinates.
 class FloatingVfx {
@@ -54,24 +53,43 @@ class StrollingVillager {
 /// Renders sky clouds, A* stepping dots, Sol (with stacked crates & work tool
 /// popups!), strolling townsfolk with Boom thought bubbles, twilight fireflies,
 /// butterflies, sunshowers, and transient VFX particles.
+///
+/// Reuses [Paint] objects and quantized opacity styles for cached text rendering.
 class CharactersAndFxPainter {
-  const CharactersAndFxPainter(this.iso, this.structuresPainter);
+  CharactersAndFxPainter(this.iso);
 
   final IsoProjection iso;
-  final StructuresAndCropsPainter structuresPainter;
 
-  void drawSkyClouds(Canvas canvas, double dayProgress, double animTime) {
-    final tint = dayProgress > 0.62
+  final Paint _fillPaint = Paint();
+  final Paint _strokePaint = Paint()..style = PaintingStyle.stroke;
+  final Paint _rainPaint = Paint()
+    ..color = const Color(0x66B3E5FC)
+    ..strokeWidth = 1.6
+    ..strokeCap = StrokeCap.round;
+
+  static const TextStyle _workEmojiStyle = TextStyle(fontSize: 15);
+  static const TextStyle _villagerCravingStyle = TextStyle(fontSize: 11);
+
+  void drawSkyClouds(
+    Canvas canvas,
+    int gridSize,
+    double dayProgress,
+    double animTime,
+  ) {
+    _fillPaint.color = dayProgress > 0.62
         ? const Color(0x44FFE0B2)
         : const Color(0x48FFFFFF);
-    final cloudPaint = Paint()..color = tint;
+    final halfSpanX = gridSize * iso.tileWidth * 0.60;
+    final spanX = halfSpanX * 2.0;
+    final cloudCount = (gridSize ~/ 4).clamp(4, 10);
 
-    for (var c = 0; c < 4; c++) {
-      final baseX = -520.0 + ((animTime * (12.0 + c * 3.0) + c * 290.0) % 1160.0);
-      final baseY = -110.0 + c * 95.0;
+    for (var c = 0; c < cloudCount; c++) {
+      final baseX =
+          -halfSpanX + ((animTime * (12.0 + c * 2.5) + c * 310.0) % spanX);
+      final baseY = -120.0 + c * (gridSize * iso.tileHeight * 0.13);
       canvas.drawOval(
         Rect.fromCenter(center: Offset(baseX, baseY), width: 130, height: 34),
-        cloudPaint,
+        _fillPaint,
       );
       canvas.drawOval(
         Rect.fromCenter(
@@ -79,7 +97,7 @@ class CharactersAndFxPainter {
           width: 74,
           height: 28,
         ),
-        cloudPaint,
+        _fillPaint,
       );
       canvas.drawOval(
         Rect.fromCenter(
@@ -87,7 +105,7 @@ class CharactersAndFxPainter {
           width: 68,
           height: 26,
         ),
-        cloudPaint,
+        _fillPaint,
       );
     }
   }
@@ -95,12 +113,13 @@ class CharactersAndFxPainter {
   void drawActivePathDots(Canvas canvas, FarmerState farmer, double animTime) {
     if (farmer.activePath.isEmpty) return;
     final pulse = 0.65 + 0.35 * math.sin(animTime * 6.0);
+    _fillPaint.color = Color.fromRGBO(255, 249, 196, 0.72 * pulse);
     for (var i = 0; i < farmer.activePath.length; i++) {
       final node = farmer.activePath[i];
       final w = iso.tileCenterToWorld(node);
       canvas.drawOval(
         Rect.fromCenter(center: Offset(w.x, w.y), width: 10, height: 5),
-        Paint()..color = Color.fromRGBO(255, 249, 196, 0.72 * pulse),
+        _fillPaint,
       );
     }
   }
@@ -116,53 +135,44 @@ class CharactersAndFxPainter {
     final cx = world.x + workTilt;
     final cy = world.y;
 
+    _fillPaint.color = const Color(0x3D000000);
     canvas.drawOval(
       Rect.fromCenter(
         center: Offset(world.x, world.y + 3),
         width: 28,
         height: 13,
       ),
-      Paint()..color = const Color(0x3D000000),
+      _fillPaint,
     );
 
     final step = isMoving ? math.sin(farmer.walkBobPhase) * 3.5 : 0.0;
-    canvas.drawCircle(
-      Offset(cx - 4 + step * 0.5, cy - 1),
-      3.5,
-      Paint()..color = const Color(0xFF5D4037),
-    );
-    canvas.drawCircle(
-      Offset(cx + 4 - step * 0.5, cy - 1),
-      3.5,
-      Paint()..color = const Color(0xFF5D4037),
-    );
+    _fillPaint.color = const Color(0xFF5D4037);
+    canvas.drawCircle(Offset(cx - 4 + step * 0.5, cy - 1), 3.5, _fillPaint);
+    canvas.drawCircle(Offset(cx + 4 - step * 0.5, cy - 1), 3.5, _fillPaint);
 
     final torsoRect = RRect.fromRectAndRadius(
       Rect.fromCenter(center: Offset(cx, cy - 13 - bob), width: 16, height: 18),
       const Radius.circular(6),
     );
-    canvas.drawRRect(torsoRect, Paint()..color = const Color(0xFFFFCA28));
+    _fillPaint.color = const Color(0xFFFFCA28);
+    canvas.drawRRect(torsoRect, _fillPaint);
     final overallsRect = RRect.fromRectAndRadius(
       Rect.fromCenter(center: Offset(cx, cy - 10 - bob), width: 15, height: 12),
       const Radius.circular(5),
     );
-    canvas.drawRRect(overallsRect, Paint()..color = const Color(0xFF1E88E5));
+    _fillPaint.color = const Color(0xFF1E88E5);
+    canvas.drawRRect(overallsRect, _fillPaint);
 
-    canvas.drawCircle(
-      Offset(cx, cy - 26 - bob),
-      7.2,
-      Paint()..color = const Color(0xFFFFCCBC),
-    );
+    _fillPaint.color = const Color(0xFFFFCCBC);
+    canvas.drawCircle(Offset(cx, cy - 26 - bob), 7.2, _fillPaint);
 
     // Cozy straw sunhat with coral ribbon
+    _fillPaint.color = const Color(0xFFFFE082);
     canvas.drawOval(
-      Rect.fromCenter(
-        center: Offset(cx, cy - 31 - bob),
-        width: 26,
-        height: 9,
-      ),
-      Paint()..color = const Color(0xFFFFE082),
+      Rect.fromCenter(center: Offset(cx, cy - 31 - bob), width: 26, height: 9),
+      _fillPaint,
     );
+    _fillPaint.color = const Color(0xFFFFD54F);
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(
@@ -172,14 +182,16 @@ class CharactersAndFxPainter {
         ),
         const Radius.circular(4),
       ),
-      Paint()..color = const Color(0xFFFFD54F),
+      _fillPaint,
     );
+    _strokePaint
+      ..color = const Color(0xFFEF5350)
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.butt;
     canvas.drawLine(
       Offset(cx - 7, cy - 31.5 - bob),
       Offset(cx + 7, cy - 31.5 - bob),
-      Paint()
-        ..color = const Color(0xFFEF5350)
-        ..strokeWidth = 2.0,
+      _strokePaint,
     );
 
     // Stacked wooden crates carried in Sol's arms
@@ -187,7 +199,7 @@ class CharactersAndFxPainter {
       final dirSign = (farmer.facingX - farmer.facingY) >= 0 ? 1.0 : -1.0;
       final stackBaseX = cx + dirSign * 12.0;
       for (var i = 0; i < farmer.carriedCrates.length; i++) {
-        structuresPainter.drawWoodenCrate(
+        CanvasDrawHelpers.drawWoodenCrate(
           canvas,
           Offset(stackBaseX, cy - 11 - bob - i * 11.5),
           farmer.carriedCrates[i],
@@ -198,14 +210,12 @@ class CharactersAndFxPainter {
 
     // Active tool action icon pop above sunhat!
     if (farmer.workTimer > 0.01 && farmer.lastActionEmoji != null) {
-      final tp = TextPainter(
-        text: TextSpan(
-          text: farmer.lastActionEmoji,
-          style: const TextStyle(fontSize: 15),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas, Offset(cx - tp.width * 0.5, cy - 54 - bob));
+      CanvasDrawHelpers.drawCenteredText(
+        canvas,
+        farmer.lastActionEmoji!,
+        Offset(cx, cy - 46 - bob),
+        _workEmojiStyle,
+      );
     }
   }
 
@@ -222,10 +232,12 @@ class CharactersAndFxPainter {
     final cx = world.x;
     final cy = world.y;
 
+    _fillPaint.color = const Color(0x30000000);
     canvas.drawOval(
       Rect.fromCenter(center: Offset(cx, cy + 2), width: 22, height: 10),
-      Paint()..color = const Color(0x30000000),
+      _fillPaint,
     );
+    _fillPaint.color = villager.tunicColor;
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(
@@ -235,91 +247,83 @@ class CharactersAndFxPainter {
         ),
         const Radius.circular(5),
       ),
-      Paint()..color = villager.tunicColor,
+      _fillPaint,
     );
-    canvas.drawCircle(
-      Offset(cx, cy - 23 - bob),
-      6.0,
-      Paint()..color = const Color(0xFFFFCCBC),
-    );
+    _fillPaint.color = const Color(0xFFFFCCBC);
+    canvas.drawCircle(Offset(cx, cy - 23 - bob), 6.0, _fillPaint);
+    _fillPaint.color = villager.hairColor;
     canvas.drawArc(
-      Rect.fromCenter(
-        center: Offset(cx, cy - 24 - bob),
-        width: 13,
-        height: 11,
-      ),
+      Rect.fromCenter(center: Offset(cx, cy - 24 - bob), width: 13, height: 11),
       math.pi,
       math.pi,
       true,
-      Paint()..color = villager.hairColor,
+      _fillPaint,
     );
 
     // Villager craving thought bubble hinting at today's hot Boom good!
     if (boomHighlight != null &&
-        (villager.pauseTimer > 0 || (animTime.floor() + villager.gx.round()) % 5 == 0)) {
+        (villager.pauseTimer > 0 ||
+            (animTime.floor() + villager.gx.round()) % 5 == 0)) {
+      final bubbleCenter = Offset(cx, cy - 40 - bob);
       final bubble = RRect.fromRectAndRadius(
-        Rect.fromCenter(center: Offset(cx, cy - 40 - bob), width: 26, height: 18),
+        Rect.fromCenter(center: bubbleCenter, width: 26, height: 18),
         const Radius.circular(9),
       );
-      canvas.drawRRect(bubble, Paint()..color = const Color(0xEEFFFFFF));
-      final tp = TextPainter(
-        text: TextSpan(
-          text: SolvilleCatalog.productEmoji(boomHighlight),
-          style: const TextStyle(fontSize: 11),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(
+      _fillPaint.color = const Color(0xEEFFFFFF);
+      canvas.drawRRect(bubble, _fillPaint);
+      CanvasDrawHelpers.drawCenteredText(
         canvas,
-        Offset(cx - tp.width * 0.5, cy - 40 - bob - tp.height * 0.5),
+        SolvilleCatalog.productEmoji(boomHighlight),
+        bubbleCenter,
+        _villagerCravingStyle,
       );
     }
   }
 
   void drawFloatingVfx(Canvas canvas, List<FloatingVfx> effects) {
-    for (final fx in effects) {
+    for (var i = 0; i < effects.length; i++) {
+      final fx = effects[i];
       final t = (fx.life / fx.maxLife).clamp(0.0, 1.0);
       if (fx.text != null) {
-        final tp = TextPainter(
-          text: TextSpan(
-            text: fx.text,
-            style: TextStyle(
-              color: fx.color.withValues(alpha: t),
-              fontSize: 14.0,
-              fontWeight: FontWeight.w900,
-              shadows: <Shadow>[
-                Shadow(
-                  color: const Color(0xAA3E2723).withValues(alpha: t),
-                  offset: const Offset(0, 1.5),
-                  blurRadius: 2,
-                ),
-              ],
-            ),
-          ),
-          textDirection: TextDirection.ltr,
-        )..layout();
-        tp.paint(
+        // Quantize alpha to 20 steps so TextPainter cache hits across frames.
+        final qAlpha = (t * 20.0).round() / 20.0;
+        if (qAlpha <= 0.0) continue;
+        CanvasDrawHelpers.drawCenteredText(
           canvas,
-          Offset(fx.x - tp.width * 0.5, fx.y - tp.height * 0.5),
+          fx.text!,
+          Offset(fx.x, fx.y),
+          TextStyle(
+            color: fx.color.withValues(alpha: qAlpha),
+            fontSize: 14.0,
+            fontWeight: FontWeight.w900,
+            shadows: <Shadow>[
+              Shadow(
+                color: const Color(0xAA3E2723).withValues(alpha: qAlpha),
+                offset: const Offset(0, 1.5),
+                blurRadius: 2,
+              ),
+            ],
+          ),
         );
       } else if (fx.isRing) {
         final radius = fx.size * (1.8 - t * 0.8);
+        _strokePaint
+          ..color = fx.color.withValues(alpha: t * 0.65)
+          ..strokeWidth = 2.4;
         canvas.drawOval(
           Rect.fromCenter(
             center: Offset(fx.x, fx.y),
             width: radius * 2.0,
             height: radius,
           ),
-          Paint()
-            ..color = fx.color.withValues(alpha: t * 0.65)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 2.4,
+          _strokePaint,
         );
       } else {
+        _fillPaint.color = fx.color.withValues(alpha: t);
         canvas.drawCircle(
           Offset(fx.x, fx.y),
           fx.size * (0.4 + 0.6 * t),
-          Paint()..color = fx.color.withValues(alpha: t),
+          _fillPaint,
         );
       }
     }
@@ -333,16 +337,16 @@ class CharactersAndFxPainter {
     required double animTime,
   }) {
     if (weather == WeatherType.gentleRain) {
-      final rainPaint = Paint()
-        ..color = const Color(0x66B3E5FC)
-        ..strokeWidth = 1.6
-        ..strokeCap = StrokeCap.round;
-      for (var i = 0; i < 42; i++) {
-        final seedX = ((i * 97) % 900) - 450.0;
-        final cycle = (animTime * 260.0 + i * 47.0) % 520.0;
+      final halfSpanX = gridSize * iso.tileWidth * 0.55;
+      final spanX = halfSpanX * 2.0;
+      final spanXInt = spanX.round();
+      final spanY = gridSize * iso.tileHeight * 1.05;
+      for (var i = 0; i < 64; i++) {
+        final seedX = ((i * 137) % spanXInt) - halfSpanX;
+        final cycle = (animTime * 280.0 + i * 53.0) % spanY;
         final rx = seedX - cycle * 0.18;
         final ry = cycle;
-        canvas.drawLine(Offset(rx, ry), Offset(rx - 4, ry + 13), rainPaint);
+        canvas.drawLine(Offset(rx, ry), Offset(rx - 4, ry + 13), _rainPaint);
       }
       return;
     }
@@ -361,28 +365,21 @@ class CharactersAndFxPainter {
             math.cos(animTime * 0.8 + f * 2.1) * 1.2;
         final w = iso.gridToWorld(gx, gy, gz: 0.9);
         final blink = (math.sin(animTime * 3.8 + f * 1.9) + 1.0) * 0.5;
-        canvas.drawCircle(
-          Offset(w.x, w.y),
-          6.5,
-          Paint()
-            ..color = Color.fromRGBO(
-              255,
-              238,
-              88,
-              0.28 * blink * duskAlpha,
-            ),
+        final center = Offset(w.x, w.y);
+        _fillPaint.color = Color.fromRGBO(
+          255,
+          238,
+          88,
+          0.28 * blink * duskAlpha,
         );
-        canvas.drawCircle(
-          Offset(w.x, w.y),
-          2.2,
-          Paint()
-            ..color = Color.fromRGBO(
-              255,
-              255,
-              180,
-              0.88 * blink * duskAlpha,
-            ),
+        canvas.drawCircle(center, 6.5, _fillPaint);
+        _fillPaint.color = Color.fromRGBO(
+          255,
+          255,
+          180,
+          0.88 * blink * duskAlpha,
         );
+        canvas.drawCircle(center, 2.2, _fillPaint);
       }
       return;
     }
@@ -393,7 +390,7 @@ class CharactersAndFxPainter {
       final gy = 4.2 + math.cos(animTime * 0.45 + b * 1.9) * 2.7;
       final w = iso.gridToWorld(gx, gy, gz: 1.2);
       final flap = (math.sin(animTime * 12.0 + b) + 1.0) * 2.2 + 1.5;
-      final wingColor = switch (b) {
+      _fillPaint.color = switch (b) {
         0 => const Color(0xFFFFF176),
         1 => const Color(0xFFF48FB1),
         _ => const Color(0xFF81D4FA),
@@ -404,7 +401,7 @@ class CharactersAndFxPainter {
           width: flap,
           height: 5,
         ),
-        Paint()..color = wingColor,
+        _fillPaint,
       );
       canvas.drawOval(
         Rect.fromCenter(
@@ -412,7 +409,7 @@ class CharactersAndFxPainter {
           width: flap,
           height: 5,
         ),
-        Paint()..color = wingColor,
+        _fillPaint,
       );
     }
   }
@@ -423,9 +420,7 @@ class CharactersAndFxPainter {
     math.Random rng,
   ) {
     final pos = event.tile;
-    final world = pos != null
-        ? iso.tileCenterToWorld(pos)
-        : (x: 0.0, y: 120.0);
+    final world = pos != null ? iso.tileCenterToWorld(pos) : (x: 0.0, y: 120.0);
 
     switch (event.type) {
       case SimEventType.dig:

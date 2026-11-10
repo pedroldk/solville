@@ -4,15 +4,7 @@ import 'market_state.dart';
 import 'tile_state.dart';
 
 /// Active tool on the bottom HUD dock.
-enum ToolMode {
-  smart,
-  dig,
-  seed,
-  water,
-  compost,
-  build,
-  remove;
-}
+enum ToolMode { smart, dig, seed, water, compost, build, remove }
 
 /// Weather state in Solville.
 enum WeatherType {
@@ -42,7 +34,7 @@ enum ActionKind {
   tendAnimal,
   loadArtisan,
   placeBuild,
-  removeStructure;
+  removeStructure,
 }
 
 class QueuedAction {
@@ -173,7 +165,7 @@ enum SimEventType {
   shopPurchase,
   trophyUnlocked,
   newDay,
-  statusHint;
+  statusHint,
 }
 
 class SimEvent {
@@ -196,7 +188,7 @@ class SimEvent {
 
 /// Complete serializable snapshot of the Solville farm.
 class GameState {
-  const GameState({
+  GameState({
     required this.gridSize,
     required this.tiles,
     required this.farmer,
@@ -271,21 +263,74 @@ class GameState {
     upgradeTier(UpgradeTrack.gardenBoots),
   );
 
-  int get totalBarnCrates =>
-      barnStock.values.fold<int>(0, (sum, count) => sum + count);
+  /// Memoized total crate count across all Barn slots.
+  late final int totalBarnCrates = _computeTotalBarnCrates();
 
-  double get charmBonus {
+  int _computeTotalBarnCrates() {
+    var sum = 0;
+    for (final count in barnStock.values) {
+      sum += count;
+    }
+    return sum;
+  }
+
+  /// Memoized cumulative Garden Charm bonus (`0.0..0.50`).
+  late final double charmBonus = _computeCharmBonus();
+
+  double _computeCharmBonus() {
     var total = 0.0;
-    for (final tile in tiles) {
-      if (tile.structure == StructureType.lantern) {
-        total += 0.03;
-      } else if (tile.structure == StructureType.flowerArch) {
-        total += 0.06;
-      } else if (tile.structure == StructureType.lemonTree) {
-        total += 0.02;
-      }
+    for (var i = 0; i < tiles.length; i++) {
+      total += tiles[i].structure.charmBonus;
     }
     return total.clamp(0.0, 0.50);
+  }
+
+  /// Memoized count of unqueued tiles with ripe crops, ready animal goods, or crates.
+  late final int readyHarvestCount = _computeReadyHarvestCount();
+
+  int _computeReadyHarvestCount() {
+    var count = 0;
+    for (var y = 1; y < gridSize; y++) {
+      final rowOffset = y * gridSize;
+      for (var x = 0; x < gridSize; x++) {
+        if (!tiles[rowOffset + x].isReadyToHarvest) continue;
+        var isQueued = false;
+        for (var i = 0; i < actionQueue.length; i++) {
+          final target = actionQueue[i].target;
+          if (target.x == x && target.y == y) {
+            isQueued = true;
+            break;
+          }
+        }
+        if (!isQueued) count++;
+      }
+    }
+    return count;
+  }
+
+  /// Memoized count of unqueued growing garden beds with moisture below 65%.
+  late final int thirstyPlotCount = _computeThirstyPlotCount();
+
+  int _computeThirstyPlotCount() {
+    var count = 0;
+    for (var y = 1; y < gridSize; y++) {
+      final rowOffset = y * gridSize;
+      for (var x = 0; x < gridSize; x++) {
+        if (!tiles[rowOffset + x].isThirstyPlot) continue;
+        var alreadyQueued = false;
+        for (var i = 0; i < actionQueue.length; i++) {
+          final a = actionQueue[i];
+          if (a.kind == ActionKind.water &&
+              a.target.x == x &&
+              a.target.y == y) {
+            alreadyQueued = true;
+            break;
+          }
+        }
+        if (!alreadyQueued) count++;
+      }
+    }
+    return count;
   }
 
   GameState copyWith({

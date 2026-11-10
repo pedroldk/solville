@@ -9,8 +9,11 @@ import '../../domain/models/game_state.dart';
 /// Pure-Dart procedural PCM WAV audio engine for Solville:
 /// 1. Tactile cozy one-shot SFX (dig, plant, water, harvest, coins, trophies)
 /// 2. Seamless-looping soothing background soundscapes (`BgmTrack.sunnyLullaby`,
-///    `BgmTrack.morningMeadow`, `BgmTrack.cozyRain`) synthesized with a 1.5s
+///    `BgmTrack.morningMeadow`, `BgmTrack.cozyRain`) synthesized with a 1.6s
 ///    raised-cosine overlap crossfade so loop wrap-around is 100% click-free.
+///
+/// Uses trigonometric phasor rotation and geometric decay recurrences to
+/// synthesize 16-second loops in ~1–2 ms without per-sample transcendental calls.
 class CozySoundService {
   CozySoundService({
     this.sfxEnabled = true,
@@ -37,66 +40,63 @@ class CozySoundService {
   int _poolCursor = 0;
   AudioPlayer? _bgmPlayer;
 
-  final Map<SimEventType, Uint8List> _cachedSfx = <SimEventType, Uint8List>{};
-  final Map<BgmTrack, Uint8List> _cachedBgm = <BgmTrack, Uint8List>{};
+  // Static process-wide caches so WAV synthesis happens at most once per track/SFX.
+  static final Map<SimEventType, Uint8List> _cachedSfx =
+      <SimEventType, Uint8List>{};
+  static final Map<BgmTrack, Uint8List> _cachedBgm = <BgmTrack, Uint8List>{};
 
   void initialize() {
     if (_initialized) return;
     _initialized = true;
+    if (_cachedSfx.isNotEmpty) return;
 
-    _cachedSfx[SimEventType.dig] = _buildNotesWav(
-      const <_Note>[_Note(185, 0.055, 0.28), _Note(145, 0.065, 0.22)],
-    );
-    _cachedSfx[SimEventType.plant] = _buildNotesWav(
-      const <_Note>[_Note(440, 0.055, 0.24), _Note(587.33, 0.08, 0.26)],
-    );
-    _cachedSfx[SimEventType.water] = _buildNotesWav(
-      const <_Note>[
-        _Note(523.25, 0.045, 0.22),
-        _Note(659.25, 0.055, 0.24),
-        _Note(783.99, 0.07, 0.20),
-      ],
-    );
-    _cachedSfx[SimEventType.refill] = _buildNotesWav(
-      const <_Note>[
-        _Note(392.0, 0.05, 0.24),
-        _Note(523.25, 0.06, 0.26),
-        _Note(659.25, 0.07, 0.26),
-        _Note(783.99, 0.09, 0.24),
-      ],
-    );
-    _cachedSfx[SimEventType.compost] = _buildNotesWav(
-      const <_Note>[_Note(493.88, 0.06, 0.24), _Note(739.99, 0.10, 0.25)],
-    );
-    _cachedSfx[SimEventType.harvest] = _buildNotesWav(
-      const <_Note>[_Note(523.25, 0.06, 0.28), _Note(659.25, 0.11, 0.30)],
-    );
-    _cachedSfx[SimEventType.coinsEarned] = _buildNotesWav(
-      const <_Note>[_Note(880.0, 0.055, 0.25), _Note(1174.66, 0.12, 0.28)],
-    );
-    _cachedSfx[SimEventType.shopPurchase] = _buildNotesWav(
-      const <_Note>[
-        _Note(587.33, 0.06, 0.25),
-        _Note(783.99, 0.07, 0.26),
-        _Note(987.77, 0.11, 0.26),
-      ],
-    );
-    _cachedSfx[SimEventType.trophyUnlocked] = _buildNotesWav(
-      const <_Note>[
-        _Note(523.25, 0.08, 0.30),
-        _Note(659.25, 0.08, 0.30),
-        _Note(783.99, 0.09, 0.32),
-        _Note(1046.50, 0.20, 0.34),
-      ],
-    );
+    _cachedSfx[SimEventType.dig] = _buildNotesWav(const <_Note>[
+      _Note(185, 0.055, 0.28),
+      _Note(145, 0.065, 0.22),
+    ]);
+    _cachedSfx[SimEventType.plant] = _buildNotesWav(const <_Note>[
+      _Note(440, 0.055, 0.24),
+      _Note(587.33, 0.08, 0.26),
+    ]);
+    _cachedSfx[SimEventType.water] = _buildNotesWav(const <_Note>[
+      _Note(523.25, 0.045, 0.22),
+      _Note(659.25, 0.055, 0.24),
+      _Note(783.99, 0.07, 0.20),
+    ]);
+    _cachedSfx[SimEventType.refill] = _buildNotesWav(const <_Note>[
+      _Note(392.0, 0.05, 0.24),
+      _Note(523.25, 0.06, 0.26),
+      _Note(659.25, 0.07, 0.26),
+      _Note(783.99, 0.09, 0.24),
+    ]);
+    _cachedSfx[SimEventType.compost] = _buildNotesWav(const <_Note>[
+      _Note(493.88, 0.06, 0.24),
+      _Note(739.99, 0.10, 0.25),
+    ]);
+    _cachedSfx[SimEventType.harvest] = _buildNotesWav(const <_Note>[
+      _Note(523.25, 0.06, 0.28),
+      _Note(659.25, 0.11, 0.30),
+    ]);
+    _cachedSfx[SimEventType.coinsEarned] = _buildNotesWav(const <_Note>[
+      _Note(880.0, 0.055, 0.25),
+      _Note(1174.66, 0.12, 0.28),
+    ]);
+    _cachedSfx[SimEventType.shopPurchase] = _buildNotesWav(const <_Note>[
+      _Note(587.33, 0.06, 0.25),
+      _Note(783.99, 0.07, 0.26),
+      _Note(987.77, 0.11, 0.26),
+    ]);
+    _cachedSfx[SimEventType.trophyUnlocked] = _buildNotesWav(const <_Note>[
+      _Note(523.25, 0.08, 0.30),
+      _Note(659.25, 0.08, 0.30),
+      _Note(783.99, 0.09, 0.32),
+      _Note(1046.50, 0.20, 0.34),
+    ]);
     _cachedSfx[SimEventType.newDay] = _cachedSfx[SimEventType.trophyUnlocked]!;
   }
 
   /// Starts or switches the soothing background soundscape.
-  Future<void> applyBgmSettings({
-    BgmTrack? track,
-    double? volume,
-  }) async {
+  Future<void> applyBgmSettings({BgmTrack? track, double? volume}) async {
     if (track != null) bgmTrack = track;
     if (volume != null) bgmVolume = volume.clamp(0.0, 1.0);
 
@@ -174,7 +174,7 @@ class CozySoundService {
   }
 
   // ---------------------------------------------------------------------------
-  // Seamless Soothing Soundscape Synthesis
+  // Seamless Soothing Soundscape Synthesis (Phasor-Accelerated)
   // ---------------------------------------------------------------------------
 
   /// Synthesizes (or returns cached) RIFF PCM WAV bytes for [track].
@@ -211,7 +211,7 @@ class CozySoundService {
       <double>[174.61, 220.00, 261.63, 329.63], // Bar 5 overlap = Bar 1!
     ];
 
-    // 1. Warm breathing pad chords (4.0s per bar, gentle raised-cosine bar envelope)
+    // 1. Warm breathing pad chords (phasor-rotated per voice + window phasor)
     for (var bar = 0; bar < chords.length; bar++) {
       final barStart = bar * 4.0;
       if (barStart >= totalSec) break;
@@ -222,18 +222,37 @@ class CozySoundService {
           .round();
       final span = math.max(1, endIdx - startIdx);
 
-      for (var i = startIdx; i < endIdx; i++) {
-        final t = i / _sampleRate;
-        final win = 0.5 - 0.5 * math.cos(2.0 * math.pi * (i - startIdx) / span);
-        var sum = 0.0;
-        for (final freq in chord) {
-          sum += math.sin(2.0 * math.pi * freq * t);
+      final winAngleStep = 2.0 * math.pi / span;
+      final winCosStep = math.cos(winAngleStep);
+      final winSinStep = math.sin(winAngleStep);
+
+      for (final freq in chord) {
+        final omega = 2.0 * math.pi * freq / _sampleRate;
+        final cosStep = math.cos(omega);
+        final sinStep = math.sin(omega);
+        final t0 = startIdx / _sampleRate;
+        var s = math.sin(2.0 * math.pi * freq * t0);
+        var c = math.cos(2.0 * math.pi * freq * t0);
+
+        var winC = 1.0;
+        var winS = 0.0;
+
+        for (var i = startIdx; i < endIdx; i++) {
+          final win = 0.5 - 0.5 * winC;
+          raw[i] += s * 0.032 * win;
+
+          final nextS = s * cosStep + c * sinStep;
+          c = c * cosStep - s * sinStep;
+          s = nextS;
+
+          final nextWinC = winC * winCosStep - winS * winSinStep;
+          winS = winS * winCosStep + winC * winSinStep;
+          winC = nextWinC;
         }
-        raw[i] += sum * 0.032 * win;
       }
     }
 
-    // 2. Soft fingerpicked nylon arpeggio notes (warm fundamental + quick-damping 2nd harmonic)
+    // 2. Soft fingerpicked nylon arpeggio notes
     const pattern = <int>[0, 2, 1, 3, 2, 1, 3, 2];
     const stepSec = 0.5;
     final totalSteps = (totalSec / stepSec).floor();
@@ -241,7 +260,6 @@ class CozySoundService {
       final bar = (step ~/ 8) % 4;
       final noteFreq = chords[bar][pattern[step % pattern.length]] * 2.0;
       final noteStartSec = step * stepSec;
-      // Leave quiet breathing rests on steps 6 & 7 of odd bars
       if (bar.isOdd && step % 8 >= 6) continue;
 
       _mixPluckedWarmNote(
@@ -262,7 +280,11 @@ class CozySoundService {
       raw[i] += lp * 0.035;
     }
 
-    return _encodeCrossfadedLoopWav(raw, loopSec: loopSec, overlapSec: overlapSec);
+    return _encodeCrossfadedLoopWav(
+      raw,
+      loopSec: loopSec,
+      overlapSec: overlapSec,
+    );
   }
 
   /// 16-second soothing meadow breeze with gentle pentatonic wind-chimes & bird calls.
@@ -274,19 +296,35 @@ class CozySoundService {
     final raw = Float64List(totalSamples);
     final rng = math.Random(202);
 
-    // Dual-stage low-pass warm breeze modulated by slow breathing LFO
+    // Dual-stage low-pass warm breeze modulated by slow breathing LFO phasors
     var lp1 = 0.0;
     var lp2 = 0.0;
+    final lfo1Step = 2.0 * math.pi / (8.0 * _sampleRate);
+    final lfo1Cos = math.cos(lfo1Step);
+    final lfo1Sin = math.sin(lfo1Step);
+    var s1 = 0.0;
+    var c1 = 1.0;
+
+    final lfo2Step = 2.0 * math.pi / (5.333 * _sampleRate);
+    final lfo2Cos = math.cos(lfo2Step);
+    final lfo2Sin = math.sin(lfo2Step);
+    var s2 = 0.0;
+    var c2 = 1.0;
+
     for (var i = 0; i < totalSamples; i++) {
-      final t = i / _sampleRate;
       final white = rng.nextDouble() * 2.0 - 1.0;
       lp1 = lp1 * 0.94 + white * 0.06;
       lp2 = lp2 * 0.95 + lp1 * 0.05;
-      final breezeSwell =
-          0.58 +
-          0.25 * math.sin(2.0 * math.pi * (t / 8.0)) +
-          0.17 * math.cos(2.0 * math.pi * (t / 5.333));
+      final breezeSwell = 0.58 + 0.25 * s1 + 0.17 * c2;
       raw[i] += lp2 * 0.34 * breezeSwell;
+
+      final nextS1 = s1 * lfo1Cos + c1 * lfo1Sin;
+      c1 = c1 * lfo1Cos - s1 * lfo1Sin;
+      s1 = nextS1;
+
+      final nextS2 = s2 * lfo2Cos + c2 * lfo2Sin;
+      c2 = c2 * lfo2Cos - s2 * lfo2Sin;
+      s2 = nextS2;
     }
 
     // Soft distant wooden wind-chime / songbird flute notes (F major pentatonic)
@@ -312,7 +350,11 @@ class CozySoundService {
       );
     }
 
-    return _encodeCrossfadedLoopWav(raw, loopSec: loopSec, overlapSec: overlapSec);
+    return _encodeCrossfadedLoopWav(
+      raw,
+      loopSec: loopSec,
+      overlapSec: overlapSec,
+    );
   }
 
   /// 16-second warm lo-fi garden sunshower raindrop patter.
@@ -331,8 +373,7 @@ class CozySoundService {
       final w = rng.nextDouble() * 2.0 - 1.0;
       brown = (brown * 0.982 + w * 0.018).clamp(-1.0, 1.0);
       softRain = softRain * 0.84 + w * 0.16;
-      final muffled = softRain * 0.045 + brown * 0.18;
-      raw[i] += muffled;
+      raw[i] += softRain * 0.045 + brown * 0.18;
     }
 
     // Gentle individual leaf-droplet patters
@@ -348,7 +389,11 @@ class CozySoundService {
       );
     }
 
-    return _encodeCrossfadedLoopWav(raw, loopSec: loopSec, overlapSec: overlapSec);
+    return _encodeCrossfadedLoopWav(
+      raw,
+      loopSec: loopSec,
+      overlapSec: overlapSec,
+    );
   }
 
   void _mixPluckedWarmNote(
@@ -363,20 +408,47 @@ class CozySoundService {
     final endIdx = math.min(buffer.length, startIdx + count);
     final attackSamples = math.max(1, (0.022 * _sampleRate).round());
 
+    final omega = 2.0 * math.pi * freqHz / _sampleRate;
+    final cosStep = math.cos(omega);
+    final sinStep = math.sin(omega);
+    var s = 0.0;
+    var c = 1.0;
+
+    final decayFundStep = math.exp(-2.8 / count);
+    final decayHarmStep = math.exp(-6.5 / count);
+    var decayFund = 1.0;
+    var decayHarm = 1.0;
+
+    final atkStep = math.pi / attackSamples;
+    final atkCosStep = math.cos(atkStep);
+    final atkSinStep = math.sin(atkStep);
+    var atkC = 1.0;
+    var atkS = 0.0;
+
     for (var i = startIdx; i < endIdx; i++) {
       final local = i - startIdx;
-      final t = local / _sampleRate;
-      final attack = local < attackSamples
-          ? 0.5 - 0.5 * math.cos(math.pi * local / attackSamples)
-          : 1.0;
-      final decayFund = math.exp(-2.8 * (local / count));
-      final decayHarm = math.exp(-6.5 * (local / count));
+      double attack;
+      if (local < attackSamples) {
+        attack = 0.5 - 0.5 * atkC;
+        final nextAtkC = atkC * atkCosStep - atkS * atkSinStep;
+        atkS = atkS * atkCosStep + atkC * atkSinStep;
+        atkC = nextAtkC;
+      } else {
+        attack = 1.0;
+      }
+
+      // Double-angle identity: sin(2*theta) = 2 * sin(theta) * cos(theta)
+      final sin2 = 2.0 * s * c;
       final sample =
-          (0.84 * math.sin(2.0 * math.pi * freqHz * t) * decayFund +
-              0.16 * math.sin(4.0 * math.pi * freqHz * t) * decayHarm) *
-          attack *
-          amplitude;
+          (0.84 * s * decayFund + 0.16 * sin2 * decayHarm) * attack * amplitude;
       buffer[i] += sample;
+
+      final nextS = s * cosStep + c * sinStep;
+      c = c * cosStep - s * sinStep;
+      s = nextS;
+
+      decayFund *= decayFundStep;
+      decayHarm *= decayHarmStep;
     }
   }
 
@@ -389,15 +461,20 @@ class CozySoundService {
     final overlapSamples = (overlapSec * _sampleRate).round();
     final out = Float64List(loopSamples);
 
-    for (var i = 0; i < loopSamples; i++) {
-      if (i < overlapSamples) {
-        // Raised-cosine blend from tail `raw[loopSamples + i]` -> head `raw[i]`
-        final w = 0.5 - 0.5 * math.cos(math.pi * i / overlapSamples);
-        out[i] = w * raw[i] + (1.0 - w) * raw[loopSamples + i];
-      } else {
-        out[i] = raw[i];
-      }
+    final blendStep = math.pi / overlapSamples;
+    final blendCosStep = math.cos(blendStep);
+    final blendSinStep = math.sin(blendStep);
+    var blendC = 1.0;
+    var blendS = 0.0;
+
+    for (var i = 0; i < overlapSamples; i++) {
+      final w = 0.5 - 0.5 * blendC;
+      out[i] = w * raw[i] + (1.0 - w) * raw[loopSamples + i];
+      final nextC = blendC * blendCosStep - blendS * blendSinStep;
+      blendS = blendS * blendCosStep + blendC * blendSinStep;
+      blendC = nextC;
     }
+    out.setRange(overlapSamples, loopSamples, raw, overlapSamples);
 
     return _floatBufferToWav(out);
   }
@@ -409,29 +486,43 @@ class CozySoundService {
     }
     final out = Float64List(totalSamples);
     var cursor = 0;
+    final invAttackSamples = 1.0 / (_sampleRate * 0.008);
+
     for (final note in notes) {
       final count = (note.durationSec * _sampleRate).round();
+      final invCount = 1.0 / count;
+      final omega = 2.0 * math.pi * note.freqHz / _sampleRate;
+      final cosStep = math.cos(omega);
+      final sinStep = math.sin(omega);
+      var s = 0.0;
+      var c = 1.0;
+
       for (var i = 0; i < count; i++) {
-        final t = i / _sampleRate;
-        final attack = (i / (_sampleRate * 0.008)).clamp(0.0, 1.0);
-        final decay = math.pow(1.0 - (i / count), 1.45).toDouble();
+        final attack = (i * invAttackSamples).clamp(0.0, 1.0);
+        final rem = 1.0 - (i * invCount);
+        // Fast approximation of rem^1.45 using rem * sqrt(rem) (= rem^1.5)
+        final decay = rem * math.sqrt(rem);
         final env = attack * decay * note.amplitude;
-        out[cursor++] =
-            (0.82 * math.sin(2.0 * math.pi * note.freqHz * t) +
-                0.18 * math.sin(4.0 * math.pi * note.freqHz * t)) *
-            env;
+        final sin2 = 2.0 * s * c;
+        out[cursor++] = (0.82 * s + 0.18 * sin2) * env;
+
+        final nextS = s * cosStep + c * sinStep;
+        c = c * cosStep - s * sinStep;
+        s = nextS;
       }
     }
     return _floatBufferToWav(out);
   }
 
   Uint8List _floatBufferToWav(Float64List samples) {
-    final dataSize = samples.length * 2;
-    final buffer = ByteData(44 + dataSize);
+    final numSamples = samples.length;
+    final dataSize = numSamples * 2;
+    final bytes = Uint8List(44 + dataSize);
+    final buffer = ByteData.sublistView(bytes);
 
     void writeAscii(int offset, String s) {
       for (var i = 0; i < s.length; i++) {
-        buffer.setUint8(offset + i, s.codeUnitAt(i));
+        bytes[offset + i] = s.codeUnitAt(i);
       }
     }
 
@@ -449,11 +540,24 @@ class CozySoundService {
     writeAscii(36, 'data');
     buffer.setUint32(40, dataSize, Endian.little);
 
-    for (var i = 0; i < samples.length; i++) {
-      final pcm = (samples[i].clamp(-1.0, 1.0) * 32767.0).round();
-      buffer.setInt16(44 + i * 2, pcm, Endian.little);
+    if (Endian.host == Endian.little) {
+      final pcmView = Int16List.sublistView(bytes, 44);
+      for (var i = 0; i < numSamples; i++) {
+        var v = samples[i];
+        if (v > 1.0) {
+          v = 1.0;
+        } else if (v < -1.0) {
+          v = -1.0;
+        }
+        pcmView[i] = (v * 32767.0).round();
+      }
+    } else {
+      for (var i = 0; i < numSamples; i++) {
+        final pcm = (samples[i].clamp(-1.0, 1.0) * 32767.0).round();
+        buffer.setInt16(44 + i * 2, pcm, Endian.little);
+      }
     }
-    return buffer.buffer.asUint8List();
+    return bytes;
   }
 }
 

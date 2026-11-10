@@ -4,6 +4,7 @@ import '../../domain/models/catalog.dart';
 import '../../domain/models/market_state.dart';
 import '../theme/solville_theme.dart';
 import '../view_models/solville_controller.dart';
+import '../widgets/solville_dialog_shell.dart';
 
 /// Town Market Forecast, Pricing Strategy, Daily Village Request & Barn Storage.
 class MarketAndBarnModal extends StatelessWidget {
@@ -21,187 +22,206 @@ class MarketAndBarnModal extends StatelessWidget {
         final charmPct = (state.charmBonus * 100).round();
         final req = market.dailyRequest;
 
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.all(16),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 700, maxHeight: 590),
-            child: Container(
-              decoration: SolvilleTheme.panelDecoration(
-                color: SolvilleTheme.parchment,
-                radius: 24,
-              ),
-              child: Column(
-                children: <Widget>[
-                  // Header
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 14, 12, 8),
-                    child: Row(
-                      children: <Widget>[
-                        const Text('🏪', style: TextStyle(fontSize: 24)),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Market Forecast & Barn (Day ${state.day})',
-                            style: const TextStyle(
-                              color: SolvilleTheme.timberDark,
-                              fontSize: 19,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ),
-                        if (charmPct > 0)
-                          Chip(
-                            backgroundColor: const Color(0xFFFCE4EC),
-                            label: Text('🌸 +$charmPct% Charm'),
-                          ),
-                        IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.close_rounded),
-                        ),
-                      ],
-                    ),
+        return SolvilleDialogShell(
+          emoji: '🏪',
+          title: 'Market Forecast & Barn (Day ${state.day})',
+          maxWidth: 700,
+          maxHeight: 590,
+          trailing: charmPct > 0
+              ? Chip(
+                  backgroundColor: const Color(0xFFFCE4EC),
+                  label: Text('🌸 +$charmPct% Charm'),
+                )
+              : null,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+            children: <Widget>[
+              // Daily Village Request Card
+              if (req != null)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: req.isCompleted
+                        ? const Color(0xFFE8F5E9)
+                        : const Color(0xFFFFF8E1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: SolvilleTheme.timberBorder),
                   ),
-
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                      children: <Widget>[
-                        // Daily Village Request Card
-                        if (req != null)
-                          Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: req.isCompleted
-                                  ? const Color(0xFFE8F5E9)
-                                  : const Color(0xFFFFF8E1),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: SolvilleTheme.timberBorder,
-                              ),
-                            ),
-                            child: Row(
-                              children: <Widget>[
-                                Text(
-                                  req.isCompleted ? '✅' : '💌',
-                                  style: const TextStyle(fontSize: 26),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      Text(
-                                        'Daily Village Order — ${req.villagerName}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w800,
-                                          color: SolvilleTheme.timberDark,
-                                        ),
-                                      ),
-                                      Text(
-                                        req.isCompleted
-                                            ? 'Completed today! Bonus +${req.bonusReward}☀️ earned!'
-                                            : 'Sell ${req.requiredCount} crates of ${SolvilleCatalog.productEmoji(req.product)} ${SolvilleCatalog.productName(req.product)} (${req.deliveredCount}/${req.requiredCount}) for +${req.bonusReward}☀️ bonus!',
-                                        style: const TextStyle(fontSize: 13),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                        // Pricing Stance Picker
-                        const Text(
-                          'Market Stall Pricing Strategy',
-                          style: TextStyle(
-                            color: SolvilleTheme.timberDark,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 6,
-                          children: <Widget>[
-                            for (final stance in PricingStance.values)
-                              ChoiceChip(
-                                selected: market.pricing == stance,
-                                selectedColor: const Color(0xFFFFE082),
-                                label: Text(stance.label),
-                                onSelected: (_) =>
-                                    controller.setPricingStance(stance),
-                              ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 14),
-
-                        // Stall & Barn Summary
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Row(
+                    children: <Widget>[
+                      Text(
+                        req.isCompleted ? '✅' : '💌',
+                        style: const TextStyle(fontSize: 26),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             Text(
-                              'Stall Counter (${market.stallCrates.length}/${MarketState.maxStallSlots}) • Barn (${state.totalBarnCrates} stored)',
+                              'Daily Village Order — ${req.villagerName}',
                               style: const TextStyle(
-                                color: SolvilleTheme.timberDark,
                                 fontWeight: FontWeight.w800,
+                                color: SolvilleTheme.timberDark,
                               ),
                             ),
-                            if (state.totalBarnCrates > 0)
-                              TextButton.icon(
-                                onPressed: controller.stockAllBoomFromBarn,
-                                icon: const Icon(Icons.local_fire_department),
-                                label: const Text('Stock Hot Goods'),
-                              ),
+                            Text(
+                              req.isCompleted
+                                  ? 'Completed today! Bonus +${req.bonusReward}☀️ earned!'
+                                  : 'Sell ${req.requiredCount} crates of ${SolvilleCatalog.productEmoji(req.product)} ${SolvilleCatalog.productName(req.product)} (${req.deliveredCount}/${req.requiredCount}) for +${req.bonusReward}☀️ bonus!',
+                              style: const TextStyle(fontSize: 13),
+                            ),
                           ],
                         ),
-                        if (market.stallCrates.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: <Widget>[
-                                for (final p in market.stallCrates)
-                                  Chip(
-                                    backgroundColor: SolvilleTheme.warmCream,
-                                    label: Text(
-                                      '${SolvilleCatalog.productEmoji(p)} ${market.unitPriceFor(p, charmBonus: state.charmBonus)}☀️',
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-
-                        const Divider(),
-                        const Text(
-                          'Today\'s Produce & Artisan Prices',
-                          style: TextStyle(
-                            color: SolvilleTheme.timberDark,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        for (final id in ProductId.values)
-                          _buildPriceRow(
-                            id: id,
-                            trend: market.trendFor(id),
-                            price: market.unitPriceFor(
-                              id,
-                              charmBonus: state.charmBonus,
-                            ),
-                            barnCount: state.barnStock[id] ?? 0,
-                          ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
+                ),
+
+              // Daily Sunny Surge Card (+25% Market Boost & Instant Sunshower)
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: market.sunnySurgeActive
+                      ? const Color(0xFFE8F5E9)
+                      : const Color(0xFFE1F5FE),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: SolvilleTheme.timberBorder),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    Text(
+                      market.sunnySurgeActive ? '✨' : '🌦️',
+                      style: const TextStyle(fontSize: 24),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            market.sunnySurgeActive
+                                ? 'Sunny Surge Active Today! (+25% All Market Prices)'
+                                : 'Daily Sunny Surge (+25% Market Boost & 100% Hydration)',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: SolvilleTheme.timberDark,
+                              fontSize: 13,
+                            ),
+                          ),
+                          Text(
+                            market.sunnySurgeActive
+                                ? 'All garden plots are hydrated and townsfolk pay +25% for every crate today!'
+                                : (controller.entitlements.isPermanentSupporter
+                                      ? 'Included free with your Sun Pass!'
+                                      : 'Watch 1 short ad (or unlock Sun Pass for free daily surges)!'),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton.tonal(
+                      onPressed: controller.canClaimSunnySurgeToday
+                          ? () => controller.activateSunnySurge()
+                          : null,
+                      child: Text(
+                        market.sunnySurgeActive
+                            ? 'Active ✓'
+                            : (controller.entitlements.isPermanentSupporter
+                                  ? 'Activate Free'
+                                  : 'Watch Ad'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Pricing Stance Picker
+              const Text(
+                'Market Stall Pricing Strategy',
+                style: TextStyle(
+                  color: SolvilleTheme.timberDark,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: <Widget>[
+                  for (final stance in PricingStance.values)
+                    ChoiceChip(
+                      selected: market.pricing == stance,
+                      selectedColor: const Color(0xFFFFE082),
+                      label: Text(stance.label),
+                      onSelected: (_) => controller.setPricingStance(stance),
+                    ),
                 ],
               ),
-            ),
+
+              const SizedBox(height: 14),
+
+              // Stall & Barn Summary
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                  Text(
+                    'Stall Counter (${market.stallCrates.length}/${MarketState.maxStallSlots}) • Barn (${state.totalBarnCrates} stored)',
+                    style: const TextStyle(
+                      color: SolvilleTheme.timberDark,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  if (state.totalBarnCrates > 0)
+                    TextButton.icon(
+                      onPressed: controller.stockAllBoomFromBarn,
+                      icon: const Icon(Icons.local_fire_department),
+                      label: const Text('Stock Hot Goods'),
+                    ),
+                ],
+              ),
+              if (market.stallCrates.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: <Widget>[
+                      for (final p in market.stallCrates)
+                        Chip(
+                          backgroundColor: SolvilleTheme.warmCream,
+                          label: Text(
+                            '${SolvilleCatalog.productEmoji(p)} ${market.unitPriceFor(p, charmBonus: state.charmBonus)}☀️',
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+              const Divider(),
+              const Text(
+                'Today\'s Produce & Artisan Prices',
+                style: TextStyle(
+                  color: SolvilleTheme.timberDark,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              for (final id in ProductId.values)
+                _buildPriceRow(
+                  id: id,
+                  trend: market.trendFor(id),
+                  price: market.unitPriceFor(id, charmBonus: state.charmBonus),
+                  barnCount: state.barnStock[id] ?? 0,
+                ),
+            ],
           ),
         );
       },

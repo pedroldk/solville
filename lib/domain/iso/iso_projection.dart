@@ -17,11 +17,7 @@ class IsoProjection {
 
   /// Projects continuous grid coordinates `(gx, gy)` and elevation `gz` to 2D
   /// world coordinates `(wx, wy)`.
-  ({double x, double y}) gridToWorld(
-    double gx,
-    double gy, {
-    double gz = 0.0,
-  }) {
+  ({double x, double y}) gridToWorld(double gx, double gy, {double gz = 0.0}) {
     final wx = (gx - gy) * (tileWidth * 0.5);
     final wy = (gx + gy) * (tileHeight * 0.5) - gz * elevationScale;
     return (x: wx, y: wy);

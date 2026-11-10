@@ -50,7 +50,7 @@ class GridPos {
       other is GridPos && x == other.x && y == other.y;
 
   @override
-  int get hashCode => Object.hash(x, y);
+  int get hashCode => (y << 16) ^ (x & 0xFFFF);
 
   @override
   String toString() => 'GridPos($x, $y)';

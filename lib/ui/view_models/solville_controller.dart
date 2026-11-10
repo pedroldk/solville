@@ -5,8 +5,10 @@ import 'package:flutter/services.dart';
 
 import '../../data/repositories/save_game_repository.dart';
 import '../../data/services/cozy_sound_service.dart';
+import '../../data/services/monetization_service.dart';
 import '../../data/services/platform_achievement_service.dart';
 import '../../domain/models/catalog.dart';
+import '../../domain/models/entitlement_state.dart';
 import '../../domain/models/game_state.dart';
 import '../../domain/models/grid_pos.dart';
 import '../../domain/models/market_state.dart';
@@ -14,27 +16,51 @@ import '../../domain/models/tile_state.dart';
 import '../../domain/simulation/farm_simulation_engine.dart';
 
 /// Central MVVM controller coordinating the Flame isometric world, Flutter HUD
-/// overlays, persistence, soothing background ambience, and achievements.
+/// overlays, persistence, soothing background ambience, achievements, and
+/// cozy monetization (Sun Pass).
 class SolvilleController extends ChangeNotifier {
   SolvilleController({
     FarmSimulationEngine? engine,
     SaveGameRepository? saveRepository,
     CozySoundService? soundService,
     PlatformAchievementService? achievementService,
+    MonetizationService? monetizationService,
+    EntitlementState? initialEntitlements,
+    DateTime Function()? clock,
   }) : _engine = engine ?? FarmSimulationEngine(),
        _saveRepo = saveRepository ?? SaveGameRepository(),
        _sound = soundService ?? CozySoundService(),
-       _achievements = achievementService ?? PlatformAchievementService() {
+       _achievements = achievementService ?? PlatformAchievementService(),
+       _monetization = monetizationService ?? MonetizationService(),
+       _entitlements = initialEntitlements ?? const EntitlementState(),
+       _hasExplicitInitialEntitlements = initialEntitlements != null,
+       _clock = clock ?? DateTime.now {
     _state = _engine.createNewGame();
+    _wasSunPassActiveLastTick = isSunPassActive;
   }
 
   final FarmSimulationEngine _engine;
   final SaveGameRepository _saveRepo;
   final CozySoundService _sound;
   final PlatformAchievementService _achievements;
+  final MonetizationService _monetization;
+  final bool _hasExplicitInitialEntitlements;
+  final DateTime Function() _clock;
 
   late GameState _state;
   GameState get state => _state;
+
+  EntitlementState _entitlements;
+  EntitlementState get entitlements => _entitlements;
+
+  DateTime get nowUtc => _clock().toUtc();
+  bool get isSunPassActive => _entitlements.isSunPassActive(nowUtc);
+  bool get isMonetizationBusy => _monetization.isBusy;
+  bool get canClaimSunnySurgeToday =>
+      _entitlements.canClaimSunnySurgeOnDay(_state.day) &&
+      !_state.market.sunnySurgeActive;
+
+  late bool _wasSunPassActiveLastTick;
 
   GridPos? _hoveredTile;
   GridPos? get hoveredTile => _hoveredTile;
@@ -69,10 +95,22 @@ class SolvilleController extends ChangeNotifier {
   /// Optional UI hooks so clicking landmarks in the 2.5D world opens modals!
   VoidCallback? onRequestOpenMarketModal;
   VoidCallback? onRequestOpenHomesteadModal;
+  VoidCallback? onRequestOpenSunPassModal;
 
   Future<void> initialize() async {
     _achievements.initialize();
     _sound.initialize();
+
+    if (!_hasExplicitInitialEntitlements) {
+      _entitlements = await _saveRepo.loadEntitlementState();
+    }
+    _wasSunPassActiveLastTick = isSunPassActive;
+
+    unawaited(
+      _monetization.initialize(
+        onOwnedProductRestored: _handleOwnedProductRestored,
+      ),
+    );
 
     final audio = await _saveRepo.loadAudioSettings();
     _sound.sfxEnabled = audio.sfxEnabled;
@@ -82,11 +120,17 @@ class SolvilleController extends ChangeNotifier {
 
     final loaded = await _saveRepo.loadSave();
     if (loaded != null) {
-      _state = loaded;
+      _state = _engine.ensureMinimumIslandSize(loaded);
+      _ensureValidEquippedSelection();
+      if (_state.gridSize != loaded.gridSize) {
+        unawaited(_saveRepo.saveGame(_state));
+      }
       for (final trophyId in _state.unlockedTrophies) {
         _achievements.unlockTrophyById(trophyId);
       }
-      _showToast('Welcome back to Solville! (Day ${_state.day})');
+      _showToast(
+        'Welcome back to Solville! (Day ${_state.day} • ${_state.gridSize}×${_state.gridSize} Isle)',
+      );
     } else {
       _showToast(
         'Welcome to Solville! Tap plots 1–3x to combo-queue Dig → Sow → Water!',
@@ -121,7 +165,22 @@ class SolvilleController extends ChangeNotifier {
 
     if (_isPaused) return;
 
-    final result = _engine.tick(_state, dt);
+    final activeNow = isSunPassActive;
+    if (_wasSunPassActiveLastTick && !activeNow) {
+      _wasSunPassActiveLastTick = false;
+      _ensureValidEquippedSelection();
+      _showToast(
+        '☀️ Your Sun Pass timer ended! Watch 1 ad for +24h anytime.',
+      );
+    } else {
+      _wasSunPassActiveLastTick = activeNow;
+    }
+
+    final result = _engine.tick(
+      _state,
+      dt,
+      isSunPassActive: activeNow,
+    );
     _state = result.state;
     final hasEvents = result.events.isNotEmpty;
     _dispatchEvents(result.events);
@@ -162,7 +221,8 @@ class SolvilleController extends ChangeNotifier {
     final willHaveCrates =
         _state.farmer.carriedCrates.isNotEmpty ||
         _state.actionQueue.any(
-          (a) => a.kind == ActionKind.harvest || a.kind == ActionKind.pickupCrate,
+          (a) =>
+              a.kind == ActionKind.harvest || a.kind == ActionKind.pickupCrate,
         );
 
     if (tile.structure == StructureType.marketStall && !willHaveCrates) {
@@ -181,13 +241,7 @@ class SolvilleController extends ChangeNotifier {
 
     final prevQueueLen = _state.actionQueue.length;
     final result = _engine.enqueueTileTap(_state, pos);
-    _state = result.state;
-    _dispatchEvents(result.events);
-
-    if (_state.actionQueue.length > prevQueueLen) {
-      _triggerGentleHaptic();
-    }
-    notifyListeners();
+    _applyStep(result, haptic: result.state.actionQueue.length > prevQueueLen);
   }
 
   /// Shift+Drag row painting on PC/Steam.
@@ -204,17 +258,17 @@ class SolvilleController extends ChangeNotifier {
     if (_state.actionQueue.any((a) => a.target == pos)) return;
 
     final tile = _state.tileAt(pos);
-    if (tile.structure != StructureType.none &&
+    final allowStructureSweep =
+        _state.activeTool == ToolMode.remove && tile.structure.isRemovable;
+    if (!allowStructureSweep &&
+        tile.structure != StructureType.none &&
         tile.structure != StructureType.lemonTree &&
         tile.structure != StructureType.artisanPress &&
         tile.animal == null) {
       return;
     }
 
-    final result = _engine.enqueueTileTap(_state, pos);
-    _state = result.state;
-    _dispatchEvents(result.events);
-    notifyListeners();
+    _applyStep(_engine.enqueueTileTap(_state, pos), gestureAudio: false);
   }
 
   void handleTileSecondaryTap(GridPos pos) {
@@ -234,58 +288,57 @@ class SolvilleController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void queueAllReadyHarvests() {
-    notifyUserGestureForAudio();
-    final result = _engine.queueAllReadyHarvests(_state);
-    _state = result.state;
-    _dispatchEvents(result.events);
-    _triggerGentleHaptic();
-    notifyListeners();
+  void untillTile(GridPos pos) {
+    final prevLen = _state.actionQueue.length;
+    final result = _engine.enqueueUntillAt(_state, pos);
+    final added = result.state.actionQueue.length > prevLen;
+    if (added) {
+      _showToast(
+        '🌿 Queued restoring plot (${pos.x}, ${pos.y}) back to grass!',
+      );
+    }
+    _applyStep(result, haptic: added);
   }
 
-  void queueAllThirstyPlots() {
-    notifyUserGestureForAudio();
-    final result = _engine.queueAllThirstyPlots(_state);
-    _state = result.state;
-    _dispatchEvents(result.events);
-    _triggerGentleHaptic();
-    notifyListeners();
-  }
+  void expandIsle() => purchaseUpgrade(UpgradeTrack.farmExpansion);
 
-  void selectTool(ToolMode tool) {
-    notifyUserGestureForAudio();
-    _state = _engine.selectTool(_state, tool);
-    _triggerGentleHaptic();
-    notifyListeners();
-  }
+  void queueAllReadyHarvests() =>
+      _applyStep(_engine.queueAllReadyHarvests(_state), haptic: true);
+
+  void queueAllThirstyPlots() =>
+      _applyStep(_engine.queueAllThirstyPlots(_state), haptic: true);
+
+  void selectTool(ToolMode tool) =>
+      _applyState(_engine.selectTool(_state, tool), haptic: true);
 
   void selectSeed(ProductId seed) {
-    notifyUserGestureForAudio();
-    _state = _engine.selectSeed(_state, seed);
-    _triggerGentleHaptic();
-    notifyListeners();
+    if (SolvilleCatalog.isCropSunPassOnly(seed) && !isSunPassActive) {
+      _promptSunPassFor('${SolvilleCatalog.productName(seed)} seeds');
+      return;
+    }
+    _applyState(_engine.selectSeed(_state, seed), haptic: true);
   }
 
   void selectBuildItem(BuildItemType item) {
-    notifyUserGestureForAudio();
-    _state = _engine.selectBuildItem(_state, item);
-    _triggerGentleHaptic();
-    notifyListeners();
+    if (SolvilleCatalog.isBuildSunPassOnly(item) && !isSunPassActive) {
+      final name = SolvilleCatalog.buildItems[item]?.name ?? 'Structure';
+      _promptSunPassFor(name);
+      return;
+    }
+    _applyState(_engine.selectBuildItem(_state, item), haptic: true);
   }
 
-  void setPricingStance(PricingStance stance) {
-    _state = _engine.setPricingStance(_state, stance);
-    unawaited(_saveRepo.saveGame(_state));
-    notifyListeners();
-  }
+  void setPricingStance(PricingStance stance) => _applyState(
+    _engine.setPricingStance(_state, stance),
+    gestureAudio: false,
+    save: true,
+  );
 
-  void stockStallFromBarn(ProductId product) {
-    final result = _engine.moveBarnCrateToStall(_state, product);
-    _state = result.state;
-    _dispatchEvents(result.events);
-    unawaited(_saveRepo.saveGame(_state));
-    notifyListeners();
-  }
+  void stockStallFromBarn(ProductId product) => _applyStep(
+    _engine.moveBarnCrateToStall(_state, product),
+    gestureAudio: false,
+    save: true,
+  );
 
   void stockAllBoomFromBarn() {
     for (final entry in _state.barnStock.entries.toList()) {
@@ -303,29 +356,175 @@ class SolvilleController extends ChangeNotifier {
   }
 
   void unlockSeedLicense(ProductId cropId) {
-    final result = _engine.unlockSeedLicense(_state, cropId);
-    _state = result.state;
-    _dispatchEvents(result.events);
-    unawaited(_saveRepo.saveGame(_state));
-    notifyListeners();
+    if (SolvilleCatalog.isCropSunPassOnly(cropId) && !isSunPassActive) {
+      _promptSunPassFor('${SolvilleCatalog.productName(cropId)} license');
+      return;
+    }
+    _applyStep(
+      _engine.unlockSeedLicense(_state, cropId),
+      gestureAudio: false,
+      save: true,
+    );
   }
 
   void purchaseUpgrade(UpgradeTrack track) {
-    final result = _engine.purchaseUpgrade(_state, track);
-    _state = result.state;
-    _dispatchEvents(result.events);
-    unawaited(_saveRepo.saveGame(_state));
+    final currentTier = _state.upgradeTier(track);
+    if (SolvilleCatalog.isNextUpgradeSunPassOnly(track, currentTier) &&
+        !isSunPassActive) {
+      final nextDef = SolvilleCatalog.nextUpgradeFor(track, currentTier);
+      _promptSunPassFor(nextDef?.name ?? 'Upgrade');
+      return;
+    }
+    _applyStep(_engine.purchaseUpgrade(_state, track), save: true);
+  }
+
+  void openSunPassModal() {
+    notifyUserGestureForAudio();
+    onRequestOpenSunPassModal?.call();
     notifyListeners();
   }
 
-  void restToNextMorning() {
-    notifyUserGestureForAudio();
-    final result = _engine.advanceToNextMorning(_state);
-    _state = result.state;
-    _dispatchEvents(result.events);
-    unawaited(_saveRepo.saveGame(_state));
+  void _promptSunPassFor(String itemName) {
+    _showToast(
+      '☀️ $itemName is part of Sun Pass! Watch 1 ad for +24h (up to 48h) or unlock forever.',
+    );
+    onRequestOpenSunPassModal?.call();
     notifyListeners();
   }
+
+  void _ensureValidEquippedSelection() {
+    if (isSunPassActive) return;
+    var next = _state;
+    if (SolvilleCatalog.isCropSunPassOnly(next.selectedSeed)) {
+      next = next.copyWith(selectedSeed: ProductId.tomato);
+    }
+    if (SolvilleCatalog.isBuildSunPassOnly(next.selectedBuildItem)) {
+      next = next.copyWith(selectedBuildItem: BuildItemType.sprinklerRotary);
+    }
+    _state = next;
+  }
+
+  /// Watches 1 rewarded ad to grant +24 hours of Sun Pass access (stackable up to 48h).
+  Future<bool> watchAdForSunPass() async {
+    notifyUserGestureForAudio();
+    final ref = nowUtc;
+    if (!_entitlements.canStackAnotherAd(ref)) {
+      _showToast('☀️ Sun Pass is already topped up to the 48-hour maximum!');
+      notifyListeners();
+      return false;
+    }
+    notifyListeners();
+    final res = await _monetization.showRewardedAd();
+    if (!res.isSuccess) {
+      _showToast('Ad cancelled or unavailable right now.');
+      notifyListeners();
+      return false;
+    }
+
+    final updatedRef = nowUtc;
+    _entitlements = _entitlements.grantRewardedAdPass(updatedRef);
+    _wasSunPassActiveLastTick = true;
+    await _saveRepo.saveEntitlementState(_entitlements);
+    unawaited(_sound.playForEvent(SimEventType.shopPurchase));
+    _showToast(
+      '☀️ Sun Pass unlocked! (${_entitlements.formatRemainingTime(updatedRef)} active)',
+    );
+    notifyListeners();
+    return true;
+  }
+
+  /// Activates the daily "Sunny Surge" (Sunshower 100% hydration + +25% Market Boost).
+  /// Free for Annual / Lifetime supporters; requires 1 rewarded ad for free players.
+  Future<bool> activateSunnySurge() async {
+    notifyUserGestureForAudio();
+    if (!canClaimSunnySurgeToday) {
+      _showToast('🌦️ Sunny Surge is already active for Day ${_state.day}!');
+      notifyListeners();
+      return false;
+    }
+
+    if (!_entitlements.isPermanentSupporter) {
+      notifyListeners();
+      final adRes = await _monetization.showRewardedAd();
+      if (!adRes.isSuccess) {
+        _showToast('Ad cancelled — Sunny Surge was not activated.');
+        notifyListeners();
+        return false;
+      }
+    }
+
+    final step = _engine.activateSunnySurge(_state);
+    _entitlements = _entitlements.copyWith(lastSunnySurgeDay: _state.day);
+    await _saveRepo.saveEntitlementState(_entitlements);
+    _applyStep(step, gestureAudio: false, haptic: true, save: true);
+    return true;
+  }
+
+  /// Purchases the 2,99€/year Annual Sun Pass subscription.
+  Future<bool> purchaseAnnualPass() async {
+    notifyUserGestureForAudio();
+    notifyListeners();
+    final res = await _monetization.purchaseAnnualPass();
+    if (!res.isSuccess) {
+      _showToast('Purchase cancelled.');
+      notifyListeners();
+      return false;
+    }
+    _entitlements = _entitlements.copyWith(hasAnnualPass: true);
+    _wasSunPassActiveLastTick = true;
+    await _saveRepo.saveEntitlementState(_entitlements);
+    unawaited(_sound.playForEvent(SimEventType.trophyUnlocked));
+    _showToast('🌻 Thank you! Annual Sun Pass (2,99€/yr) is now active!');
+    notifyListeners();
+    return true;
+  }
+
+  /// Purchases the 4,99€ one-time Lifetime Cozy Edition.
+  Future<bool> purchaseLifetimePass() async {
+    notifyUserGestureForAudio();
+    notifyListeners();
+    final res = await _monetization.purchaseLifetimePass();
+    if (!res.isSuccess) {
+      _showToast('Purchase cancelled.');
+      notifyListeners();
+      return false;
+    }
+    _entitlements = _entitlements.copyWith(hasLifetimePass: true);
+    _wasSunPassActiveLastTick = true;
+    await _saveRepo.saveEntitlementState(_entitlements);
+    unawaited(_sound.playForEvent(SimEventType.trophyUnlocked));
+    _showToast(
+      '👑 Thank you! Solville Lifetime Cozy Edition is yours forever!',
+    );
+    notifyListeners();
+    return true;
+  }
+
+  /// Restores previous Annual or Lifetime purchases from the platform store.
+  Future<void> restorePurchases() async {
+    notifyUserGestureForAudio();
+    notifyListeners();
+    final restored = await _monetization.restorePurchases();
+    final hasAnnual = restored.contains(EntitlementState.annualPassProductId);
+    final hasLifetime = restored.contains(
+      EntitlementState.lifetimePassProductId,
+    );
+    if (hasAnnual || hasLifetime) {
+      _entitlements = _entitlements.copyWith(
+        hasAnnualPass: _entitlements.hasAnnualPass || hasAnnual,
+        hasLifetimePass: _entitlements.hasLifetimePass || hasLifetime,
+      );
+      _wasSunPassActiveLastTick = true;
+      await _saveRepo.saveEntitlementState(_entitlements);
+      _showToast('✅ Restored your Solville Sun Pass purchases!');
+    } else {
+      _showToast('No previous store purchases found for this account.');
+    }
+    notifyListeners();
+  }
+
+  void restToNextMorning() =>
+      _applyStep(_engine.advanceToNextMorning(_state), save: true);
 
   void togglePause() {
     _isPaused = !_isPaused;
@@ -391,6 +590,33 @@ class SolvilleController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _applyState(
+    GameState nextState, {
+    bool gestureAudio = true,
+    bool haptic = false,
+    bool save = false,
+  }) {
+    if (gestureAudio) notifyUserGestureForAudio();
+    _state = nextState;
+    if (haptic) _triggerGentleHaptic();
+    if (save) unawaited(_saveRepo.saveGame(_state));
+    notifyListeners();
+  }
+
+  void _applyStep(
+    SimulationStepResult result, {
+    bool gestureAudio = true,
+    bool haptic = false,
+    bool save = false,
+  }) {
+    if (gestureAudio) notifyUserGestureForAudio();
+    _state = result.state;
+    _dispatchEvents(result.events);
+    if (haptic) _triggerGentleHaptic();
+    if (save) unawaited(_saveRepo.saveGame(_state));
+    notifyListeners();
+  }
+
   void _dispatchEvents(List<SimEvent> events) {
     for (final event in events) {
       onVisualSimEvent?.call(event);
@@ -420,8 +646,26 @@ class SolvilleController extends ChangeNotifier {
     }
   }
 
+  void _handleOwnedProductRestored(String productId) {
+    var updated = _entitlements;
+    if (productId == EntitlementState.annualPassProductId &&
+        !updated.hasAnnualPass) {
+      updated = updated.copyWith(hasAnnualPass: true);
+    } else if (productId == EntitlementState.lifetimePassProductId &&
+        !updated.hasLifetimePass) {
+      updated = updated.copyWith(hasLifetimePass: true);
+    } else {
+      return;
+    }
+    _entitlements = updated;
+    _wasSunPassActiveLastTick = true;
+    unawaited(_saveRepo.saveEntitlementState(_entitlements));
+    notifyListeners();
+  }
+
   @override
   void dispose() {
+    _monetization.dispose();
     unawaited(_saveRepo.saveGame(_state));
     unawaited(_sound.dispose());
     super.dispose();

@@ -21,6 +21,46 @@ void main() {
     });
 
     test(
+      'starts with an 11x11 starter isle and syncs grid size with expansion tier',
+      () {
+        expect(state.gridSize, equals(11));
+        expect(state.tiles.length, equals(11 * 11));
+
+        // Simulate an oversized 22x22 tier-0 save and verify it trims unused meadow back to 11x11
+        final oversizedTiles = List<TileState>.generate(
+          22 * 22,
+          (i) => i < 22
+              ? const TileState(ground: GroundType.cobbleLane)
+              : const TileState(ground: GroundType.grass),
+        );
+        oversizedTiles[3 * 22 + 4] = const TileState(
+          ground: GroundType.soil,
+          moisture: 0.9,
+          crop: PlantedCrop(
+            cropId: ProductId.tomato,
+            growth: 0.8,
+            harvestsLeft: 3,
+          ),
+        );
+        final oversizedState = state.copyWith(
+          gridSize: 22,
+          tiles: oversizedTiles,
+        );
+        final synced = engine.ensureMinimumIslandSize(oversizedState);
+
+        expect(synced.gridSize, equals(11));
+        expect(
+          synced.tileAt(const GridPos(4, 3)).crop?.cropId,
+          ProductId.tomato,
+        );
+        expect(
+          synced.tileAt(const GridPos(10, 0)).ground,
+          GroundType.cobbleLane,
+        );
+      },
+    );
+
+    test(
       'supports Alice Greenfingers 3-click combo queue (Dig -> Sow -> Water)',
       () {
         const target = GridPos(7, 4); // Starts as grass
@@ -48,6 +88,37 @@ void main() {
         expect(updatedTile.moisture, greaterThan(0.80));
       },
     );
+
+    test('untills empty or planted soil blocks cleanly back into grass', () {
+      const emptySoil = GridPos(6, 3);
+      const plantedSoil = GridPos(4, 3);
+
+      // Enrich empty soil first to verify compost/moisture reset when untilled
+      final enrichedTiles = List<TileState>.from(state.tiles);
+      enrichedTiles[emptySoil.y * state.gridSize + emptySoil.x] = state
+          .tileAt(emptySoil)
+          .copyWith(fertilized: true, moisture: 0.9);
+      state = state.copyWith(tiles: enrichedTiles, activeTool: ToolMode.remove);
+
+      // Queue untilling via ToolMode.remove on empty soil + enqueueUntillAt on planted soil
+      state = engine.enqueueTileTap(state, emptySoil).state;
+      state = engine.enqueueUntillAt(state, plantedSoil).state;
+      expect(state.actionQueue.length, equals(2));
+
+      for (var i = 0; i < 80; i++) {
+        state = engine.tick(state, 0.1).state;
+      }
+
+      expect(state.actionQueue, isEmpty);
+      final restoredEmpty = state.tileAt(emptySoil);
+      expect(restoredEmpty.ground, equals(GroundType.grass));
+      expect(restoredEmpty.moisture, equals(0.0));
+      expect(restoredEmpty.fertilized, isFalse);
+
+      final restoredPlanted = state.tileAt(plantedSoil);
+      expect(restoredPlanted.ground, equals(GroundType.grass));
+      expect(restoredPlanted.crop, isNull);
+    });
 
     test(
       'automatically detours to Stone Well when watering with empty can',
@@ -103,16 +174,16 @@ void main() {
         const pressPos = GridPos(8, 4);
 
         final updatedTiles = List<TileState>.from(state.tiles);
-        updatedTiles[lemonPos.y * state.gridSize + lemonPos.x] =
-            const TileState(
-              ground: GroundType.grass,
-              structure: StructureType.lemonTree,
-            );
-        updatedTiles[pressPos.y * state.gridSize + pressPos.x] =
-            const TileState(
-              ground: GroundType.stonePath,
-              structure: StructureType.artisanPress,
-            );
+        updatedTiles[lemonPos.y * state.gridSize +
+            lemonPos.x] = const TileState(
+          ground: GroundType.grass,
+          structure: StructureType.lemonTree,
+        );
+        updatedTiles[pressPos.y * state.gridSize +
+            pressPos.x] = const TileState(
+          ground: GroundType.stonePath,
+          structure: StructureType.artisanPress,
+        );
 
         state = state.copyWith(
           tiles: updatedTiles,
@@ -137,20 +208,25 @@ void main() {
     );
 
     test(
-      'purchases upgrades, expands farm grid, and round-trips JSON cleanly',
+      'expands isle repeatedly with coins across multiple tiers and round-trips JSON',
       () {
-        state = state.copyWith(coins: 1000);
+        state = state.copyWith(coins: 5000);
         state = engine.purchaseUpgrade(state, UpgradeTrack.crateStacker).state;
         state = engine.purchaseUpgrade(state, UpgradeTrack.farmExpansion).state;
-
-        expect(state.maxCarryCrates, equals(2));
         expect(state.gridSize, equals(14));
+
+        state = engine.purchaseUpgrade(state, UpgradeTrack.farmExpansion).state;
+        expect(state.gridSize, equals(17));
+
+        state = engine.purchaseUpgrade(state, UpgradeTrack.farmExpansion).state;
+        expect(state.gridSize, equals(20));
+        expect(state.maxCarryCrates, equals(2));
 
         final jsonStr = jsonEncode(state.toJson());
         final restored = GameState.fromJson(
           jsonDecode(jsonStr) as Map<String, dynamic>,
         );
-        expect(restored.gridSize, equals(14));
+        expect(restored.gridSize, equals(20));
         expect(restored.maxCarryCrates, equals(2));
         expect(restored.coins, equals(state.coins));
       },
@@ -158,25 +234,26 @@ void main() {
   });
 
   group('CozySoundService seamless BGM synthesis', () {
-    test('synthesizes valid click-free RIFF PCM WAV loops for all 3 tracks', () {
-      final sound = CozySoundService(silentPlatformOutput: true);
-      for (final track in const <BgmTrack>[
-        BgmTrack.sunnyLullaby,
-        BgmTrack.morningMeadow,
-        BgmTrack.cozyRain,
-      ]) {
-        final wav = sound.synthesizeTrackWav(track);
-        expect(wav.length, greaterThan(44 + 22050 * 16 * 2 - 10));
-        // Verify RIFF....WAVE header
-        expect(String.fromCharCodes(wav.sublist(0, 4)), equals('RIFF'));
-        expect(String.fromCharCodes(wav.sublist(8, 12)), equals('WAVE'));
+    test(
+      'synthesizes valid click-free RIFF PCM WAV loops for all 3 tracks',
+      () {
+        final sound = CozySoundService(silentPlatformOutput: true);
+        for (final track in const <BgmTrack>[
+          BgmTrack.sunnyLullaby,
+          BgmTrack.morningMeadow,
+          BgmTrack.cozyRain,
+        ]) {
+          final wav = sound.synthesizeTrackWav(track);
+          expect(wav.length, greaterThan(44 + 22050 * 16 * 2 - 10));
+          expect(String.fromCharCodes(wav.sublist(0, 4)), equals('RIFF'));
+          expect(String.fromCharCodes(wav.sublist(8, 12)), equals('WAVE'));
 
-        // Verify seamless wrap-around continuity (first & last PCM sample diff is tiny)
-        final bd = ByteData.sublistView(wav);
-        final firstSample = bd.getInt16(44, Endian.little);
-        final lastSample = bd.getInt16(wav.length - 2, Endian.little);
-        expect((firstSample - lastSample).abs(), lessThan(600));
-      }
-    });
+          final bd = ByteData.sublistView(wav);
+          final firstSample = bd.getInt16(44, Endian.little);
+          final lastSample = bd.getInt16(wav.length - 2, Endian.little);
+          expect((firstSample - lastSample).abs(), lessThan(600));
+        }
+      },
+    );
   });
 }

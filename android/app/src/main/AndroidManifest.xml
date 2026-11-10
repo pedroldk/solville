@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
     <application
         android:label="Solville"
         android:appCategory="game"
@@ -31,6 +34,10 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- AdMob App ID (defaults to Google's official test App ID; override via ADMOB_APP_ID env var in release) -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

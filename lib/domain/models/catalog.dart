@@ -67,6 +67,7 @@ class CropDef {
     required this.maxHarvests,
     required this.primaryColorHex,
     required this.accentColorHex,
+    this.requiresSunPass = false,
   });
 
   final ProductId id;
@@ -94,14 +95,13 @@ class CropDef {
 
   final int primaryColorHex;
   final int accentColorHex;
+
+  /// Whether this crop requires an active Solville Sun Pass (or 24h–48h Ad Pass).
+  final bool requiresSunPass;
 }
 
 /// Animal enclosure types inspired by Alice Greenfingers.
-enum AnimalType {
-  chicken,
-  bee,
-  cow;
-}
+enum AnimalType { chicken, bee, cow }
 
 class AnimalDef {
   const AnimalDef({
@@ -149,6 +149,7 @@ class BuildItemDef {
     required this.walkable,
     this.sprinklerRadius = 0,
     this.charmBonus = 0.0,
+    this.requiresSunPass = false,
   });
 
   final BuildItemType type;
@@ -159,15 +160,11 @@ class BuildItemDef {
   final bool walkable;
   final int sprinklerRadius;
   final double charmBonus;
+  final bool requiresSunPass;
 }
 
 /// Permanent character & farm upgrades in the Town Shop.
-enum UpgradeTrack {
-  wateringCan,
-  crateStacker,
-  gardenBoots,
-  farmExpansion,
-}
+enum UpgradeTrack { wateringCan, crateStacker, gardenBoots, farmExpansion }
 
 class UpgradeTierDef {
   const UpgradeTierDef({
@@ -177,6 +174,7 @@ class UpgradeTierDef {
     required this.emoji,
     required this.description,
     required this.cost,
+    this.requiresSunPass = false,
   });
 
   final UpgradeTrack track;
@@ -185,6 +183,7 @@ class UpgradeTierDef {
   final String emoji;
   final String description;
   final int cost;
+  final bool requiresSunPass;
 }
 
 /// Milestone trophy definition (synced to Trophy Cabinet & Steam Achievements).
@@ -208,6 +207,9 @@ class TrophyDef {
 
 /// Central catalog of balanced game definitions for Solville.
 abstract final class SolvilleCatalog {
+  static const int starterGridSize = 11;
+  static const int expansionStepSize = 3;
+  static const int maxExpansionTier = 8;
   static const int compostCost = 18;
   static const double lemonTreeCycleSeconds = 24.0;
   static const double artisanPressCycleSeconds = 20.0;
@@ -268,6 +270,7 @@ abstract final class SolvilleCatalog {
       maxHarvests: 1,
       primaryColorHex: 0xFFFDD835,
       accentColorHex: 0xFFFFF59D,
+      requiresSunPass: true,
     ),
     ProductId.lavender: CropDef(
       id: ProductId.lavender,
@@ -283,6 +286,7 @@ abstract final class SolvilleCatalog {
       maxHarvests: 2,
       primaryColorHex: 0xFF8E24AA,
       accentColorHex: 0xFFCE93D8,
+      requiresSunPass: true,
     ),
     ProductId.pumpkin: CropDef(
       id: ProductId.pumpkin,
@@ -297,6 +301,7 @@ abstract final class SolvilleCatalog {
       maxHarvests: 1,
       primaryColorHex: 0xFFF4511E,
       accentColorHex: 0xFFFFAB91,
+      requiresSunPass: true,
     ),
   };
 
@@ -342,6 +347,20 @@ abstract final class SolvilleCatalog {
     ProductId.preserves => '🫙',
   };
 
+  static int productColorHex(ProductId id) => switch (id) {
+    ProductId.tomato => 0xFFE53935,
+    ProductId.carrot => 0xFFFB8C00,
+    ProductId.strawberry => 0xFFD81B60,
+    ProductId.corn => 0xFFFDD835,
+    ProductId.lavender => 0xFF8E24AA,
+    ProductId.pumpkin => 0xFFF4511E,
+    ProductId.lemon => 0xFFFFEE58,
+    ProductId.eggs => 0xFFFFF8E1,
+    ProductId.honey => 0xFFFFB300,
+    ProductId.milk => 0xFFE1F5FE,
+    ProductId.preserves => 0xFFAD1457,
+  };
+
   static const Map<AnimalType, AnimalDef> animals = <AnimalType, AnimalDef>{
     AnimalType.chicken: AnimalDef(
       type: AnimalType.chicken,
@@ -376,96 +395,100 @@ abstract final class SolvilleCatalog {
     ),
   };
 
-  static const Map<BuildItemType, BuildItemDef> buildItems =
-      <BuildItemType, BuildItemDef>{
-        BuildItemType.sprinklerRotary: BuildItemDef(
-          type: BuildItemType.sprinklerRotary,
-          name: 'Rotary Sprinkler',
-          emoji: '💦',
-          description: 'Automatically waters all 8 surrounding plots (3x3).',
-          cost: 105,
-          walkable: false,
-          sprinklerRadius: 1,
-        ),
-        BuildItemType.sprinklerSolar: BuildItemDef(
-          type: BuildItemType.sprinklerSolar,
-          name: 'Solar Mist Tower',
-          emoji: '⛲',
-          description: 'Waters a lush 5x5 garden zone with golden solar mist.',
-          cost: 235,
-          walkable: false,
-          sprinklerRadius: 2,
-        ),
-        BuildItemType.lemonTree: BuildItemDef(
-          type: BuildItemType.lemonTree,
-          name: 'Sunburst Lemon Tree',
-          emoji: '🍋',
-          description:
-              'Permanent orchard tree! Passively grows crates of Lemons.',
-          cost: 165,
-          walkable: false,
-          charmBonus: 0.02,
-        ),
-        BuildItemType.artisanPress: BuildItemDef(
-          type: BuildItemType.artisanPress,
-          name: 'Artisan Kettle',
-          emoji: '🫙',
-          description:
-              'Simmers carried or Barn fruit/crops into 96☀️ Preserves!',
-          cost: 260,
-          walkable: false,
-        ),
-        BuildItemType.henhouse: BuildItemDef(
-          type: BuildItemType.henhouse,
-          name: 'Cozy Henhouse',
-          emoji: '🐔',
-          description: 'Home for happy egg-laying chickens.',
-          cost: 135,
-          walkable: false,
-        ),
-        BuildItemType.beehive: BuildItemDef(
-          type: BuildItemType.beehive,
-          name: 'Wildflower Apiary',
-          emoji: '🐝',
-          description: 'Produces honey passively; loves nearby Lavender!',
-          cost: 210,
-          walkable: false,
-        ),
-        BuildItemType.cowPaddock: BuildItemDef(
-          type: BuildItemType.cowPaddock,
-          name: 'Sunny Paddock',
-          emoji: '🐄',
-          description: 'Lush mini-pasture for a prized dairy cow.',
-          cost: 330,
-          walkable: false,
-        ),
-        BuildItemType.stonePath: BuildItemDef(
-          type: BuildItemType.stonePath,
-          name: 'Sunstone Path',
-          emoji: '🧱',
-          description: 'Warm garden paving: +40% farmer walking speed!',
-          cost: 10,
-          walkable: true,
-        ),
-        BuildItemType.lantern: BuildItemDef(
-          type: BuildItemType.lantern,
-          name: 'Solar Lantern',
-          emoji: '🏮',
-          description: 'Warm dusk glow + +3% Market Charm price bonus.',
-          cost: 45,
-          walkable: false,
-          charmBonus: 0.03,
-        ),
-        BuildItemType.flowerArch: BuildItemDef(
-          type: BuildItemType.flowerArch,
-          name: 'Blossom Arch',
-          emoji: '🌸',
-          description: 'Walkable floral arch + +6% Market Charm price bonus.',
-          cost: 85,
-          walkable: true,
-          charmBonus: 0.06,
-        ),
-      };
+  static const Map<BuildItemType, BuildItemDef>
+  buildItems = <BuildItemType, BuildItemDef>{
+    BuildItemType.sprinklerRotary: BuildItemDef(
+      type: BuildItemType.sprinklerRotary,
+      name: 'Rotary Sprinkler',
+      emoji: '💦',
+      description: 'Automatically waters all 8 surrounding plots (3x3).',
+      cost: 105,
+      walkable: false,
+      sprinklerRadius: 1,
+    ),
+    BuildItemType.sprinklerSolar: BuildItemDef(
+      type: BuildItemType.sprinklerSolar,
+      name: 'Solar Mist Tower',
+      emoji: '⛲',
+      description: 'Waters a lush 5x5 garden zone with golden solar mist.',
+      cost: 235,
+      walkable: false,
+      sprinklerRadius: 2,
+      requiresSunPass: true,
+    ),
+    BuildItemType.lemonTree: BuildItemDef(
+      type: BuildItemType.lemonTree,
+      name: 'Sunburst Lemon Tree',
+      emoji: '🍋',
+      description: 'Permanent orchard tree! Passively grows crates of Lemons.',
+      cost: 165,
+      walkable: false,
+      charmBonus: 0.02,
+      requiresSunPass: true,
+    ),
+    BuildItemType.artisanPress: BuildItemDef(
+      type: BuildItemType.artisanPress,
+      name: 'Artisan Kettle',
+      emoji: '🫙',
+      description: 'Simmers carried or Barn fruit/crops into 96☀️ Preserves!',
+      cost: 260,
+      walkable: false,
+      requiresSunPass: true,
+    ),
+    BuildItemType.henhouse: BuildItemDef(
+      type: BuildItemType.henhouse,
+      name: 'Cozy Henhouse',
+      emoji: '🐔',
+      description: 'Home for happy egg-laying chickens.',
+      cost: 135,
+      walkable: false,
+    ),
+    BuildItemType.beehive: BuildItemDef(
+      type: BuildItemType.beehive,
+      name: 'Wildflower Apiary',
+      emoji: '🐝',
+      description: 'Produces honey passively; loves nearby Lavender!',
+      cost: 210,
+      walkable: false,
+      requiresSunPass: true,
+    ),
+    BuildItemType.cowPaddock: BuildItemDef(
+      type: BuildItemType.cowPaddock,
+      name: 'Sunny Paddock',
+      emoji: '🐄',
+      description: 'Lush mini-pasture for a prized dairy cow.',
+      cost: 330,
+      walkable: false,
+      requiresSunPass: true,
+    ),
+    BuildItemType.stonePath: BuildItemDef(
+      type: BuildItemType.stonePath,
+      name: 'Sunstone Path',
+      emoji: '🧱',
+      description: 'Warm garden paving: +40% farmer walking speed!',
+      cost: 10,
+      walkable: true,
+    ),
+    BuildItemType.lantern: BuildItemDef(
+      type: BuildItemType.lantern,
+      name: 'Solar Lantern',
+      emoji: '🏮',
+      description: 'Warm dusk glow + +3% Market Charm price bonus.',
+      cost: 45,
+      walkable: false,
+      charmBonus: 0.03,
+    ),
+    BuildItemType.flowerArch: BuildItemDef(
+      type: BuildItemType.flowerArch,
+      name: 'Blossom Arch',
+      emoji: '🌸',
+      description: 'Walkable floral arch + +6% Market Charm price bonus.',
+      cost: 85,
+      walkable: true,
+      charmBonus: 0.06,
+      requiresSunPass: true,
+    ),
+  };
 
   static const List<UpgradeTierDef> upgrades = <UpgradeTierDef>[
     UpgradeTierDef(
@@ -483,6 +506,7 @@ abstract final class SolvilleCatalog {
       emoji: '✨',
       description: 'Holds 18 water charges and hydrates adjacent dry sprouts!',
       cost: 175,
+      requiresSunPass: true,
     ),
     UpgradeTierDef(
       track: UpgradeTrack.crateStacker,
@@ -499,6 +523,7 @@ abstract final class SolvilleCatalog {
       emoji: '🏗️',
       description: 'Carry up to 4 stacked crates in a single market trip!',
       cost: 215,
+      requiresSunPass: true,
     ),
     UpgradeTierDef(
       track: UpgradeTrack.gardenBoots,
@@ -515,22 +540,54 @@ abstract final class SolvilleCatalog {
       emoji: '🥾',
       description: '+55% walking speed — glide from garden to stall!',
       cost: 190,
+      requiresSunPass: true,
     ),
     UpgradeTierDef(
       track: UpgradeTrack.farmExpansion,
       tier: 1,
       name: 'Sunny Meadow Deed',
-      emoji: '🗺️',
-      description: 'Expands the Solville farm grid from 11x11 to 14x14!',
-      cost: 240,
+      emoji: '🏝️',
+      description: 'Expands the Solville isle from 11×11 to 14×14 (+75 tiles)!',
+      cost: 220,
     ),
     UpgradeTierDef(
       track: UpgradeTrack.farmExpansion,
       tier: 2,
-      name: 'Grand Oasis Charter',
+      name: 'Golden Orchard Charter',
+      emoji: '🗺️',
+      description: 'Expands the Solville isle from 14×14 to 17×17 (+93 tiles)!',
+      cost: 420,
+      requiresSunPass: true,
+    ),
+    UpgradeTierDef(
+      track: UpgradeTrack.farmExpansion,
+      tier: 3,
+      name: 'Breezy Hilltop Grant',
       emoji: '🏞️',
-      description: 'Unlocks the full 17x17 sprawling Solville estate!',
-      cost: 460,
+      description:
+          'Expands the Solville isle from 17×17 to 20×20 (+111 tiles)!',
+      cost: 680,
+      requiresSunPass: true,
+    ),
+    UpgradeTierDef(
+      track: UpgradeTrack.farmExpansion,
+      tier: 4,
+      name: 'Sunlit Peninsula Deed',
+      emoji: '🌅',
+      description:
+          'Expands the Solville isle from 20×20 to 23×23 (+129 tiles)!',
+      cost: 1000,
+      requiresSunPass: true,
+    ),
+    UpgradeTierDef(
+      track: UpgradeTrack.farmExpansion,
+      tier: 5,
+      name: 'Emerald Cove Charter',
+      emoji: '🌴',
+      description:
+          'Expands the Solville isle from 23×23 to 26×26 (+147 tiles)!',
+      cost: 1400,
+      requiresSunPass: true,
     ),
   ];
 
@@ -651,9 +708,46 @@ abstract final class SolvilleCatalog {
     _ => 1.55,
   };
 
-  static int gridSizeForExpansionTier(int tier) => switch (tier) {
-    0 => 11,
-    1 => 14,
-    _ => 17,
-  };
+  static int gridSizeForExpansionTier(int tier) =>
+      starterGridSize + tier.clamp(0, maxExpansionTier) * expansionStepSize;
+
+  /// Resolves the next available upgrade tier definition for [track], including
+  /// further frontier island deeds up to [maxExpansionTier] (`35×35`).
+  static UpgradeTierDef? nextUpgradeFor(UpgradeTrack track, int currentTier) {
+    final nextTier = currentTier + 1;
+    for (final candidate in upgrades) {
+      if (candidate.track == track && candidate.tier == nextTier) {
+        return candidate;
+      }
+    }
+    if (track == UpgradeTrack.farmExpansion && nextTier <= maxExpansionTier) {
+      final fromSize = gridSizeForExpansionTier(currentTier);
+      final toSize = gridSizeForExpansionTier(nextTier);
+      final addedTiles = toSize * toSize - fromSize * fromSize;
+      final dynamicCost = 1400 + (nextTier - 5) * 550;
+      return UpgradeTierDef(
+        track: UpgradeTrack.farmExpansion,
+        tier: nextTier,
+        name: 'Grand Archipelago Deed $nextTier',
+        emoji: '🏝️',
+        description:
+            'Expands the Solville isle from $fromSize×$fromSize to $toSize×$toSize (+$addedTiles tiles)!',
+        cost: dynamicCost,
+        requiresSunPass: true,
+      );
+    }
+    return null;
+  }
+
+  /// Whether [cropId] requires an active Solville Sun Pass.
+  static bool isCropSunPassOnly(ProductId cropId) =>
+      crops[cropId]?.requiresSunPass ?? false;
+
+  /// Whether [itemType] requires an active Solville Sun Pass.
+  static bool isBuildSunPassOnly(BuildItemType itemType) =>
+      buildItems[itemType]?.requiresSunPass ?? false;
+
+  /// Whether the next upgrade tier on [track] from [currentTier] requires an active Sun Pass.
+  static bool isNextUpgradeSunPassOnly(UpgradeTrack track, int currentTier) =>
+      nextUpgradeFor(track, currentTier)?.requiresSunPass ?? false;
 }
