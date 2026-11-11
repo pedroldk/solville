@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart' show Locale, VoidCallback;
 
 import '../../data/repositories/save_game_repository.dart';
 import '../../data/services/cozy_sound_service.dart';
@@ -12,8 +13,10 @@ import '../../domain/models/entitlement_state.dart';
 import '../../domain/models/game_state.dart';
 import '../../domain/models/grid_pos.dart';
 import '../../domain/models/market_state.dart';
+import '../../domain/models/solville_toast.dart';
 import '../../domain/models/tile_state.dart';
 import '../../domain/simulation/farm_simulation_engine.dart';
+import '../../l10n/solville_l10n_extensions.dart';
 
 /// Central MVVM controller coordinating the Flame isometric world, Flutter HUD
 /// overlays, persistence, soothing background ambience, achievements, and
@@ -72,7 +75,12 @@ class SolvilleController extends ChangeNotifier {
 
   String? _toastMessage;
   String? get toastMessage => _toastMessage;
+  SolvilleToast? _toast;
+  SolvilleToast? get toast => _toast;
   double _toastTimer = 0.0;
+
+  Locale? _appLocale;
+  Locale? get appLocale => _appLocale;
 
   bool _isPaused = false;
   bool get isPaused => _isPaused;
@@ -118,6 +126,10 @@ class SolvilleController extends ChangeNotifier {
     _sound.bgmVolume = audio.bgmVolume;
     unawaited(_sound.applyBgmSettings());
 
+    _appLocale = SolvilleLocaleHelper.parseLocaleCode(
+      await _saveRepo.loadLocaleCode(),
+    );
+
     final loaded = await _saveRepo.loadSave();
     if (loaded != null) {
       _state = _engine.ensureMinimumIslandSize(loaded);
@@ -130,12 +142,25 @@ class SolvilleController extends ChangeNotifier {
       }
       _showToast(
         'Welcome back to Solville! (Day ${_state.day} • ${_state.gridSize}×${_state.gridSize} Isle)',
+        toast: SolvilleToast(
+          SolvilleToastKind.welcomeBack,
+          day: _state.day,
+          gridSize: _state.gridSize,
+        ),
       );
     } else {
       _showToast(
         'Welcome to Solville! Tap plots 1–3x to combo-queue Dig → Sow → Water!',
+        toast: const SolvilleToast(SolvilleToastKind.welcomeNew),
       );
     }
+    notifyListeners();
+  }
+
+  Future<void> setAppLocale(Locale? locale) async {
+    if (_appLocale == locale) return;
+    _appLocale = locale;
+    await _saveRepo.saveLocaleCode(SolvilleLocaleHelper.toStorageCode(locale));
     notifyListeners();
   }
 
@@ -159,8 +184,9 @@ class SolvilleController extends ChangeNotifier {
   void advanceFrame(double dt) {
     if (_toastTimer > 0.0) {
       _toastTimer -= dt;
-      if (_toastTimer <= 0.0 && _toastMessage != null) {
+      if (_toastTimer <= 0.0 && (_toastMessage != null || _toast != null)) {
         _toastMessage = null;
+        _toast = null;
         notifyListeners();
       }
     }
@@ -179,6 +205,7 @@ class SolvilleController extends ChangeNotifier {
       _ensureValidEquippedSelection();
       _showToast(
         '☀️ Your Sun Pass timer ended! Watch 1 ad for +24h anytime.',
+        toast: const SolvilleToast(SolvilleToastKind.sunPassEnded),
       );
     } else {
       _wasSunPassActiveLastTick = activeNow;
@@ -303,6 +330,11 @@ class SolvilleController extends ChangeNotifier {
     if (added) {
       _showToast(
         '🌿 Queued restoring plot (${pos.x}, ${pos.y}) back to grass!',
+        toast: SolvilleToast(
+          SolvilleToastKind.queuedUntill,
+          x: pos.x,
+          y: pos.y,
+        ),
       );
     }
     _applyStep(result, haptic: added);
@@ -321,7 +353,13 @@ class SolvilleController extends ChangeNotifier {
 
   void selectSeed(ProductId seed) {
     if (SolvilleCatalog.isCropSunPassOnly(seed) && !isSunPassActive) {
-      _promptSunPassFor('${SolvilleCatalog.productName(seed)} seeds');
+      _promptSunPassFor(
+        '${SolvilleCatalog.productName(seed)} seeds',
+        toast: SolvilleToast(
+          SolvilleToastKind.sunPassRequiredSeed,
+          product: seed,
+        ),
+      );
       return;
     }
     _applyState(_engine.selectSeed(_state, seed), haptic: true);
@@ -330,7 +368,13 @@ class SolvilleController extends ChangeNotifier {
   void selectBuildItem(BuildItemType item) {
     if (SolvilleCatalog.isBuildSunPassOnly(item) && !isSunPassActive) {
       final name = SolvilleCatalog.buildItems[item]?.name ?? 'Structure';
-      _promptSunPassFor(name);
+      _promptSunPassFor(
+        name,
+        toast: SolvilleToast(
+          SolvilleToastKind.sunPassRequiredBuild,
+          buildItem: item,
+        ),
+      );
       return;
     }
     _applyState(_engine.selectBuildItem(_state, item), haptic: true);
@@ -365,7 +409,13 @@ class SolvilleController extends ChangeNotifier {
 
   void unlockSeedLicense(ProductId cropId) {
     if (SolvilleCatalog.isCropSunPassOnly(cropId) && !isSunPassActive) {
-      _promptSunPassFor('${SolvilleCatalog.productName(cropId)} license');
+      _promptSunPassFor(
+        '${SolvilleCatalog.productName(cropId)} license',
+        toast: SolvilleToast(
+          SolvilleToastKind.sunPassRequiredSeedLicense,
+          product: cropId,
+        ),
+      );
       return;
     }
     _applyStep(
@@ -380,7 +430,14 @@ class SolvilleController extends ChangeNotifier {
     if (SolvilleCatalog.isNextUpgradeSunPassOnly(track, currentTier) &&
         !isSunPassActive) {
       final nextDef = SolvilleCatalog.nextUpgradeFor(track, currentTier);
-      _promptSunPassFor(nextDef?.name ?? 'Upgrade');
+      _promptSunPassFor(
+        nextDef?.name ?? 'Upgrade',
+        toast: SolvilleToast(
+          SolvilleToastKind.sunPassRequiredUpgrade,
+          upgradeTrack: track,
+          tier: currentTier + 1,
+        ),
+      );
       return;
     }
     _applyStep(_engine.purchaseUpgrade(_state, track), save: true);
@@ -392,9 +449,10 @@ class SolvilleController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _promptSunPassFor(String itemName) {
+  void _promptSunPassFor(String itemName, {SolvilleToast? toast}) {
     _showToast(
       '☀️ $itemName is part of Sun Pass! Watch 1 ad for +24h (up to 48h) or unlock forever.',
+      toast: toast,
     );
     onRequestOpenSunPassModal?.call();
     notifyListeners();
@@ -417,7 +475,10 @@ class SolvilleController extends ChangeNotifier {
     notifyUserGestureForAudio();
     final ref = nowUtc;
     if (!_entitlements.canStackAnotherAd(ref)) {
-      _showToast('☀️ Sun Pass is already topped up to the 48-hour maximum!');
+      _showToast(
+        '☀️ Sun Pass is already topped up to the 48-hour maximum!',
+        toast: const SolvilleToast(SolvilleToastKind.sunPassMaxed),
+      );
       notifyListeners();
       return false;
     }
@@ -425,7 +486,10 @@ class SolvilleController extends ChangeNotifier {
     final res = await _monetization.showRewardedAd();
     unawaited(_sound.ensureBgmActive());
     if (!res.isSuccess) {
-      _showToast('Ad cancelled or unavailable right now.');
+      _showToast(
+        'Ad cancelled or unavailable right now.',
+        toast: const SolvilleToast(SolvilleToastKind.adCancelled),
+      );
       notifyListeners();
       return false;
     }
@@ -437,6 +501,10 @@ class SolvilleController extends ChangeNotifier {
     unawaited(_sound.playForEvent(SimEventType.shopPurchase));
     _showToast(
       '☀️ Sun Pass unlocked! (${_entitlements.formatRemainingTime(updatedRef)} active)',
+      toast: SolvilleToast(
+        SolvilleToastKind.sunPassUnlocked,
+        duration: _entitlements.remainingAdPassDuration(updatedRef),
+      ),
     );
     notifyListeners();
     return true;
@@ -447,7 +515,13 @@ class SolvilleController extends ChangeNotifier {
   Future<bool> activateSunnySurge() async {
     notifyUserGestureForAudio();
     if (!canClaimSunnySurgeToday) {
-      _showToast('🌦️ Sunny Surge is already active for Day ${_state.day}!');
+      _showToast(
+        '🌦️ Sunny Surge is already active for Day ${_state.day}!',
+        toast: SolvilleToast(
+          SolvilleToastKind.sunnySurgeAlreadyActive,
+          day: _state.day,
+        ),
+      );
       notifyListeners();
       return false;
     }
@@ -457,7 +531,10 @@ class SolvilleController extends ChangeNotifier {
       final adRes = await _monetization.showRewardedAd();
       unawaited(_sound.ensureBgmActive());
       if (!adRes.isSuccess) {
-        _showToast('Ad cancelled — Sunny Surge was not activated.');
+        _showToast(
+          'Ad cancelled — Sunny Surge was not activated.',
+          toast: const SolvilleToast(SolvilleToastKind.adCancelledSurge),
+        );
         notifyListeners();
         return false;
       }
@@ -476,7 +553,10 @@ class SolvilleController extends ChangeNotifier {
     notifyListeners();
     final res = await _monetization.purchaseAnnualPass();
     if (!res.isSuccess) {
-      _showToast('Purchase cancelled.');
+      _showToast(
+        'Purchase cancelled.',
+        toast: const SolvilleToast(SolvilleToastKind.purchaseCancelled),
+      );
       notifyListeners();
       return false;
     }
@@ -484,7 +564,10 @@ class SolvilleController extends ChangeNotifier {
     _wasSunPassActiveLastTick = true;
     await _saveRepo.saveEntitlementState(_entitlements);
     unawaited(_sound.playForEvent(SimEventType.trophyUnlocked));
-    _showToast('🌻 Thank you! Annual Sun Pass (2,99€/yr) is now active!');
+    _showToast(
+      '🌻 Thank you! Annual Sun Pass (2,99€/yr) is now active!',
+      toast: const SolvilleToast(SolvilleToastKind.annualPassActivated),
+    );
     notifyListeners();
     return true;
   }
@@ -495,7 +578,10 @@ class SolvilleController extends ChangeNotifier {
     notifyListeners();
     final res = await _monetization.purchaseLifetimePass();
     if (!res.isSuccess) {
-      _showToast('Purchase cancelled.');
+      _showToast(
+        'Purchase cancelled.',
+        toast: const SolvilleToast(SolvilleToastKind.purchaseCancelled),
+      );
       notifyListeners();
       return false;
     }
@@ -505,6 +591,7 @@ class SolvilleController extends ChangeNotifier {
     unawaited(_sound.playForEvent(SimEventType.trophyUnlocked));
     _showToast(
       '👑 Thank you! Solville Lifetime Cozy Edition is yours forever!',
+      toast: const SolvilleToast(SolvilleToastKind.lifetimePassActivated),
     );
     notifyListeners();
     return true;
@@ -526,9 +613,15 @@ class SolvilleController extends ChangeNotifier {
       );
       _wasSunPassActiveLastTick = true;
       await _saveRepo.saveEntitlementState(_entitlements);
-      _showToast('✅ Restored your Solville Sun Pass purchases!');
+      _showToast(
+        '✅ Restored your Solville Sun Pass purchases!',
+        toast: const SolvilleToast(SolvilleToastKind.purchasesRestored),
+      );
     } else {
-      _showToast('No previous store purchases found for this account.');
+      _showToast(
+        'No previous store purchases found for this account.',
+        toast: const SolvilleToast(SolvilleToastKind.noPreviousPurchases),
+      );
     }
     notifyListeners();
   }
@@ -556,7 +649,13 @@ class SolvilleController extends ChangeNotifier {
   Future<void> cycleBgmTrack() async {
     final nextIndex = (_sound.bgmTrack.index + 1) % BgmTrack.values.length;
     await setBgmTrack(BgmTrack.values[nextIndex]);
-    _showToast('Ambience: ${_sound.bgmTrack.label}');
+    _showToast(
+      'Ambience: ${_sound.bgmTrack.label}',
+      toast: SolvilleToast(
+        SolvilleToastKind.ambienceChanged,
+        bgmTrack: _sound.bgmTrack,
+      ),
+    );
   }
 
   Future<void> setBgmVolume(double volume) async {
@@ -577,7 +676,10 @@ class SolvilleController extends ChangeNotifier {
 
   Future<void> saveNow() async {
     await _saveRepo.saveGame(_state);
-    _showToast('💾 Farm progress saved!');
+    _showToast(
+      '💾 Farm progress saved!',
+      toast: const SolvilleToast(SolvilleToastKind.farmSaved),
+    );
     notifyListeners();
   }
 
@@ -585,7 +687,10 @@ class SolvilleController extends ChangeNotifier {
     await _saveRepo.clearSave();
     _state = _engine.createNewGame();
     _inspectedTile = null;
-    _showToast('🌱 Started a fresh sunny farm in Solville!');
+    _showToast(
+      '🌱 Started a fresh sunny farm in Solville!',
+      toast: const SolvilleToast(SolvilleToastKind.startedFreshFarm),
+    );
     await _saveRepo.saveGame(_state);
     onRequestCenterCamera?.call();
     notifyListeners();
@@ -638,13 +743,14 @@ class SolvilleController extends ChangeNotifier {
       }
 
       if (event.message != null && event.message!.isNotEmpty) {
-        _showToast(event.message!);
+        _showToast(event.message!, toast: event.toast);
       }
     }
   }
 
-  void _showToast(String message) {
+  void _showToast(String message, {SolvilleToast? toast}) {
     _toastMessage = message;
+    _toast = toast;
     _toastTimer = 4.2;
   }
 

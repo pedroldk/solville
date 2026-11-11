@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/models/catalog.dart';
+import '../../l10n/app_localizations.dart';
+import '../../l10n/solville_l10n_extensions.dart';
 import '../theme/solville_theme.dart';
 import '../view_models/solville_controller.dart';
 import '../widgets/solville_dialog_shell.dart';
@@ -17,12 +19,13 @@ class ShopModal extends StatelessWidget {
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
+        final l10n = AppLocalizations.of(context);
         final state = controller.state;
         return DefaultTabController(
           length: 3,
           child: SolvilleDialogShell(
             emoji: '🛒',
-            title: 'Solville Town Shop',
+            title: l10n.shopTitle,
             maxWidth: 680,
             maxHeight: 560,
             trailing: Container(
@@ -43,13 +46,13 @@ class ShopModal extends StatelessWidget {
             ),
             child: Column(
               children: <Widget>[
-                const TabBar(
+                TabBar(
                   labelColor: SolvilleTheme.timberDark,
-                  labelStyle: TextStyle(fontWeight: FontWeight.w800),
+                  labelStyle: const TextStyle(fontWeight: FontWeight.w800),
                   tabs: <Widget>[
-                    Tab(text: '⬆️ Upgrades'),
-                    Tab(text: '🌱 Seed Licenses'),
-                    Tab(text: '🏡 Build & Animals'),
+                    Tab(text: l10n.shopTabUpgrades),
+                    Tab(text: l10n.shopTabSeeds),
+                    Tab(text: l10n.shopTabBuild),
                   ],
                 ),
                 Expanded(
@@ -98,19 +101,14 @@ class _UpgradesTab extends StatelessWidget {
     int currentTier,
     int coins,
   ) {
+    final l10n = AppLocalizations.of(context);
     final nextDef = SolvilleCatalog.nextUpgradeFor(track, currentTier);
 
     if (nextDef == null) {
       final maxGrid = SolvilleCatalog.gridSizeForExpansionTier(
         SolvilleCatalog.maxExpansionTier,
       );
-      final maxedTitle = switch (track) {
-        UpgradeTrack.wateringCan => 'Solar Mist Jug (Maxed)',
-        UpgradeTrack.crateStacker => 'Master Stacker Harness (Maxed)',
-        UpgradeTrack.gardenBoots => 'Sunrunner Boots (Maxed)',
-        UpgradeTrack.farmExpansion =>
-          'Grand Archipelago Estate ($maxGrid×$maxGrid Maxed)',
-      };
+      final maxedTitle = l10n.upgradeMaxedTitle(track, maxGrid);
       return Card(
         margin: const EdgeInsets.only(bottom: 10),
         child: ListTile(
@@ -119,39 +117,40 @@ class _UpgradesTab extends StatelessWidget {
             maxedTitle,
             style: const TextStyle(fontWeight: FontWeight.w800),
           ),
-          subtitle: const Text('Fully upgraded!'),
-          trailing: const Chip(label: Text('MAX')),
+          subtitle: Text(l10n.shopFullyUpgraded),
+          trailing: Chip(label: Text(l10n.shopMaxBadge)),
         ),
       );
     }
 
     final affordable = coins >= nextDef.cost;
     final lockedByPass = nextDef.requiresSunPass && !controller.isSunPassActive;
+    final upgradeName = l10n.upgradeName(track, nextDef.tier);
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
         leading: Text(nextDef.emoji, style: const TextStyle(fontSize: 28)),
         title: Text(
-          lockedByPass ? '${nextDef.name} • ☀️ Sun Pass' : nextDef.name,
+          lockedByPass ? l10n.shopItemSunPass(upgradeName) : upgradeName,
           style: const TextStyle(
             color: SolvilleTheme.timberDark,
             fontWeight: FontWeight.w800,
           ),
         ),
-        subtitle: Text(nextDef.description),
+        subtitle: Text(l10n.upgradeDescription(track, nextDef.tier)),
         trailing: lockedByPass
             ? FilledButton.tonal(
                 onPressed: () {
                   Navigator.of(context).pop();
                   controller.openSunPassModal();
                 },
-                child: const Text('☀️ Sun Pass'),
+                child: Text(l10n.shopSunPassBadge),
               )
             : FilledButton(
                 onPressed: affordable
                     ? () => controller.purchaseUpgrade(track)
                     : null,
-                child: Text('Buy ${nextDef.cost}☀️'),
+                child: Text(l10n.shopBuyCost(nextDef.cost)),
               ),
       ),
     );
@@ -165,6 +164,7 @@ class _SeedsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final state = controller.state;
     return ListView(
       padding: const EdgeInsets.all(14),
@@ -176,15 +176,25 @@ class _SeedsTab extends StatelessWidget {
               leading: Text(crop.emoji, style: const TextStyle(fontSize: 28)),
               title: Text(
                 crop.requiresSunPass && !controller.isSunPassActive
-                    ? '${crop.name} • Base Crate ${crop.baseCrateValue}☀️ • ☀️ Sun Pass'
-                    : '${crop.name} • Base Crate ${crop.baseCrateValue}☀️',
+                    ? l10n.shopSeedBaseCrateSunPass(
+                        l10n.productName(crop.id),
+                        crop.baseCrateValue,
+                      )
+                    : l10n.shopSeedBaseCrate(
+                        l10n.productName(crop.id),
+                        crop.baseCrateValue,
+                      ),
                 style: const TextStyle(
                   color: SolvilleTheme.timberDark,
                   fontWeight: FontWeight.w800,
                 ),
               ),
               subtitle: Text(
-                '${crop.description}\nPlanting cost: ${crop.seedCost}☀️ • Harvests: ${crop.maxHarvests}x',
+                l10n.shopSeedSubtitle(
+                  l10n.cropDescription(crop.id),
+                  crop.seedCost,
+                  crop.maxHarvests,
+                ),
               ),
               isThreeLine: true,
               trailing: (crop.requiresSunPass && !controller.isSunPassActive)
@@ -193,7 +203,7 @@ class _SeedsTab extends StatelessWidget {
                         Navigator.of(context).pop();
                         controller.openSunPassModal();
                       },
-                      child: const Text('☀️ Sun Pass'),
+                      child: Text(l10n.shopSunPassBadge),
                     )
                   : (state.unlockedSeeds.contains(crop.id)
                         ? OutlinedButton(
@@ -201,13 +211,13 @@ class _SeedsTab extends StatelessWidget {
                               controller.selectSeed(crop.id);
                               Navigator.of(context).pop();
                             },
-                            child: const Text('Equip Seed'),
+                            child: Text(l10n.shopEquipSeed),
                           )
                         : FilledButton(
                             onPressed: state.coins >= crop.licenseCost
                                 ? () => controller.unlockSeedLicense(crop.id)
                                 : null,
-                            child: Text('Unlock ${crop.licenseCost}☀️'),
+                            child: Text(l10n.shopUnlockCost(crop.licenseCost)),
                           )),
             ),
           ),
@@ -223,6 +233,7 @@ class _BuildItemsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final state = controller.state;
     final expTier = state.upgradeTier(UpgradeTrack.farmExpansion);
     final nextExp = SolvilleCatalog.nextUpgradeFor(
@@ -243,34 +254,42 @@ class _BuildItemsTab extends StatelessWidget {
                 style: const TextStyle(fontSize: 28),
               ),
               title: Text(
-                '${nextExp.name} (Current Isle: ${state.gridSize}×${state.gridSize})',
+                l10n.shopCurrentIsleTitle(
+                  l10n.upgradeName(UpgradeTrack.farmExpansion, nextExp.tier),
+                  state.gridSize,
+                ),
                 style: const TextStyle(
                   color: SolvilleTheme.timberDark,
                   fontWeight: FontWeight.w900,
                 ),
               ),
-              subtitle: Text(nextExp.description),
+              subtitle: Text(
+                l10n.upgradeDescription(
+                  UpgradeTrack.farmExpansion,
+                  nextExp.tier,
+                ),
+              ),
               trailing: (nextExp.requiresSunPass && !controller.isSunPassActive)
                   ? FilledButton.tonal(
                       onPressed: () {
                         Navigator.of(context).pop();
                         controller.openSunPassModal();
                       },
-                      child: const Text('☀️ Sun Pass'),
+                      child: Text(l10n.shopSunPassBadge),
                     )
                   : FilledButton(
                       onPressed: state.coins >= nextExp.cost
                           ? controller.expandIsle
                           : null,
-                      child: Text('Expand ${nextExp.cost}☀️'),
+                      child: Text(l10n.shopExpandCost(nextExp.cost)),
                     ),
             ),
           ),
-        const Padding(
-          padding: EdgeInsets.only(bottom: 8),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
           child: Text(
-            'Select an item below, then tap any open grass tile on your farm to place it!',
-            style: TextStyle(
+            l10n.shopBuildHint,
+            style: const TextStyle(
               color: SolvilleTheme.timberDark,
               fontWeight: FontWeight.w700,
             ),
@@ -283,21 +302,27 @@ class _BuildItemsTab extends StatelessWidget {
               leading: Text(item.emoji, style: const TextStyle(fontSize: 28)),
               title: Text(
                 item.requiresSunPass && !controller.isSunPassActive
-                    ? '${item.name} (${item.cost}☀️ each • ☀️ Sun Pass)'
-                    : '${item.name} (${item.cost}☀️ each)',
+                    ? l10n.shopBuildItemTitleSunPass(
+                        l10n.buildItemName(item.type),
+                        item.cost,
+                      )
+                    : l10n.shopBuildItemTitle(
+                        l10n.buildItemName(item.type),
+                        item.cost,
+                      ),
                 style: const TextStyle(
                   color: SolvilleTheme.timberDark,
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              subtitle: Text(item.description),
+              subtitle: Text(l10n.buildItemDescription(item.type)),
               trailing: (item.requiresSunPass && !controller.isSunPassActive)
                   ? FilledButton.tonal(
                       onPressed: () {
                         Navigator.of(context).pop();
                         controller.openSunPassModal();
                       },
-                      child: const Text('☀️ Sun Pass'),
+                      child: Text(l10n.shopSunPassBadge),
                     )
                   : FilledButton.tonal(
                       onPressed: state.coins >= item.cost
@@ -306,7 +331,7 @@ class _BuildItemsTab extends StatelessWidget {
                               Navigator.of(context).pop();
                             }
                           : null,
-                      child: const Text('Place on Farm'),
+                      child: Text(l10n.shopPlaceOnFarm),
                     ),
             ),
           ),

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../domain/models/catalog.dart';
 import '../../domain/models/game_state.dart';
 import '../../game/solville_game.dart';
+import '../../l10n/app_localizations.dart';
+import '../../l10n/solville_l10n_extensions.dart';
 import '../theme/solville_theme.dart';
 import '../view_models/solville_controller.dart';
 import '../widgets/solville_pill_button.dart';
@@ -25,6 +27,7 @@ class BottomToolDock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final state = controller.state;
     final showSeeds =
         state.activeTool == ToolMode.smart || state.activeTool == ToolMode.seed;
@@ -60,7 +63,7 @@ class BottomToolDock extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
                         Text(
-                          '⚡ ${state.actionQueue.length} Queued',
+                          l10n.dockQueuedCount(state.actionQueue.length),
                           style: const TextStyle(
                             color: SolvilleTheme.timberDark,
                             fontWeight: FontWeight.w800,
@@ -80,9 +83,9 @@ class BottomToolDock extends StatelessWidget {
                               color: const Color(0xFFFFCDD2),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Text(
-                              '✕ Clear',
-                              style: TextStyle(
+                            child: Text(
+                              l10n.dockClear,
+                              style: const TextStyle(
                                 color: Color(0xFFB71C1C),
                                 fontWeight: FontWeight.w800,
                                 fontSize: 11.5,
@@ -96,8 +99,8 @@ class BottomToolDock extends StatelessWidget {
                 if (readyHarvests > 0)
                   SolvillePillButton(
                     emoji: '🌾',
-                    label: 'Harvest Ripe ($readyHarvests)',
-                    tooltip: 'Queue all ripe harvests & crates (Hotkey: H)',
+                    label: l10n.dockHarvestRipe(readyHarvests),
+                    tooltip: l10n.dockHarvestRipeTooltip,
                     backgroundColor: const Color(0xFFE8F5E9),
                     borderRadius: 18,
                     padding: const EdgeInsets.symmetric(
@@ -110,8 +113,8 @@ class BottomToolDock extends StatelessWidget {
                 if (thirstyPlots > 0)
                   SolvillePillButton(
                     emoji: '💧',
-                    label: 'Water Dry ($thirstyPlots)',
-                    tooltip: 'Queue watering on thirsty garden beds',
+                    label: l10n.dockWaterDry(thirstyPlots),
+                    tooltip: l10n.dockWaterDryTooltip,
                     backgroundColor: const Color(0xFFE1F5FE),
                     borderRadius: 18,
                     padding: const EdgeInsets.symmetric(
@@ -132,7 +135,7 @@ class BottomToolDock extends StatelessWidget {
                     children: <Widget>[
                       IconButton(
                         visualDensity: VisualDensity.compact,
-                        tooltip: 'Center on Sol (Space / C)',
+                        tooltip: l10n.dockCenterCameraTooltip,
                         onPressed: game.centerCameraOnFarmer,
                         icon: const Icon(
                           Icons.my_location_rounded,
@@ -142,7 +145,7 @@ class BottomToolDock extends StatelessWidget {
                       ),
                       IconButton(
                         visualDensity: VisualDensity.compact,
-                        tooltip: 'Zoom In',
+                        tooltip: l10n.dockZoomInTooltip,
                         onPressed: () => game.adjustZoom(1.15),
                         icon: const Icon(
                           Icons.add_rounded,
@@ -152,7 +155,7 @@ class BottomToolDock extends StatelessWidget {
                       ),
                       IconButton(
                         visualDensity: VisualDensity.compact,
-                        tooltip: 'Zoom Out',
+                        tooltip: l10n.dockZoomOutTooltip,
                         onPressed: () => game.adjustZoom(0.87),
                         icon: const Icon(
                           Icons.remove_rounded,
@@ -189,35 +192,35 @@ class BottomToolDock extends StatelessWidget {
                       _ToolSlotButton(
                         hotkey: '1',
                         emoji: '🖐️',
-                        label: 'Smart',
+                        label: l10n.toolSmart,
                         selected: state.activeTool == ToolMode.smart,
                         onTap: () => controller.selectTool(ToolMode.smart),
                       ),
                       _ToolSlotButton(
                         hotkey: '2',
                         emoji: '🪏',
-                        label: 'Dig',
+                        label: l10n.toolDig,
                         selected: state.activeTool == ToolMode.dig,
                         onTap: () => controller.selectTool(ToolMode.dig),
                       ),
                       _ToolSlotButton(
                         hotkey: '3',
                         emoji: SolvilleCatalog.productEmoji(state.selectedSeed),
-                        label: 'Seeds',
+                        label: l10n.toolSeed,
                         selected: state.activeTool == ToolMode.seed,
                         onTap: () => controller.selectTool(ToolMode.seed),
                       ),
                       _ToolSlotButton(
                         hotkey: '4',
                         emoji: '🪣',
-                        label: 'Water',
+                        label: l10n.toolWater,
                         selected: state.activeTool == ToolMode.water,
                         onTap: () => controller.selectTool(ToolMode.water),
                       ),
                       _ToolSlotButton(
                         hotkey: '5',
                         emoji: '✨',
-                        label: 'Compost',
+                        label: l10n.toolCompost,
                         subLabel: '${SolvilleCatalog.compostCost}☀️',
                         selected: state.activeTool == ToolMode.compost,
                         onTap: () => controller.selectTool(ToolMode.compost),
@@ -225,15 +228,15 @@ class BottomToolDock extends StatelessWidget {
                       _ToolSlotButton(
                         hotkey: '6',
                         emoji: '🔨',
-                        label: 'Build',
+                        label: l10n.toolBuild,
                         selected: state.activeTool == ToolMode.build,
                         onTap: () => controller.selectTool(ToolMode.build),
                       ),
                       _ToolSlotButton(
                         hotkey: '7',
                         emoji: '🌿',
-                        label: 'Untill',
-                        subLabel: 'Clear',
+                        label: l10n.toolRemove,
+                        subLabel: l10n.toolRemoveSub,
                         selected: state.activeTool == ToolMode.remove,
                         onTap: () => controller.selectTool(ToolMode.remove),
                       ),
@@ -260,6 +263,7 @@ class _SeedSelectorStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final state = controller.state;
     final unlockedCrops = SolvilleCatalog.crops.values
         .where((c) => state.unlockedSeeds.contains(c.id))
@@ -287,8 +291,11 @@ class _SeedSelectorStrip extends StatelessWidget {
                       : SolvilleTheme.parchment,
                   label: Text(
                     crop.requiresSunPass && !controller.isSunPassActive
-                        ? '${crop.emoji} ${crop.name.split(' ').last} (☀️ Pass)'
-                        : '${crop.emoji} ${crop.name.split(' ').last} (${crop.seedCost}☀️)',
+                        ? l10n.dockSeedLockedLabel(
+                            crop.emoji,
+                            l10n.productShortName(crop.id),
+                          )
+                        : '${crop.emoji} ${l10n.productShortName(crop.id)} (${crop.seedCost}☀️)',
                     style: const TextStyle(
                       color: SolvilleTheme.timberDark,
                       fontWeight: FontWeight.w700,
@@ -303,9 +310,9 @@ class _SeedSelectorStrip extends StatelessWidget {
                 padding: const EdgeInsets.only(left: 4),
                 child: ActionChip(
                   backgroundColor: const Color(0xFFE8F5E9),
-                  label: const Text(
-                    '+ Unlock Seeds',
-                    style: TextStyle(
+                  label: Text(
+                    l10n.dockUnlockSeeds,
+                    style: const TextStyle(
                       color: SolvilleTheme.timberDark,
                       fontWeight: FontWeight.w800,
                       fontSize: 11.5,
@@ -328,6 +335,7 @@ class _BuildSelectorStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final state = controller.state;
     final expTier = state.upgradeTier(UpgradeTrack.farmExpansion);
     final nextExp = SolvilleCatalog.nextUpgradeFor(
@@ -356,8 +364,12 @@ class _BuildSelectorStrip extends StatelessWidget {
                             : const Color(0xFFFFF8E1)),
                   label: Text(
                     nextExp.requiresSunPass && !controller.isSunPassActive
-                        ? '🏝️ Expand Isle ${state.gridSize}×${state.gridSize}→$nextSize×$nextSize (☀️ Sun Pass)'
-                        : '🏝️ Expand Isle ${state.gridSize}×${state.gridSize}→$nextSize×$nextSize (${nextExp.cost}☀️)',
+                        ? l10n.dockExpandIsleLocked(state.gridSize, nextSize)
+                        : l10n.dockExpandIsle(
+                            state.gridSize,
+                            nextSize,
+                            nextExp.cost,
+                          ),
                     style: const TextStyle(
                       color: SolvilleTheme.timberDark,
                       fontWeight: FontWeight.w800,
@@ -379,8 +391,11 @@ class _BuildSelectorStrip extends StatelessWidget {
                       : SolvilleTheme.parchment,
                   label: Text(
                     def.requiresSunPass && !controller.isSunPassActive
-                        ? '${def.emoji} ${def.name} (☀️ Pass)'
-                        : '${def.emoji} ${def.name} (${def.cost}☀️)',
+                        ? l10n.dockBuildLockedLabel(
+                            def.emoji,
+                            l10n.buildItemName(def.type),
+                          )
+                        : '${def.emoji} ${l10n.buildItemName(def.type)} (${def.cost}☀️)',
                     style: const TextStyle(
                       color: SolvilleTheme.timberDark,
                       fontWeight: FontWeight.w700,

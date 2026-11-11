@@ -1,0 +1,22 @@
+{
+  "@@locale": "en_GB",
+  "bgmCozyRain": "🌧️ Cosy Rain",
+  "bgmShortCozyRain": "Cosy Rain",
+  "animalChickenName": "Cosy Henhouse",
+  "buildHenhouseName": "Cosy Henhouse",
+  "trophyFeatheredFriendsDesc": "Collect a crate of Fresh Eggs from a Cosy Henhouse.",
+  "trophyVillageDarlingTitle": "Beloved Neighbour",
+  "trophyVillageDarlingDesc": "Fulfil 3 special Daily Village Requests.",
+  "hudHomesteadTooltip": "Homestead & Cosy Soundscape",
+  "entitlementCozyEdition": "Cosy Edition",
+  "dockCenterCameraTooltip": "Centre on Sol (Space / C)",
+  "homesteadTitle": "Sunlit Homestead & Cosy Soundscape",
+  "shopTabSeeds": "🌱 Seed Licences",
+  "sunPassIncludedBody": "• 🌽🪻🎃 Gourmet Crops: Golden Corn, Fragrant Lavender (+35% Bee speed) & Solville Pumpkin\n• 🍋🫙🐝🐄 Artisan & Ranch: Lemon Trees, Artisan Preserves Kettle, Wildflower Apiary, Sunny Cow Paddock, Solar Mist Tower (5×5) & Blossom Arch\n• 🏝️🛠️ Grand Expansions & Master Tools: Expand your isle up to 35×35 + Tier 2 Tool Upgrades\n• 💚 Cosy Promise: Your farm is never deleted if the ad timer ends—existing builds simply pause until you unlock again!",
+  "sunPassLifetimeTitle": "Lifetime Cosy Edition • {price}",
+  "sunPassStatusLifetimeHeadline": "👑 Lifetime Cosy Edition Unlocked",
+  "helpSec6Body": "• Tap / Left-Click: Queue action (or tap Farmhouse/Stall to open menus)\n• Shift + Drag (PC): Sweep across garden rows to batch-queue chores or untill\n• Right-Click (PC) or \"✕ Clear\": Cancel queued tasks\n• Drag / WASD / Arrow Keys: Pan isometric diorama\n• Pinch (Android) / Scroll Wheel (PC): Zoom camera\n• Keys 1–7: Tools (7 = Untill to Grass) • H: Harvest Ripe • M: Cosy Music • Space/C: Centre",
+  "toastNeedCoinsSeedLicense": "Need more Sols for this seed licence!",
+  "toastPromptSunPassLicense": "{name} licence",
+  "toastLifetimePassActivated": "👑 Thank you! Solville Lifetime Cosy Edition is yours forever!"
+}

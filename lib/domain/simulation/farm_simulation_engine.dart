@@ -5,6 +5,7 @@ import '../models/catalog.dart';
 import '../models/game_state.dart';
 import '../models/grid_pos.dart';
 import '../models/market_state.dart';
+import '../models/solville_toast.dart';
 import '../models/tile_state.dart';
 import '../pathfinding/astar_pathfinder.dart';
 import 'farm_map_generator.dart';
@@ -166,6 +167,7 @@ class FarmSimulationEngine {
           type: SimEventType.water,
           message:
               '🌦️ Sunny Surge! All plots hydrated & +25% Golden Market Boost active today!',
+          toast: SolvilleToast(SolvilleToastKind.sunnySurge),
         ),
       ],
     );
@@ -195,6 +197,7 @@ class FarmSimulationEngine {
           SimEvent(
             type: SimEventType.statusHint,
             message: 'Action queue is full (16 tasks)!',
+            toast: SolvilleToast(SolvilleToastKind.actionQueueFull),
           ),
         ],
       );
@@ -279,12 +282,17 @@ class FarmSimulationEngine {
               SimEvent(
                 type: SimEventType.statusHint,
                 message: 'No ripe crops or ready crates to harvest right now!',
+                toast: SolvilleToast(SolvilleToastKind.noHarvestsReady),
               ),
             ]
           : <SimEvent>[
               SimEvent(
                 type: SimEventType.statusHint,
                 message: 'Queued $added harvest task${added == 1 ? '' : 's'}!',
+                toast: SolvilleToast(
+                  SolvilleToastKind.queuedHarvests,
+                  count: added,
+                ),
               ),
             ],
     );
@@ -327,6 +335,7 @@ class FarmSimulationEngine {
               SimEvent(
                 type: SimEventType.statusHint,
                 message: 'All growing crops are well hydrated!',
+                toast: SolvilleToast(SolvilleToastKind.allCropsHydrated),
               ),
             ]
           : <SimEvent>[
@@ -334,6 +343,10 @@ class FarmSimulationEngine {
                 type: SimEventType.statusHint,
                 message:
                     'Queued watering for $added garden bed${added == 1 ? '' : 's'}!',
+                toast: SolvilleToast(
+                  SolvilleToastKind.queuedWatering,
+                  count: added,
+                ),
               ),
             ],
     );
@@ -391,6 +404,7 @@ class FarmSimulationEngine {
           SimEvent(
             type: SimEventType.statusHint,
             message: 'Market Stall display is full (8 crates)!',
+            toast: SolvilleToast(SolvilleToastKind.stallFull),
           ),
         ],
       );
@@ -422,6 +436,7 @@ class FarmSimulationEngine {
           SimEvent(
             type: SimEventType.statusHint,
             message: 'Need more Sols for this seed license!',
+            toast: SolvilleToast(SolvilleToastKind.needCoinsSeedLicense),
           ),
         ],
       );
@@ -439,6 +454,10 @@ class FarmSimulationEngine {
         SimEvent(
           type: SimEventType.shopPurchase,
           message: 'Unlocked ${def.name} seeds!',
+          toast: SolvilleToast(
+            SolvilleToastKind.unlockedSeeds,
+            product: cropId,
+          ),
         ),
       ],
     );
@@ -459,6 +478,13 @@ class FarmSimulationEngine {
             type: SimEventType.statusHint,
             message:
                 'Need ${upgradeDef.cost}☀️ for ${upgradeDef.name} (you have ${state.coins}☀️)!',
+            toast: SolvilleToast(
+              SolvilleToastKind.needCoinsForUpgrade,
+              upgradeTrack: track,
+              tier: upgradeDef.tier,
+              cost: upgradeDef.cost,
+              coins: state.coins,
+            ),
           ),
         ],
       );
@@ -488,8 +514,24 @@ class FarmSimulationEngine {
     final purchaseMsg = track == UpgradeTrack.farmExpansion
         ? '🏝️ ${upgradeDef.name}! Isle expanded to ${nextState.gridSize}×${nextState.gridSize}!'
         : 'Purchased ${upgradeDef.name}!';
+    final purchaseToast = track == UpgradeTrack.farmExpansion
+        ? SolvilleToast(
+            SolvilleToastKind.expandedIsle,
+            upgradeTrack: track,
+            tier: upgradeDef.tier,
+            gridSize: nextState.gridSize,
+          )
+        : SolvilleToast(
+            SolvilleToastKind.purchasedUpgrade,
+            upgradeTrack: track,
+            tier: upgradeDef.tier,
+          );
     final events = <SimEvent>[
-      SimEvent(type: SimEventType.shopPurchase, message: purchaseMsg),
+      SimEvent(
+        type: SimEventType.shopPurchase,
+        message: purchaseMsg,
+        toast: purchaseToast,
+      ),
     ];
     nextState = TrophyEvaluator.evaluateTrophies(nextState, events);
     return SimulationStepResult(state: nextState, events: events);
@@ -546,6 +588,11 @@ class FarmSimulationEngine {
         SimEvent(
           type: SimEventType.newDay,
           message: 'Day $nextDay dawned in Solville! (${nextWeather.label})',
+          toast: SolvilleToast(
+            SolvilleToastKind.newDay,
+            day: nextDay,
+            weather: nextWeather,
+          ),
         ),
       ],
     );
@@ -1049,6 +1096,7 @@ class FarmSimulationEngine {
           const SimEvent(
             type: SimEventType.statusHint,
             message: 'Path blocked! Adjust garden layout.',
+            toast: SolvilleToast(SolvilleToastKind.pathBlocked),
           ),
         );
         return state.copyWith(actionQueue: state.actionQueue.sublist(1));
@@ -1174,6 +1222,7 @@ class FarmSimulationEngine {
             type: SimEventType.refill,
             tile: pos,
             message: 'Watering can refilled!',
+            toast: const SolvilleToast(SolvilleToastKind.waterRefilled),
           ),
         );
         return nextState;
@@ -1207,6 +1256,11 @@ class FarmSimulationEngine {
                 type: SimEventType.statusHint,
                 tile: pos,
                 message: 'Need ${def.seedCost}☀️ for ${def.name} seeds!',
+                toast: SolvilleToast(
+                  SolvilleToastKind.needCoinsForSeed,
+                  product: seed,
+                  cost: def.seedCost,
+                ),
               ),
             );
             return nextState;
@@ -1266,6 +1320,10 @@ class FarmSimulationEngine {
                 type: SimEventType.statusHint,
                 message:
                     'Need ${SolvilleCatalog.compostCost}☀️ for Rich Compost!',
+                toast: SolvilleToast(
+                  SolvilleToastKind.needCoinsForCompost,
+                  cost: SolvilleCatalog.compostCost,
+                ),
               ),
             );
             return nextState;
@@ -1342,6 +1400,9 @@ class FarmSimulationEngine {
                 type: SimEventType.compost,
                 tile: pos,
                 message: 'Simmering Gourmet Preserves! 🫙',
+                toast: const SolvilleToast(
+                  SolvilleToastKind.simmeringPreserves,
+                ),
               ),
             );
           }
@@ -1369,6 +1430,7 @@ class FarmSimulationEngine {
               const SimEvent(
                 type: SimEventType.statusHint,
                 message: 'Hands full! Deliver crates or upgrade Crate Stacker.',
+                toast: SolvilleToast(SolvilleToastKind.handsFull),
               ),
             );
           }
@@ -1382,6 +1444,7 @@ class FarmSimulationEngine {
             const SimEvent(
               type: SimEventType.statusHint,
               message: 'Harvest crops into crates first, then bring them here!',
+              toast: SolvilleToast(SolvilleToastKind.harvestCratesFirst),
             ),
           );
           return nextState;
@@ -1413,6 +1476,7 @@ class FarmSimulationEngine {
               type: SimEventType.statusHint,
               tile: barnPos,
               message: 'Crates stored safely in the Barn!',
+              toast: SolvilleToast(SolvilleToastKind.storedInBarn),
             ),
           );
           return nextState.copyWith(
@@ -1453,6 +1517,10 @@ class FarmSimulationEngine {
               SimEvent(
                 type: SimEventType.statusHint,
                 message: 'Need ${def.tendCost}☀️ for animal feed!',
+                toast: SolvilleToast(
+                  SolvilleToastKind.needCoinsForFeed,
+                  cost: def.tendCost,
+                ),
               ),
             );
             return nextState;
@@ -1469,6 +1537,10 @@ class FarmSimulationEngine {
               type: SimEventType.water,
               tile: pos,
               message: 'Fed ${def.name}!',
+              toast: SolvilleToast(
+                SolvilleToastKind.fedAnimal,
+                animal: tile.animal!.type,
+              ),
             ),
           );
         }
@@ -1485,6 +1557,11 @@ class FarmSimulationEngine {
             SimEvent(
               type: SimEventType.statusHint,
               message: 'Need ${def.cost}☀️ for ${def.name}!',
+              toast: SolvilleToast(
+                SolvilleToastKind.needCoinsForBuild,
+                buildItem: itemType,
+                cost: def.cost,
+              ),
             ),
           );
           return nextState;
@@ -1550,6 +1627,10 @@ class FarmSimulationEngine {
             type: SimEventType.shopPurchase,
             tile: pos,
             message: 'Placed ${def.name}!',
+            toast: SolvilleToast(
+              SolvilleToastKind.placedBuild,
+              buildItem: itemType,
+            ),
           ),
         );
         return nextState;
@@ -1641,6 +1722,7 @@ class FarmSimulationEngine {
         type: SimEventType.coinsEarned,
         amount: 25,
         message: 'Mayor Sunny gifted a 25☀️ Village Seed Grant!',
+        toast: SolvilleToast(SolvilleToastKind.villageGrant),
       ),
     );
     return state.copyWith(coins: state.coins + 25);

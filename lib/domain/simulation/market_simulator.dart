@@ -4,6 +4,7 @@ import '../models/catalog.dart';
 import '../models/game_state.dart';
 import '../models/grid_pos.dart';
 import '../models/market_state.dart';
+import '../models/solville_toast.dart';
 
 /// Generates morning market trends, daily villager orders, and processes
 /// townsfolk purchases at the Market Stall.
@@ -112,6 +113,11 @@ abstract final class MarketSimulator {
             amount: updatedRequest.bonusReward,
             message:
                 '${updatedRequest.villagerName}\'s order complete! +${updatedRequest.bonusReward}☀️',
+            toast: SolvilleToast(
+              SolvilleToastKind.villagerOrderComplete,
+              villagerName: updatedRequest.villagerName,
+              coins: updatedRequest.bonusReward,
+            ),
           ),
         );
       }
@@ -124,6 +130,11 @@ abstract final class MarketSimulator {
         amount: salePrice,
         message:
             'Sold ${SolvilleCatalog.productEmoji(soldProduct)} +$salePrice☀️',
+        toast: SolvilleToast(
+          SolvilleToastKind.soldCrate,
+          product: soldProduct,
+          coins: salePrice,
+        ),
       ),
     );
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/models/entitlement_state.dart';
+import '../../l10n/app_localizations.dart';
+import '../../l10n/solville_l10n_extensions.dart';
 import '../theme/solville_theme.dart';
 import '../view_models/solville_controller.dart';
 import '../widgets/solville_dialog_shell.dart';
@@ -20,16 +22,17 @@ class SunPassModal extends StatelessWidget {
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
+        final l10n = AppLocalizations.of(context);
         final ent = controller.entitlements;
         final now = controller.nowUtc;
         final isActive = controller.isSunPassActive;
         final canStackAd = ent.canStackAnotherAd(now);
-        final remText = ent.formatRemainingTime(now);
+        final remText = l10n.formatDuration(ent.remainingAdPassDuration(now));
         final busy = controller.isMonetizationBusy;
 
         return SolvilleDialogShell(
           emoji: '☀️',
-          title: 'Solville Sun Pass',
+          title: l10n.sunPassTitle,
           maxWidth: 680,
           maxHeight: 620,
           trailing: Container(
@@ -42,7 +45,7 @@ class SunPassModal extends StatelessWidget {
               border: Border.all(color: SolvilleTheme.timberBorder),
             ),
             child: Text(
-              isActive ? '☀️ Active' : 'Starter Tier',
+              isActive ? l10n.sunPassBadgeActive : l10n.sunPassBadgeStarter,
               style: const TextStyle(
                 color: SolvilleTheme.timberDark,
                 fontWeight: FontWeight.w900,
@@ -72,24 +75,21 @@ class SunPassModal extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: const Color(0x44795548)),
                   ),
-                  child: const Column(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
-                        '✨ Everything Included in Sun Pass:',
-                        style: TextStyle(
+                        l10n.sunPassIncludedHeading,
+                        style: const TextStyle(
                           color: SolvilleTheme.timberDark,
                           fontWeight: FontWeight.w900,
                           fontSize: 13.5,
                         ),
                       ),
-                      SizedBox(height: 6),
+                      const SizedBox(height: 6),
                       Text(
-                        '• 🌽🪻🎃 Gourmet Crops: Golden Corn, Fragrant Lavender (+35% Bee speed) & Solville Pumpkin\n'
-                        '• 🍋🫙🐝🐄 Artisan & Ranch: Lemon Trees, Artisan Preserves Kettle, Wildflower Apiary, Sunny Cow Paddock, Solar Mist Tower (5×5) & Blossom Arch\n'
-                        '• 🏝️🛠️ Grand Expansions & Master Tools: Expand your isle up to 35×35 + Tier 2 Tool Upgrades\n'
-                        '• 💚 Cozy Promise: Your farm is never deleted if the ad timer ends—existing builds simply pause until you unlock again!',
-                        style: TextStyle(
+                        l10n.sunPassIncludedBody,
+                        style: const TextStyle(
                           color: SolvilleTheme.timberDark,
                           fontSize: 12.5,
                           height: 1.38,
@@ -104,24 +104,23 @@ class SunPassModal extends StatelessWidget {
                 // Option 1: Watch Rewarded Ad (+24h, stackable up to 48h)
                 _OfferCard(
                   emoji: '🎬',
-                  title: 'Watch 1 Short Ad • +24 Hours Unlock',
-                  badgeText: 'FREE • STACK UP TO 48H',
+                  title: l10n.sunPassAdTitle,
+                  badgeText: l10n.sunPassAdBadge,
                   badgeColor: const Color(0xFFE1F5FE),
                   backgroundColor: const Color(0xFFFFFFFF),
-                  description:
-                      'Unlock the entire Solville catalog for 24 hours. Watch 2 ads back-to-back to stack up to 48 hours of uninterrupted play!',
+                  description: l10n.sunPassAdDesc,
                   trailing: FilledButton.tonal(
                     onPressed: (!busy && canStackAd)
                         ? () => controller.watchAdForSunPass()
                         : null,
                     child: Text(
                       ent.isPermanentSupporter
-                          ? 'Unlocked Forever'
+                          ? l10n.sunPassUnlockedForever
                           : (!canStackAd
-                                ? 'Maxed (48h)'
+                                ? l10n.sunPassMaxed48h
                                 : (isActive
-                                      ? 'Watch Ad (+24h Top-Up)'
-                                      : 'Watch Ad (+24h)')),
+                                      ? l10n.sunPassWatchAdTopUp
+                                      : l10n.sunPassWatchAd24h)),
                     ),
                   ),
                 ),
@@ -131,21 +130,19 @@ class SunPassModal extends StatelessWidget {
                 // Option 2: Annual Sun Pass (2,99€ / year)
                 _OfferCard(
                   emoji: '🌻',
-                  title:
-                      'Annual Sun Pass • ${EntitlementState.annualPassPriceLabel}',
-                  badgeText: 'MOST POPULAR • ~0,25€/MO',
+                  title: l10n.sunPassAnnualTitle(l10n.entitlementAnnualPrice),
+                  badgeText: l10n.sunPassAnnualBadge,
                   badgeColor: const Color(0xFFFFE082),
                   backgroundColor: const Color(0xFFFFFDE7),
-                  description:
-                      'Full year of ad-free access to all crops, animals & island expansions + Free 1-tap Daily Sunny Surge (+25% Market Boost & instant Sunshower)!',
+                  description: l10n.sunPassAnnualDesc,
                   trailing: FilledButton(
                     onPressed: (!busy && !ent.isPermanentSupporter)
                         ? () => controller.purchaseAnnualPass()
                         : null,
                     child: Text(
                       ent.hasAnnualPass || ent.hasLifetimePass
-                          ? 'Active ✓'
-                          : 'Subscribe 2,99€/yr',
+                          ? l10n.sunPassActiveCheck
+                          : l10n.sunPassSubscribeBtn,
                     ),
                   ),
                 ),
@@ -155,19 +152,21 @@ class SunPassModal extends StatelessWidget {
                 // Option 3: Lifetime Cozy Edition (4,99€ one-time)
                 _OfferCard(
                   emoji: '👑',
-                  title:
-                      'Lifetime Cozy Edition • ${EntitlementState.lifetimePassPriceLabel}',
-                  badgeText: 'ONE-TIME PAYMENT • OWN FOREVER',
+                  title: l10n.sunPassLifetimeTitle(
+                    l10n.entitlementLifetimePrice,
+                  ),
+                  badgeText: l10n.sunPassLifetimeBadge,
                   badgeColor: const Color(0xFFF8BBD0),
                   backgroundColor: const Color(0xFFFFF8F9),
-                  description:
-                      'No subscriptions, no timers, no ads—ever. Own all of Solville and daily Sunny Surge boosts forever with a single purchase.',
+                  description: l10n.sunPassLifetimeDesc,
                   trailing: FilledButton(
                     onPressed: (!busy && !ent.hasLifetimePass)
                         ? () => controller.purchaseLifetimePass()
                         : null,
                     child: Text(
-                      ent.hasLifetimePass ? 'Owned ✓' : 'Buy Once 4,99€',
+                      ent.hasLifetimePass
+                          ? l10n.sunPassOwnedCheck
+                          : l10n.sunPassBuyOnceBtn,
                     ),
                   ),
                 ),
@@ -193,9 +192,9 @@ class SunPassModal extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            const Text(
-                              'Daily Sunny Surge (100% Hydration + +25% Market Prices)',
-                              style: TextStyle(
+                            Text(
+                              l10n.sunPassSurgeCardTitle,
+                              style: const TextStyle(
                                 fontWeight: FontWeight.w800,
                                 color: SolvilleTheme.timberDark,
                                 fontSize: 13,
@@ -203,8 +202,8 @@ class SunPassModal extends StatelessWidget {
                             ),
                             Text(
                               ent.isPermanentSupporter
-                                  ? 'Included free every day with your supporter pass!'
-                                  : 'Watch 1 optional ad once per day to drench your farm & boost Market Stall payouts!',
+                                  ? l10n.sunPassSurgeSupporterDesc
+                                  : l10n.sunPassSurgeFreeDesc,
                               style: const TextStyle(fontSize: 12),
                             ),
                           ],
@@ -217,10 +216,10 @@ class SunPassModal extends StatelessWidget {
                             : null,
                         child: Text(
                           !controller.canClaimSunnySurgeToday
-                              ? 'Active Today ✓'
+                              ? l10n.sunPassActiveTodayCheck
                               : (ent.isPermanentSupporter
-                                    ? 'Claim Free Surge'
-                                    : 'Watch Ad (Surge)'),
+                                    ? l10n.sunPassClaimFreeSurge
+                                    : l10n.sunPassWatchAdSurge),
                         ),
                       ),
                     ],
@@ -235,7 +234,7 @@ class SunPassModal extends StatelessWidget {
                   child: TextButton.icon(
                     onPressed: busy ? null : controller.restorePurchases,
                     icon: const Icon(Icons.restore_rounded, size: 17),
-                    label: const Text('Restore Purchases'),
+                    label: Text(l10n.sunPassRestorePurchases),
                   ),
                 ),
               ],
@@ -260,29 +259,26 @@ class _StatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final String headline;
     final String subtext;
     final Color bgColor;
 
     if (entitlements.hasLifetimePass || entitlements.isFullEditionBuild) {
-      headline = '👑 Lifetime Cozy Edition Unlocked';
-      subtext =
-          'All crops, animals, expansions, and free daily Sunny Surges are yours forever!';
+      headline = l10n.sunPassStatusLifetimeHeadline;
+      subtext = l10n.sunPassStatusLifetimeSubtext;
       bgColor = const Color(0xFFFFF3C4);
     } else if (entitlements.hasAnnualPass) {
-      headline = '🌻 Annual Sun Pass Active (2,99€ / year)';
-      subtext =
-          'All Sun Pass content and free daily Sunny Surges are unlocked!';
+      headline = l10n.sunPassStatusAnnualHeadline;
+      subtext = l10n.sunPassStatusAnnualSubtext;
       bgColor = const Color(0xFFFFF3C4);
     } else if (isActive) {
-      headline = '☀️ Ad Pass Active — $remainingLabel remaining';
-      subtext =
-          'All crops, builds, and upgrades are unlocked! You can stack up to 48 hours max.';
+      headline = l10n.sunPassStatusAdHeadline(remainingLabel);
+      subtext = l10n.sunPassStatusAdSubtext;
       bgColor = const Color(0xFFE8F5E9);
     } else {
-      headline = '🌱 Playing on Free Starter Homestead';
-      subtext =
-          'Watch 1 short ad for 24h of full access (stackable to 48h), or unlock permanently below!';
+      headline = l10n.sunPassStatusStarterHeadline;
+      subtext = l10n.sunPassStatusStarterSubtext;
       bgColor = const Color(0xFFFFF8E1);
     }
 

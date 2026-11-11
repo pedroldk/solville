@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'l10n/app_localizations.dart';
+import 'l10n/solville_l10n_extensions.dart';
 import 'ui/theme/solville_theme.dart';
 import 'ui/view_models/solville_controller.dart';
 import 'ui/views/solville_screen.dart';
@@ -32,11 +34,21 @@ class SolvilleApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Solville',
-      debugShowCheckedModeBanner: false,
-      theme: SolvilleTheme.buildTheme(),
-      home: SolvilleScreen(controller: controller),
+    return ListenableBuilder(
+      listenable: controller,
+      child: SolvilleScreen(controller: controller),
+      builder: (context, child) {
+        return MaterialApp(
+          onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
+          debugShowCheckedModeBanner: false,
+          theme: SolvilleTheme.buildTheme(),
+          locale: controller.appLocale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localeResolutionCallback: SolvilleLocaleHelper.resolveLocale,
+          home: child,
+        );
+      },
     );
   }
 }

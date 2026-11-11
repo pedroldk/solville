@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/models/catalog.dart';
+import '../../l10n/app_localizations.dart';
+import '../../l10n/solville_l10n_extensions.dart';
 import '../theme/solville_theme.dart';
 import '../view_models/solville_controller.dart';
 import '../widgets/solville_dialog_shell.dart';
@@ -17,11 +19,14 @@ class TrophyCabinetModal extends StatelessWidget {
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
+        final l10n = AppLocalizations.of(context);
         final unlocked = controller.state.unlockedTrophies;
         return SolvilleDialogShell(
           emoji: '🏆',
-          title:
-              'Trophy Cabinet (${unlocked.length}/${SolvilleCatalog.trophies.length})',
+          title: l10n.trophyCabinetTitle(
+            unlocked.length,
+            SolvilleCatalog.trophies.length,
+          ),
           maxWidth: 660,
           maxHeight: 560,
           trailing: Chip(
@@ -29,7 +34,9 @@ class TrophyCabinetModal extends StatelessWidget {
                 ? const Color(0xFFE8F5E9)
                 : SolvilleTheme.warmCream,
             label: Text(
-              controller.isSteamActive ? '🎮 Steam Synced' : '💾 Local Cabinet',
+              controller.isSteamActive
+                  ? l10n.trophySteamSynced
+                  : l10n.trophyLocalCabinet,
               style: const TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w700,
@@ -75,7 +82,7 @@ class TrophyCabinetModal extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
                           Text(
-                            def.title,
+                            l10n.trophyTitle(def.id),
                             style: TextStyle(
                               fontWeight: FontWeight.w800,
                               color: isDone
@@ -85,7 +92,7 @@ class TrophyCabinetModal extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            def.description,
+                            l10n.trophyDescription(def.id),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontSize: 11.5),
@@ -93,8 +100,8 @@ class TrophyCabinetModal extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             isDone
-                                ? '✓ Claimed +${def.rewardCoins}☀️'
-                                : 'Reward: +${def.rewardCoins}☀️',
+                                ? l10n.trophyClaimed(def.rewardCoins)
+                                : l10n.trophyReward(def.rewardCoins),
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w800,

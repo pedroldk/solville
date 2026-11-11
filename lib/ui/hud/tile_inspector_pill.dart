@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../domain/models/catalog.dart';
 import '../../domain/models/grid_pos.dart';
 import '../../domain/models/tile_state.dart';
+import '../../l10n/app_localizations.dart';
+import '../../l10n/solville_l10n_extensions.dart';
 import '../theme/solville_theme.dart';
 import '../view_models/solville_controller.dart';
 
@@ -15,6 +17,7 @@ class TileInspectorPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final pos = controller.hoveredTile ?? controller.inspectedTile;
     if (pos == null || !controller.state.inBounds(pos)) {
       return const SizedBox.shrink();
@@ -22,7 +25,7 @@ class TileInspectorPill extends StatelessWidget {
 
     final state = controller.state;
     final tile = state.tileAt(pos);
-    final summary = _describeTile(pos, tile);
+    final summary = _describeTile(l10n, pos, tile);
     if (summary == null) {
       return const SizedBox.shrink();
     }
@@ -47,7 +50,7 @@ class TileInspectorPill extends StatelessWidget {
             Flexible(
               child: Text(
                 isSunPassPaused
-                    ? '$summary • ☀️ Sun Pass Paused'
+                    ? l10n.inspectorSunPassPaused(summary)
                     : summary,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -73,9 +76,9 @@ class TileInspectorPill extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: SolvilleTheme.timberBorder),
                   ),
-                  child: const Text(
-                    '☀️ Unlock',
-                    style: TextStyle(
+                  child: Text(
+                    l10n.inspectorUnlockBtn,
+                    style: const TextStyle(
                       color: SolvilleTheme.timberDark,
                       fontWeight: FontWeight.w800,
                       fontSize: 11,
@@ -99,9 +102,9 @@ class TileInspectorPill extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: SolvilleTheme.timberBorder),
                   ),
-                  child: const Text(
-                    '🌿 Untill',
-                    style: TextStyle(
+                  child: Text(
+                    l10n.inspectorUntillBtn,
+                    style: const TextStyle(
                       color: SolvilleTheme.timberDark,
                       fontWeight: FontWeight.w800,
                       fontSize: 11,
@@ -131,46 +134,56 @@ class TileInspectorPill extends StatelessWidget {
     );
   }
 
-  String? _describeTile(GridPos pos, TileState tile) {
+  String? _describeTile(AppLocalizations l10n, GridPos pos, TileState tile) {
     final state = controller.state;
 
     if (tile.droppedCrate != null) {
       final prod = tile.droppedCrate!;
-      return '${SolvilleCatalog.productEmoji(prod)} ${SolvilleCatalog.productName(prod)} Crate on ground • Tap to pick up';
+      return l10n.inspectorCrateOnGround(
+        SolvilleCatalog.productEmoji(prod),
+        l10n.productName(prod),
+      );
     }
 
     switch (tile.structure) {
       case StructureType.farmhouse:
-        return '🏡 Sunlit Homestead • Tap for Soothing Soundscape & Farm Journal';
+        return l10n.inspectorFarmhouse;
       case StructureType.well:
-        return '🪨 Stone Well • Refills Watering Can (${state.farmer.waterCharges}/${state.maxWaterCharges})';
+        return l10n.inspectorWell(
+          state.farmer.waterCharges,
+          state.maxWaterCharges,
+        );
       case StructureType.barn:
-        return '🏚️ Red Barn • ${state.totalBarnCrates} crates stored (Tap to store or open Market)';
+        return l10n.inspectorBarn(state.totalBarnCrates);
       case StructureType.marketStall:
-        return '🏪 Market Stall • ${state.market.stallCrates.length}/8 crates displayed';
+        return l10n.inspectorMarketStall(state.market.stallCrates.length);
       case StructureType.lemonTree:
         final pct = (tile.producerProgress * 100).round();
         return tile.producerCrates > 0
-            ? '🍋 Sunburst Lemon Tree • ${tile.producerCrates}/2 crates ready! (+2% Charm)'
-            : '🍋 Sunburst Lemon Tree • Ripening $pct% (+2% Charm)';
+            ? l10n.inspectorLemonReady(tile.producerCrates)
+            : l10n.inspectorLemonRipening(pct);
       case StructureType.artisanPress:
         final pct = (tile.producerProgress * 100).round();
         if (tile.producerCrates > 0 && !tile.producerActive) {
-          return '🍯 Artisan Preserves Kettle • ${tile.producerCrates}/2 Gourmet Preserves ready!';
+          return l10n.inspectorKettleReady(tile.producerCrates);
         }
         if (tile.producerActive) {
-          return '🍯 Artisan Kettle • Simmering Preserves $pct% (${tile.producerCrates}/2 ready)';
+          return l10n.inspectorKettleSimmering(pct, tile.producerCrates);
         }
-        return '🍯 Artisan Kettle • Idle (auto-pulls raw Barn produce or carry a crate here)';
+        return l10n.inspectorKettleIdle;
       case StructureType.sprinklerRotary:
-        return '💦 Rotary Sprinkler (3×3) • Next mist in ${tile.sprinklerCooldown.toStringAsFixed(1)}s';
+        return l10n.inspectorRotarySprinkler(
+          tile.sprinklerCooldown.toStringAsFixed(1),
+        );
       case StructureType.sprinklerSolar:
-        return '⛲ Solar Mist Fountain (5×5) • Next mist in ${tile.sprinklerCooldown.toStringAsFixed(1)}s';
+        return l10n.inspectorSolarSprinkler(
+          tile.sprinklerCooldown.toStringAsFixed(1),
+        );
       case StructureType.lantern:
-        return '🏮 Garden Lantern • +3% Townspeople Tip Charm';
+        return l10n.inspectorLantern;
       case StructureType.flowerArch:
         if (tile.crop == null) {
-          return '🌸 Blooming Trellis Arch • +6% Tip Charm & +20% nearby Bee speed';
+          return l10n.inspectorFlowerArch;
         }
       case StructureType.henhouse:
       case StructureType.beehive:
@@ -182,41 +195,62 @@ class TileInspectorPill extends StatelessWidget {
     if (tile.animal != null) {
       final animal = tile.animal!;
       final def = SolvilleCatalog.animals[animal.type]!;
+      final animalName = l10n.animalName(animal.type);
       final pct = (animal.progress * 100).round();
       if (animal.readyCrates > 0) {
-        return '${def.emoji} ${def.name} • ${animal.readyCrates} ${SolvilleCatalog.productName(def.product)} ready!';
+        return l10n.inspectorAnimalReady(
+          def.emoji,
+          animalName,
+          animal.readyCrates,
+          l10n.productName(def.product),
+        );
       }
       if (animal.type == AnimalType.bee) {
         final bonusPct = (controller.beeFlowerBonusAt(pos) * 100).round();
-        return '${def.emoji} ${def.name} • $pct% Honey${bonusPct > 0 ? ' (+$bonusPct% Flower Synergy!)' : ''}';
+        final bonus = bonusPct > 0 ? l10n.inspectorBeeSynergy(bonusPct) : '';
+        return l10n.inspectorBeeProducing(def.emoji, animalName, pct, bonus);
       }
       final feedPct = (animal.feedLevel * 100).round();
       return animal.needsTending
-          ? '${def.emoji} ${def.name} • Hungry! Tap to feed (${def.tendCost}☀️)'
-          : '${def.emoji} ${def.name} • $pct% • Feed $feedPct%';
+          ? l10n.inspectorAnimalHungry(def.emoji, animalName, def.tendCost)
+          : l10n.inspectorAnimalProducing(def.emoji, animalName, pct, feedPct);
     }
 
     if (tile.crop != null) {
       final crop = tile.crop!;
       final def = SolvilleCatalog.crops[crop.cropId]!;
+      final cropName = l10n.productName(crop.cropId);
       final growthPct = (crop.growth * 100).round();
       final moistPct = (tile.moisture * 100).round();
-      final compostTag = tile.fertilized ? ' • ✨ +35% Compost' : '';
+      final compostTag = tile.fertilized ? l10n.inspectorCompostTag : '';
       if (crop.isRipe) {
-        return '${def.emoji} ${def.name} • Ripe! Tap to harvest (${crop.harvestsLeft} left)$compostTag';
+        return l10n.inspectorCropRipe(
+          def.emoji,
+          cropName,
+          crop.harvestsLeft,
+          compostTag,
+        );
       }
-      final droopTag = crop.isDrooping ? ' (Thirsty!)' : '';
-      return '${def.emoji} ${def.name} • $growthPct% grown • 💧 $moistPct%$droopTag • ${crop.harvestsLeft}x harvest$compostTag';
+      final droopTag = crop.isDrooping ? l10n.inspectorCropThirsty : '';
+      return l10n.inspectorCropGrowing(
+        def.emoji,
+        cropName,
+        growthPct,
+        moistPct,
+        droopTag,
+        crop.harvestsLeft,
+        compostTag,
+      );
     }
 
     if (tile.ground == GroundType.soil) {
       final moistPct = (tile.moisture * 100).round();
-      final compostTag = tile.fertilized ? ' • ✨ Composted (+35%)' : '';
-      return '🌱 Tilled Garden Bed (${pos.x}, ${pos.y}) • 💧 $moistPct%$compostTag • Tool 7 to untill to grass';
+      final compostTag = tile.fertilized ? l10n.inspectorSoilComposted : '';
+      return l10n.inspectorSoil(pos.x, pos.y, moistPct, compostTag);
     }
 
     if (tile.ground == GroundType.weeds) {
-      return '🌿 Wild Weeds (${pos.x}, ${pos.y}) • Tap 1–3× to clear, sow & water';
+      return l10n.inspectorWeeds(pos.x, pos.y);
     }
 
     // Keep hovered empty grass/paths quiet unless explicitly tapped on mobile
@@ -225,7 +259,7 @@ class TileInspectorPill extends StatelessWidget {
     }
 
     if (tile.ground == GroundType.stonePath) {
-      return '🧱 Sunstone Path (${pos.x}, ${pos.y}) • +40% faster walking';
+      return l10n.inspectorStonePath(pos.x, pos.y);
     }
 
     return null;

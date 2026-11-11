@@ -1,6 +1,7 @@
 import 'catalog.dart';
 import 'grid_pos.dart';
 import 'market_state.dart';
+import 'solville_toast.dart';
 import 'tile_state.dart';
 
 /// Active tool on the bottom HUD dock.
@@ -173,6 +174,7 @@ class SimEvent {
     required this.type,
     this.tile,
     this.message,
+    this.toast,
     this.amount = 0,
     this.trophyId,
     this.radius = 1,
@@ -181,6 +183,7 @@ class SimEvent {
   final SimEventType type;
   final GridPos? tile;
   final String? message;
+  final SolvilleToast? toast;
   final int amount;
   final String? trophyId;
   final int radius;

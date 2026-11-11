@@ -1,5 +1,6 @@
 import '../models/catalog.dart';
 import '../models/game_state.dart';
+import '../models/solville_toast.dart';
 
 /// Evaluates milestone trophy conditions and awards bonus Sols when unlocked.
 abstract final class TrophyEvaluator {
@@ -30,6 +31,11 @@ abstract final class TrophyEvaluator {
           trophyId: id,
           amount: def.rewardCoins,
           message: '🏆 Trophy: ${def.title} (+${def.rewardCoins}☀️)!',
+          toast: SolvilleToast(
+            SolvilleToastKind.trophyUnlocked,
+            trophyId: id,
+            coins: def.rewardCoins,
+          ),
         ),
       );
     }

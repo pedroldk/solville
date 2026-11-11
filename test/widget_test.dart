@@ -152,4 +152,42 @@ void main() {
       controller.dispose();
     },
   );
+
+  testWidgets(
+    'Mobile viewport (<600dp) renders compact single-row Day Info & Market/Shop/Pass cards with collapsible secondary controls',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final controller = SolvilleController(
+        soundService: CozySoundService(silentPlatformOutput: true),
+      );
+      await controller.initialize();
+
+      await tester.pumpWidget(SolvilleApp(controller: controller));
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // Verify compact mobile labels in Day Info and Market/Shop/Pass cards
+      expect(find.textContaining('D1 '), findsOneWidget);
+      expect(find.text('🌅 Next'), findsOneWidget);
+      expect(find.text('Shop'), findsOneWidget);
+      expect(find.text('Pass'), findsOneWidget);
+
+      // Secondary controls (Trophies 0/12) are collapsed behind the '⋯' button initially
+      expect(find.text('0/12'), findsNothing);
+      expect(find.byIcon(Icons.more_horiz_rounded), findsOneWidget);
+
+      // Expand secondary controls via '⋯' button
+      await tester.tap(find.byIcon(Icons.more_horiz_rounded));
+      await tester.pump();
+      expect(find.text('0/12'), findsOneWidget);
+      expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      controller.dispose();
+    },
+  );
 }

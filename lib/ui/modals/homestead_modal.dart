@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/models/catalog.dart';
+import '../../l10n/app_localizations.dart';
+import '../../l10n/solville_l10n_extensions.dart';
 import '../theme/solville_theme.dart';
 import '../view_models/solville_controller.dart';
 import '../widgets/solville_dialog_shell.dart';
@@ -17,14 +19,15 @@ class HomesteadAndAudioModal extends StatelessWidget {
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
+        final l10n = AppLocalizations.of(context);
         final state = controller.state;
         final pctVol = (controller.bgmVolume * 100).round();
 
         return SolvilleDialogShell(
           emoji: '🏡',
-          title: 'Sunlit Homestead & Cozy Soundscape',
+          title: l10n.homesteadTitle,
           maxWidth: 580,
-          maxHeight: 580,
+          maxHeight: 620,
           shrinkWrap: true,
           child: ListView(
             shrinkWrap: true,
@@ -43,14 +46,14 @@ class HomesteadAndAudioModal extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      const Row(
+                      Row(
                         children: <Widget>[
-                          Text('🎵', style: TextStyle(fontSize: 18)),
-                          SizedBox(width: 8),
+                          const Text('🎵', style: TextStyle(fontSize: 18)),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Soothing Background Soundscape',
-                              style: TextStyle(
+                              l10n.homesteadSoundscapeHeading,
+                              style: const TextStyle(
                                 color: SolvilleTheme.timberDark,
                                 fontWeight: FontWeight.w900,
                                 fontSize: 15,
@@ -60,9 +63,12 @@ class HomesteadAndAudioModal extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      const Text(
-                        'Choose a gentle, seamlessly looping garden ambience (press M anytime on PC to cycle):',
-                        style: TextStyle(fontSize: 12.5, color: Colors.black87),
+                      Text(
+                        l10n.homesteadSoundscapeSubtitle,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: Colors.black87,
+                        ),
                       ),
                       const SizedBox(height: 10),
                       Wrap(
@@ -75,7 +81,7 @@ class HomesteadAndAudioModal extends StatelessWidget {
                               selectedColor: const Color(0xFFFFE082),
                               backgroundColor: SolvilleTheme.parchment,
                               label: Text(
-                                track.label,
+                                l10n.bgmTrackLabel(track),
                                 style: const TextStyle(
                                   color: SolvilleTheme.timberDark,
                                   fontWeight: FontWeight.w800,
@@ -95,9 +101,9 @@ class HomesteadAndAudioModal extends StatelessWidget {
                             color: SolvilleTheme.timberDark,
                           ),
                           const SizedBox(width: 6),
-                          const Text(
-                            'Ambience Volume',
-                            style: TextStyle(
+                          Text(
+                            l10n.homesteadAmbienceVolume,
+                            style: const TextStyle(
                               color: SolvilleTheme.timberDark,
                               fontWeight: FontWeight.w700,
                               fontSize: 13,
@@ -130,17 +136,17 @@ class HomesteadAndAudioModal extends StatelessWidget {
                         contentPadding: EdgeInsets.zero,
                         dense: true,
                         activeTrackColor: SolvilleTheme.meadowGreen,
-                        title: const Text(
-                          '🔊 Tactile Garden Sound Effects (SFX)',
-                          style: TextStyle(
+                        title: Text(
+                          l10n.homesteadSfxTitle,
+                          style: const TextStyle(
                             color: SolvilleTheme.timberDark,
                             fontWeight: FontWeight.w800,
                             fontSize: 13,
                           ),
                         ),
-                        subtitle: const Text(
-                          'Gentle chimes when digging, watering, harvesting & earning Sols',
-                          style: TextStyle(fontSize: 11.5),
+                        subtitle: Text(
+                          l10n.homesteadSfxSubtitle,
+                          style: const TextStyle(fontSize: 11.5),
                         ),
                         value: controller.sfxEnabled,
                         onChanged: (_) => controller.toggleSfx(),
@@ -165,9 +171,9 @@ class HomesteadAndAudioModal extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Text(
-                      '📖 Sol\'s Homestead Journal',
-                      style: TextStyle(
+                    Text(
+                      l10n.homesteadJournalHeading,
+                      style: const TextStyle(
                         color: SolvilleTheme.timberDark,
                         fontWeight: FontWeight.w900,
                         fontSize: 15,
@@ -179,22 +185,28 @@ class HomesteadAndAudioModal extends StatelessWidget {
                       runSpacing: 8,
                       children: <Widget>[
                         _JournalBadge(
-                          label: 'Day ${state.day} • ${state.weather.label}',
+                          label: l10n.homesteadJournalDay(
+                            state.day,
+                            l10n.weatherLabel(state.weather),
+                          ),
                         ),
                         _JournalBadge(
-                          label: '🏝️ ${state.gridSize}×${state.gridSize} Isle',
+                          label: l10n.homesteadJournalIsle(state.gridSize),
                         ),
                         _JournalBadge(
-                          label:
-                              '☀️ ${state.lifetimeCoinsEarned} Lifetime Sols',
+                          label: l10n.homesteadJournalCoins(
+                            state.lifetimeCoinsEarned,
+                          ),
                         ),
                         _JournalBadge(
-                          label:
-                              '📦 ${state.totalCratesHarvested} Crates Harvested',
+                          label: l10n.homesteadJournalCrates(
+                            state.totalCratesHarvested,
+                          ),
                         ),
                         _JournalBadge(
-                          label:
-                              '🌸 +${(state.charmBonus * 100).round()}% Garden Charm',
+                          label: l10n.homesteadJournalCharm(
+                            (state.charmBonus * 100).round(),
+                          ),
                         ),
                       ],
                     ),
@@ -210,7 +222,7 @@ class HomesteadAndAudioModal extends StatelessWidget {
                             Navigator.of(context).pop();
                           },
                           icon: const Icon(Icons.wb_twilight_rounded),
-                          label: const Text('🌅 Rest Until Next Morning'),
+                          label: Text(l10n.homesteadRestNextMorning),
                         ),
                         FilledButton.icon(
                           onPressed: () async {
@@ -220,11 +232,82 @@ class HomesteadAndAudioModal extends StatelessWidget {
                             }
                           },
                           icon: const Icon(Icons.save_rounded),
-                          label: const Text('Save Farm'),
+                          label: Text(l10n.homesteadSaveFarm),
                         ),
                       ],
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // 3. Language Selector Card
+              Material(
+                color: SolvilleTheme.warmCream,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  side: const BorderSide(color: Color(0x44795548), width: 1.4),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        l10n.homesteadLanguageHeading,
+                        style: const TextStyle(
+                          color: SolvilleTheme.timberDark,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.homesteadLanguageSubtitle,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: <Widget>[
+                          ChoiceChip(
+                            selected: controller.appLocale == null,
+                            selectedColor: const Color(0xFFFFE082),
+                            backgroundColor: SolvilleTheme.parchment,
+                            label: Text(
+                              l10n.languageSystem,
+                              style: const TextStyle(
+                                color: SolvilleTheme.timberDark,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 12,
+                              ),
+                            ),
+                            onSelected: (_) => controller.setAppLocale(null),
+                          ),
+                          for (final loc in SolvilleLocaleHelper.selectableLocales)
+                            ChoiceChip(
+                              selected: controller.appLocale == loc,
+                              selectedColor: const Color(0xFFFFE082),
+                              backgroundColor: SolvilleTheme.parchment,
+                              label: Text(
+                                _localeLabel(l10n, loc),
+                                style: const TextStyle(
+                                  color: SolvilleTheme.timberDark,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              onSelected: (_) => controller.setAppLocale(loc),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -232,6 +315,18 @@ class HomesteadAndAudioModal extends StatelessWidget {
         );
       },
     );
+  }
+
+  String _localeLabel(AppLocalizations l10n, Locale locale) {
+    return switch ((locale.languageCode, locale.countryCode)) {
+      ('en', 'GB') => l10n.languageEnGb,
+      ('en', _) => l10n.languageEnUs,
+      ('pt', _) => l10n.languagePtPt,
+      ('fr', _) => l10n.languageFr,
+      ('es', _) => l10n.languageEs,
+      ('de', _) => l10n.languageDe,
+      _ => locale.toLanguageTag(),
+    };
   }
 }
 

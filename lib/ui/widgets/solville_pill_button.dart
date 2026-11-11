@@ -15,6 +15,7 @@ class SolvillePillButton extends StatelessWidget {
     this.borderRadius = 14,
     this.padding = const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     this.fontSize = 12.5,
+    this.emojiSize = 14,
   });
 
   final String emoji;
@@ -25,6 +26,7 @@ class SolvillePillButton extends StatelessWidget {
   final double borderRadius;
   final EdgeInsetsGeometry padding;
   final double fontSize;
+  final double emojiSize;
 
   @override
   Widget build(BuildContext context) {
@@ -43,16 +45,18 @@ class SolvillePillButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Text(emoji, style: const TextStyle(fontSize: 14)),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: TextStyle(
-                  color: SolvilleTheme.timberDark,
-                  fontWeight: FontWeight.w800,
-                  fontSize: fontSize,
+              Text(emoji, style: TextStyle(fontSize: emojiSize)),
+              if (label.isNotEmpty) ...<Widget>[
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: SolvilleTheme.timberDark,
+                    fontWeight: FontWeight.w800,
+                    fontSize: fontSize,
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),

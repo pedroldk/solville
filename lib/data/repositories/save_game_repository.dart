@@ -31,6 +31,7 @@ class SaveGameRepository {
   static const String _bgmTrackPrefsKey = 'solville_bgm_track_v2';
   static const String _bgmVolPrefsKey = 'solville_bgm_volume_v2';
   static const String _entitlementPrefsKey = 'solville_entitlements_v1';
+  static const String _localePrefsKey = 'solville_locale_v1';
 
   Future<SharedPreferences>? _prefsFuture;
   GameState? _pendingSaveState;
@@ -136,6 +137,26 @@ class SaveGameRepository {
       final prefs = await _getPrefs();
       final encoded = jsonEncode(state.toJson());
       await prefs.setString(_entitlementPrefsKey, encoded);
+    } catch (_) {}
+  }
+
+  Future<String?> loadLocaleCode() async {
+    try {
+      final prefs = await _getPrefs();
+      return prefs.getString(_localePrefsKey);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> saveLocaleCode(String? code) async {
+    try {
+      final prefs = await _getPrefs();
+      if (code == null || code.isEmpty) {
+        await prefs.remove(_localePrefsKey);
+      } else {
+        await prefs.setString(_localePrefsKey, code);
+      }
     } catch (_) {}
   }
 }

@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/models/catalog.dart';
+import '../../l10n/app_localizations.dart';
+import '../../l10n/solville_l10n_extensions.dart';
 import '../theme/solville_theme.dart';
 import '../view_models/solville_controller.dart';
 import '../widgets/solville_pill_button.dart';
 
 /// Adaptive top HUD displaying Coins, Water charges, Stacked Crates, Day/Sun
 /// progress, Hot Market Boom ticker, Soothing Soundscape selector, and modals.
-class TopStatusBar extends StatelessWidget {
+class TopStatusBar extends StatefulWidget {
   const TopStatusBar({
     super.key,
     required this.controller,
@@ -27,168 +29,322 @@ class TopStatusBar extends StatelessWidget {
   final VoidCallback onOpenHelp;
   final VoidCallback? onOpenSunPass;
 
-  String _bgmShortTitle(BgmTrack track, {required bool compact}) {
-    if (compact) return 'Audio';
-    return switch (track) {
-      BgmTrack.sunnyLullaby => 'Lullaby',
-      BgmTrack.morningMeadow => 'Meadow',
-      BgmTrack.cozyRain => 'Cozy Rain',
-      BgmTrack.off => 'Music Off',
-    };
-  }
+  @override
+  State<TopStatusBar> createState() => _TopStatusBarState();
+}
+
+class _TopStatusBarState extends State<TopStatusBar> {
+  bool _mobileMenuExpanded = false;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final controller = widget.controller;
     final state = controller.state;
     final booms = state.market.boomProducts;
     final boomEmojis = booms.map(SolvilleCatalog.productEmoji).join(' ');
+    final weatherLabel = l10n.weatherLabel(state.weather);
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
         final compact = constraints.maxWidth < 820;
+
+        final statChildren = <Widget>[
+          _StatChip(
+            emoji: '☀️',
+            label: '${state.coins}',
+            tooltip: l10n.hudSolsTooltip,
+            highlight: const Color(0xFFFFF3C4),
+            compact: isMobile,
+          ),
+          _StatChip(
+            emoji: '🪣',
+            label: '${state.farmer.waterCharges}/${state.maxWaterCharges}',
+            tooltip: l10n.hudWaterTooltip,
+            highlight: const Color(0xFFE1F5FE),
+            compact: isMobile,
+          ),
+          _StatChip(
+            emoji: '📦',
+            label: '${state.farmer.carriedCrates.length}/${state.maxCarryCrates}',
+            tooltip: l10n.hudCratesTooltip,
+            highlight: const Color(0xFFFFECB3),
+            compact: isMobile,
+          ),
+          _DayWeatherChip(
+            day: state.day,
+            progress: state.dayProgress,
+            weatherLabel: compact
+                ? weatherLabel.split(' ').first
+                : weatherLabel,
+            onNextMorning: controller.restToNextMorning,
+            compact: isMobile,
+          ),
+        ];
+
+        final pillPadding = isMobile
+            ? const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5)
+            : const EdgeInsets.symmetric(horizontal: 10, vertical: 6);
+        final pillRadius = isMobile ? 11.0 : 14.0;
+        final pillFontSize = isMobile ? 11.0 : 12.5;
+        final pillEmojiSize = isMobile ? 12.5 : 14.0;
+
+        final actionChildren = <Widget>[
+          SolvillePillButton(
+            emoji: '📈',
+            label: isMobile
+                ? boomEmojis
+                : (compact
+                      ? l10n.hudMarketCompact(boomEmojis)
+                      : l10n.hudMarketFull(
+                          boomEmojis,
+                          state.market.stallCrates.length,
+                        )),
+            backgroundColor: const Color(0xFFFFF8E1),
+            padding: pillPadding,
+            borderRadius: pillRadius,
+            fontSize: pillFontSize,
+            emojiSize: pillEmojiSize,
+            onTap: widget.onOpenMarket,
+          ),
+          SolvillePillButton(
+            emoji: '🛒',
+            label: l10n.hudShop,
+            backgroundColor: const Color(0xFFE8F5E9),
+            padding: pillPadding,
+            borderRadius: pillRadius,
+            fontSize: pillFontSize,
+            emojiSize: pillEmojiSize,
+            onTap: widget.onOpenShop,
+          ),
+          if (!controller.entitlements.isFullEditionBuild &&
+              widget.onOpenSunPass != null)
+            SolvillePillButton(
+              emoji: controller.entitlements.hasLifetimePass
+                  ? '👑'
+                  : (controller.entitlements.hasAnnualPass ? '🌻' : '☀️'),
+              label: compact
+                  ? (controller.isSunPassActive
+                        ? l10n.hudPassShortActive
+                        : l10n.hudPassShort)
+                  : l10n.entitlementStatusPillText(
+                      controller.entitlements,
+                      controller.nowUtc,
+                    ),
+              tooltip: l10n.hudSunPassTooltip,
+              backgroundColor: controller.isSunPassActive
+                  ? const Color(0xFFFFE082)
+                  : const Color(0xFFFFF3E0),
+              padding: pillPadding,
+              borderRadius: pillRadius,
+              fontSize: pillFontSize,
+              emojiSize: pillEmojiSize,
+              onTap: widget.onOpenSunPass!,
+            ),
+          if (!isMobile || _mobileMenuExpanded) ...<Widget>[
+            SolvillePillButton(
+              emoji: '🏆',
+              label:
+                  '${state.unlockedTrophies.length}/${SolvilleCatalog.trophies.length}',
+              backgroundColor: const Color(0xFFFFECB3),
+              padding: pillPadding,
+              borderRadius: pillRadius,
+              fontSize: pillFontSize,
+              emojiSize: pillEmojiSize,
+              onTap: widget.onOpenTrophies,
+            ),
+            SolvillePillButton(
+              emoji: controller.bgmTrack.shortEmoji,
+              label: l10n.bgmTrackShortTitle(
+                controller.bgmTrack,
+                compact: compact,
+                isMobile: isMobile,
+              ),
+              tooltip: l10n.hudHomesteadTooltip,
+              backgroundColor: const Color(0xFFE1F5FE),
+              padding: pillPadding,
+              borderRadius: pillRadius,
+              fontSize: pillFontSize,
+              emojiSize: pillEmojiSize,
+              onTap: widget.onOpenAudio,
+            ),
+            if (isMobile) ...<Widget>[
+              _CompactHudIconButton(
+                tooltip: controller.sfxEnabled
+                    ? l10n.hudMuteSfx
+                    : l10n.hudEnableSfx,
+                icon: controller.sfxEnabled
+                    ? Icons.volume_up_rounded
+                    : Icons.volume_off_rounded,
+                onTap: controller.toggleSfx,
+              ),
+              _CompactHudIconButton(
+                tooltip: l10n.hudHelpTooltip,
+                icon: Icons.help_outline_rounded,
+                onTap: widget.onOpenHelp,
+              ),
+            ] else ...<Widget>[
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                tooltip: controller.sfxEnabled
+                    ? l10n.hudMuteSfx
+                    : l10n.hudEnableSfx,
+                onPressed: controller.toggleSfx,
+                icon: Icon(
+                  controller.sfxEnabled
+                      ? Icons.volume_up_rounded
+                      : Icons.volume_off_rounded,
+                  color: SolvilleTheme.timberDark,
+                  size: 20,
+                ),
+              ),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                tooltip: l10n.hudHelpTooltip,
+                onPressed: widget.onOpenHelp,
+                icon: const Icon(
+                  Icons.help_outline_rounded,
+                  color: SolvilleTheme.timberDark,
+                  size: 20,
+                ),
+              ),
+            ],
+          ],
+          if (isMobile)
+            _CompactHudIconButton(
+              tooltip: _mobileMenuExpanded
+                  ? l10n.hudHideExtra
+                  : l10n.hudShowExtra,
+              icon: _mobileMenuExpanded
+                  ? Icons.chevron_left_rounded
+                  : Icons.more_horiz_rounded,
+              backgroundColor: _mobileMenuExpanded
+                  ? const Color(0xFFFFECB3)
+                  : SolvilleTheme.warmCream,
+              onTap: () => setState(() {
+                _mobileMenuExpanded = !_mobileMenuExpanded;
+              }),
+            ),
+        ];
+
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 6 : 10,
+            vertical: isMobile ? 4 : 8,
+          ),
           child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: isMobile ? 6 : 8,
+            runSpacing: isMobile ? 4 : 8,
             alignment: WrapAlignment.spaceBetween,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
               // Left cluster: Sols, Water, Carried Crates, Day
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 7,
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 7 : 12,
+                  vertical: isMobile ? 4 : 7,
                 ),
-                decoration: SolvilleTheme.panelDecoration(radius: 22),
-                child: Wrap(
-                  spacing: 12,
-                  runSpacing: 6,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: <Widget>[
-                    _StatChip(
-                      emoji: '☀️',
-                      label: '${state.coins}',
-                      tooltip: 'Sols (Solville Coins)',
-                      highlight: const Color(0xFFFFF3C4),
-                    ),
-                    _StatChip(
-                      emoji: '🪣',
-                      label:
-                          '${state.farmer.waterCharges}/${state.maxWaterCharges}',
-                      tooltip: 'Watering Can charges (refill at Stone Well)',
-                      highlight: const Color(0xFFE1F5FE),
-                    ),
-                    _StatChip(
-                      emoji: '📦',
-                      label:
-                          '${state.farmer.carriedCrates.length}/${state.maxCarryCrates}',
-                      tooltip:
-                          'Carried Crates (deliver to Market Stall or Barn)',
-                      highlight: const Color(0xFFFFECB3),
-                    ),
-                    _DayWeatherChip(
-                      day: state.day,
-                      progress: state.dayProgress,
-                      weatherLabel: compact
-                          ? state.weather.label.split(' ').first
-                          : state.weather.label,
-                      onNextMorning: controller.restToNextMorning,
-                    ),
-                  ],
+                decoration: SolvilleTheme.panelDecoration(
+                  radius: isMobile ? 16 : 22,
                 ),
+                child: isMobile
+                    ? SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: _withHorizontalSpacing(statChildren, 5),
+                        ),
+                      )
+                    : Wrap(
+                        spacing: 12,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: statChildren,
+                      ),
               ),
 
-              // Right cluster: Market Ticker, Shop, Trophies, Soothing Audio, Help
+              // Right cluster: Market Ticker, Shop, Pass, and collapsible utilities
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: SolvilleTheme.panelDecoration(radius: 22),
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: <Widget>[
-                    SolvillePillButton(
-                      emoji: '📈',
-                      label: compact
-                          ? 'Market $boomEmojis'
-                          : 'Market 🔥 $boomEmojis (${state.market.stallCrates.length}/8)',
-                      backgroundColor: const Color(0xFFFFF8E1),
-                      onTap: onOpenMarket,
-                    ),
-                    SolvillePillButton(
-                      emoji: '🛒',
-                      label: 'Shop',
-                      backgroundColor: const Color(0xFFE8F5E9),
-                      onTap: onOpenShop,
-                    ),
-                    if (!controller.entitlements.isFullEditionBuild &&
-                        onOpenSunPass != null)
-                      SolvillePillButton(
-                        emoji: controller.entitlements.hasLifetimePass
-                            ? '👑'
-                            : (controller.entitlements.hasAnnualPass
-                                  ? '🌻'
-                                  : '☀️'),
-                        label: compact
-                            ? (controller.isSunPassActive ? 'Pass ✓' : 'Pass')
-                            : controller.entitlements.statusPillText(
-                                controller.nowUtc,
-                              ),
-                        tooltip:
-                            'Solville Sun Pass (24h–48h Ad Pass or 2,99€/yr)',
-                        backgroundColor: controller.isSunPassActive
-                            ? const Color(0xFFFFE082)
-                            : const Color(0xFFFFF3E0),
-                        onTap: onOpenSunPass!,
-                      ),
-                    SolvillePillButton(
-                      emoji: '🏆',
-                      label:
-                          '${state.unlockedTrophies.length}/${SolvilleCatalog.trophies.length}',
-                      backgroundColor: const Color(0xFFFFECB3),
-                      onTap: onOpenTrophies,
-                    ),
-                    SolvillePillButton(
-                      emoji: controller.bgmTrack.shortEmoji,
-                      label: _bgmShortTitle(
-                        controller.bgmTrack,
-                        compact: compact,
-                      ),
-                      backgroundColor: const Color(0xFFE1F5FE),
-                      onTap: onOpenAudio,
-                    ),
-                    IconButton(
-                      visualDensity: VisualDensity.compact,
-                      tooltip: controller.sfxEnabled
-                          ? 'Mute Garden SFX'
-                          : 'Enable Garden SFX',
-                      onPressed: controller.toggleSfx,
-                      icon: Icon(
-                        controller.sfxEnabled
-                            ? Icons.volume_up_rounded
-                            : Icons.volume_off_rounded,
-                        color: SolvilleTheme.timberDark,
-                        size: 20,
-                      ),
-                    ),
-                    IconButton(
-                      visualDensity: VisualDensity.compact,
-                      tooltip: 'How to Play, Controls & Save',
-                      onPressed: onOpenHelp,
-                      icon: const Icon(
-                        Icons.help_outline_rounded,
-                        color: SolvilleTheme.timberDark,
-                        size: 20,
-                      ),
-                    ),
-                  ],
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 6 : 8,
+                  vertical: isMobile ? 4 : 6,
                 ),
+                decoration: SolvilleTheme.panelDecoration(
+                  radius: isMobile ? 16 : 22,
+                ),
+                child: isMobile
+                    ? SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: _withHorizontalSpacing(actionChildren, 4),
+                        ),
+                      )
+                    : Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: actionChildren,
+                      ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  List<Widget> _withHorizontalSpacing(List<Widget> children, double gap) {
+    final result = <Widget>[];
+    for (var i = 0; i < children.length; i++) {
+      if (i > 0) {
+        result.add(SizedBox(width: gap));
+      }
+      result.add(children[i]);
+    }
+    return result;
+  }
+}
+
+class _CompactHudIconButton extends StatelessWidget {
+  const _CompactHudIconButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onTap,
+    this.backgroundColor = SolvilleTheme.parchment,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onTap;
+  final Color backgroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(11),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(11),
+          onTap: onTap,
+          child: Container(
+            width: 26,
+            height: 26,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(11),
+              border: Border.all(
+                color: SolvilleTheme.timberBorder,
+                width: 1.3,
+              ),
+            ),
+            child: Icon(icon, color: SolvilleTheme.timberDark, size: 15.5),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -199,35 +355,40 @@ class _StatChip extends StatelessWidget {
     required this.label,
     required this.tooltip,
     required this.highlight,
+    this.compact = false,
   });
 
   final String emoji;
   final String label;
   final String tooltip;
   final Color highlight;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Tooltip(
       message: tooltip,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 6 : 9,
+          vertical: compact ? 2 : 4,
+        ),
         decoration: BoxDecoration(
           color: highlight,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(compact ? 10 : 14),
           border: Border.all(color: const Color(0x33795548)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Text(emoji, style: const TextStyle(fontSize: 15)),
-            const SizedBox(width: 5),
+            Text(emoji, style: TextStyle(fontSize: compact ? 12.5 : 15)),
+            SizedBox(width: compact ? 3.5 : 5),
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 color: SolvilleTheme.timberDark,
                 fontWeight: FontWeight.w800,
-                fontSize: 13.5,
+                fontSize: compact ? 11.5 : 13.5,
               ),
             ),
           ],
@@ -243,57 +404,65 @@ class _DayWeatherChip extends StatelessWidget {
     required this.progress,
     required this.weatherLabel,
     required this.onNextMorning,
+    this.compact = false,
   });
 
   final int day;
   final double progress;
   final String weatherLabel;
   final VoidCallback onNextMorning;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         SizedBox(
-          width: 18,
-          height: 18,
+          width: compact ? 14 : 18,
+          height: compact ? 14 : 18,
           child: CircularProgressIndicator(
             value: progress.clamp(0.0, 1.0),
-            strokeWidth: 3,
+            strokeWidth: compact ? 2.2 : 3,
             backgroundColor: const Color(0x33795548),
             valueColor: const AlwaysStoppedAnimation<Color>(
               SolvilleTheme.sunGold,
             ),
           ),
         ),
-        const SizedBox(width: 7),
+        SizedBox(width: compact ? 5 : 7),
         Text(
-          'Day $day • $weatherLabel',
-          style: const TextStyle(
+          compact
+              ? l10n.hudDayWeatherCompact(day, weatherLabel)
+              : l10n.hudDayWeatherFull(day, weatherLabel),
+          style: TextStyle(
             color: SolvilleTheme.timberDark,
             fontWeight: FontWeight.w700,
-            fontSize: 12.5,
+            fontSize: compact ? 11 : 12.5,
           ),
         ),
-        const SizedBox(width: 6),
+        SizedBox(width: compact ? 5 : 6),
         Tooltip(
-          message: 'Rest & start next morning with fresh Market Trends',
+          message: l10n.hudNextMorningTooltip,
           child: InkWell(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(compact ? 10 : 12),
             onTap: onNextMorning,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 6 : 8,
+                vertical: compact ? 2 : 3,
+              ),
               decoration: BoxDecoration(
                 color: const Color(0xFFFFE0B2),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(compact ? 10 : 12),
                 border: Border.all(color: SolvilleTheme.timberBorder),
               ),
-              child: const Text(
-                '🌅 Next Day',
+              child: Text(
+                compact ? l10n.hudNextCompact : l10n.hudNextFull,
                 style: TextStyle(
                   color: SolvilleTheme.timberDark,
-                  fontSize: 11.5,
+                  fontSize: compact ? 10.5 : 11.5,
                   fontWeight: FontWeight.w800,
                 ),
               ),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../domain/models/catalog.dart';
 import '../../domain/models/market_state.dart';
+import '../../l10n/app_localizations.dart';
+import '../../l10n/solville_l10n_extensions.dart';
 import '../theme/solville_theme.dart';
 import '../view_models/solville_controller.dart';
 import '../widgets/solville_dialog_shell.dart';
@@ -17,6 +19,7 @@ class MarketAndBarnModal extends StatelessWidget {
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
+        final l10n = AppLocalizations.of(context);
         final state = controller.state;
         final market = state.market;
         final charmPct = (state.charmBonus * 100).round();
@@ -24,13 +27,13 @@ class MarketAndBarnModal extends StatelessWidget {
 
         return SolvilleDialogShell(
           emoji: '🏪',
-          title: 'Market Forecast & Barn (Day ${state.day})',
+          title: l10n.marketTitle(state.day),
           maxWidth: 700,
           maxHeight: 590,
           trailing: charmPct > 0
               ? Chip(
                   backgroundColor: const Color(0xFFFCE4EC),
-                  label: Text('🌸 +$charmPct% Charm'),
+                  label: Text(l10n.marketCharmBadge(charmPct)),
                 )
               : null,
           child: ListView(
@@ -60,7 +63,9 @@ class MarketAndBarnModal extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             Text(
-                              'Daily Village Order — ${req.villagerName}',
+                              l10n.marketOrderHeading(
+                                l10n.villagerName(req.villagerName),
+                              ),
                               style: const TextStyle(
                                 fontWeight: FontWeight.w800,
                                 color: SolvilleTheme.timberDark,
@@ -68,8 +73,14 @@ class MarketAndBarnModal extends StatelessWidget {
                             ),
                             Text(
                               req.isCompleted
-                                  ? 'Completed today! Bonus +${req.bonusReward}☀️ earned!'
-                                  : 'Sell ${req.requiredCount} crates of ${SolvilleCatalog.productEmoji(req.product)} ${SolvilleCatalog.productName(req.product)} (${req.deliveredCount}/${req.requiredCount}) for +${req.bonusReward}☀️ bonus!',
+                                  ? l10n.marketOrderCompleted(req.bonusReward)
+                                  : l10n.marketOrderProgress(
+                                      req.requiredCount,
+                                      SolvilleCatalog.productEmoji(req.product),
+                                      l10n.productName(req.product),
+                                      req.deliveredCount,
+                                      req.bonusReward,
+                                    ),
                               style: const TextStyle(fontSize: 13),
                             ),
                           ],
@@ -106,8 +117,8 @@ class MarketAndBarnModal extends StatelessWidget {
                         children: <Widget>[
                           Text(
                             market.sunnySurgeActive
-                                ? 'Sunny Surge Active Today! (+25% All Market Prices)'
-                                : 'Daily Sunny Surge (+25% Market Boost & 100% Hydration)',
+                                ? l10n.marketSurgeActiveTitle
+                                : l10n.marketSurgeInactiveTitle,
                             style: const TextStyle(
                               fontWeight: FontWeight.w800,
                               color: SolvilleTheme.timberDark,
@@ -116,10 +127,10 @@ class MarketAndBarnModal extends StatelessWidget {
                           ),
                           Text(
                             market.sunnySurgeActive
-                                ? 'All garden plots are hydrated and townsfolk pay +25% for every crate today!'
+                                ? l10n.marketSurgeActiveSubtitle
                                 : (controller.entitlements.isPermanentSupporter
-                                      ? 'Included free with your Sun Pass!'
-                                      : 'Watch 1 short ad (or unlock Sun Pass for free daily surges)!'),
+                                      ? l10n.marketSurgeSupporterSubtitle
+                                      : l10n.marketSurgeFreeSubtitle),
                             style: const TextStyle(fontSize: 12),
                           ),
                         ],
@@ -132,10 +143,10 @@ class MarketAndBarnModal extends StatelessWidget {
                           : null,
                       child: Text(
                         market.sunnySurgeActive
-                            ? 'Active ✓'
+                            ? l10n.marketSurgeActiveBtn
                             : (controller.entitlements.isPermanentSupporter
-                                  ? 'Activate Free'
-                                  : 'Watch Ad'),
+                                  ? l10n.marketSurgeFreeBtn
+                                  : l10n.marketSurgeWatchAdBtn),
                       ),
                     ),
                   ],
@@ -143,9 +154,9 @@ class MarketAndBarnModal extends StatelessWidget {
               ),
 
               // Pricing Stance Picker
-              const Text(
-                'Market Stall Pricing Strategy',
-                style: TextStyle(
+              Text(
+                l10n.marketPricingHeading,
+                style: const TextStyle(
                   color: SolvilleTheme.timberDark,
                   fontWeight: FontWeight.w800,
                 ),
@@ -159,7 +170,7 @@ class MarketAndBarnModal extends StatelessWidget {
                     ChoiceChip(
                       selected: market.pricing == stance,
                       selectedColor: const Color(0xFFFFE082),
-                      label: Text(stance.label),
+                      label: Text(l10n.pricingStanceLabel(stance)),
                       onSelected: (_) => controller.setPricingStance(stance),
                     ),
                 ],
@@ -171,18 +182,24 @@ class MarketAndBarnModal extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
-                  Text(
-                    'Stall Counter (${market.stallCrates.length}/${MarketState.maxStallSlots}) • Barn (${state.totalBarnCrates} stored)',
-                    style: const TextStyle(
-                      color: SolvilleTheme.timberDark,
-                      fontWeight: FontWeight.w800,
+                  Flexible(
+                    child: Text(
+                      l10n.marketCounterAndBarn(
+                        market.stallCrates.length,
+                        MarketState.maxStallSlots,
+                        state.totalBarnCrates,
+                      ),
+                      style: const TextStyle(
+                        color: SolvilleTheme.timberDark,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                   if (state.totalBarnCrates > 0)
                     TextButton.icon(
                       onPressed: controller.stockAllBoomFromBarn,
                       icon: const Icon(Icons.local_fire_department),
-                      label: const Text('Stock Hot Goods'),
+                      label: Text(l10n.marketStockHotGoods),
                     ),
                 ],
               ),
@@ -205,9 +222,9 @@ class MarketAndBarnModal extends StatelessWidget {
                 ),
 
               const Divider(),
-              const Text(
-                'Today\'s Produce & Artisan Prices',
-                style: TextStyle(
+              Text(
+                l10n.marketTodayPricesHeading,
+                style: const TextStyle(
                   color: SolvilleTheme.timberDark,
                   fontWeight: FontWeight.w800,
                 ),
@@ -216,6 +233,7 @@ class MarketAndBarnModal extends StatelessWidget {
 
               for (final id in ProductId.values)
                 _buildPriceRow(
+                  l10n: l10n,
                   id: id,
                   trend: market.trendFor(id),
                   price: market.unitPriceFor(id, charmBonus: state.charmBonus),
@@ -229,6 +247,7 @@ class MarketAndBarnModal extends StatelessWidget {
   }
 
   Widget _buildPriceRow({
+    required AppLocalizations l10n,
     required ProductId id,
     required MarketTrend trend,
     required int price,
@@ -257,7 +276,7 @@ class MarketAndBarnModal extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    SolvilleCatalog.productName(id),
+                    l10n.productName(id),
                     style: const TextStyle(
                       fontWeight: FontWeight.w800,
                       color: SolvilleTheme.timberDark,
@@ -265,7 +284,7 @@ class MarketAndBarnModal extends StatelessWidget {
                   ),
                   if (barnCount > 0)
                     Text(
-                      '📦 $barnCount in Barn',
+                      l10n.marketInBarnCount(barnCount),
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -282,7 +301,7 @@ class MarketAndBarnModal extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                trend.label,
+                l10n.marketTrendLabel(trend),
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
@@ -302,7 +321,7 @@ class MarketAndBarnModal extends StatelessWidget {
               const SizedBox(width: 8),
               FilledButton.tonal(
                 onPressed: () => controller.stockStallFromBarn(id),
-                child: const Text('Sell 1'),
+                child: Text(l10n.marketSellOne),
               ),
             ],
           ],

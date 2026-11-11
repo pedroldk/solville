@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../game/solville_game.dart';
+import '../../l10n/app_localizations.dart';
+import '../../l10n/solville_l10n_extensions.dart';
 import '../hud/bottom_tool_dock.dart';
 import '../hud/game_viewport_surface.dart';
 import '../hud/tile_inspector_pill.dart';
@@ -137,7 +139,11 @@ class _SolvilleScreenState extends State<SolvilleScreen>
               child: ListenableBuilder(
                 listenable: widget.controller,
                 builder: (context, _) {
-                  final toast = widget.controller.toastMessage;
+                  final l10n = AppLocalizations.of(context);
+                  final toastData = widget.controller.toast;
+                  final toast = toastData != null
+                      ? l10n.resolveToast(toastData)
+                      : widget.controller.toastMessage;
                   return Column(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: <Widget>[
