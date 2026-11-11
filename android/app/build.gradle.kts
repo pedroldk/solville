@@ -26,8 +26,8 @@ android {
 
     defaultConfig {
         applicationId = "pt.solal.solville"
-        // google_mobile_ads requires minSdk >= 23.
-        minSdk = maxOf(flutter.minSdkVersion, 23)
+        // google_mobile_ads 9.2+ and shared_preferences_android 2.5+ require minSdk >= 24.
+        minSdk = maxOf(flutter.minSdkVersion, 24)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -71,6 +71,8 @@ android {
 
     buildTypes {
         release {
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

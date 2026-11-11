@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Golden sun halo (inside 66dp safe zone) -->
+    <path
+        android:fillColor="#FFE082"
+        android:fillAlpha="0.55"
+        android:pathData="M54,42m-18,0a18,18 0,1 1,36 0a18,18 0,1 1,-36 0" />
+    <!-- Golden sun core -->
+    <path
+        android:fillColor="#FFB300"
+        android:pathData="M54,42m-13,0a13,13 0,1 1,26 0a13,13 0,1 1,-26 0" />
+    <path
+        android:fillColor="#FFD54F"
+        android:pathData="M54,42m-9.5,0a9.5,9.5 0,1 1,19 0a9.5,9.5 0,1 1,-19 0" />
+
+    <!-- Distant sunlit hill -->
+    <path
+        android:fillColor="#66BB6A"
+        android:pathData="M16,74 Q40,54 68,66 Q84,72 92,74 L92,92 L16,92 Z" />
+
+    <!-- Foreground lush meadow hill -->
+    <path
+        android:fillColor="#43A047"
+        android:pathData="M14,78 Q46,60 94,76 L94,96 L14,96 Z" />
+
+    <!-- Warm golden furrow stripes -->
+    <path
+        android:fillColor="#8BC34A"
+        android:pathData="M24,82 Q52,70 84,82 L80,86 Q52,75 28,86 Z" />
+
+    <!-- Cozy farmhouse walls -->
+    <path
+        android:fillColor="#FFFDF6"
+        android:pathData="M43,58h22v15h-22z" />
+    <!-- Timber framing border -->
+    <path
+        android:fillColor="#795548"
+        android:pathData="M42,72h24v2.5h-24z" />
+    <!-- Terracotta pitched roof -->
+    <path
+        android:fillColor="#D84315"
+        android:pathData="M39,59 L54,46 L69,59 Z" />
+    <!-- Cozy arched wooden door -->
+    <path
+        android:fillColor="#5D4037"
+        android:pathData="M51,63h6v9h-6z" />
+    <!-- Warm sunlit window -->
+    <path
+        android:fillColor="#FFB300"
+        android:pathData="M45.5,62h3.5v3.5h-3.5z" />
+    <path
+        android:fillColor="#FFB300"
+        android:pathData="M59,62h3.5v3.5h-3.5z" />
+</vector>

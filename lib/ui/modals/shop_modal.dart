@@ -47,6 +47,10 @@ class ShopModal extends StatelessWidget {
             child: Column(
               children: <Widget>[
                 TabBar(
+                  isScrollable: MediaQuery.sizeOf(context).width < 420,
+                  tabAlignment: MediaQuery.sizeOf(context).width < 420
+                      ? TabAlignment.center
+                      : TabAlignment.fill,
                   labelColor: SolvilleTheme.timberDark,
                   labelStyle: const TextStyle(fontWeight: FontWeight.w800),
                   tabs: <Widget>[

@@ -140,15 +140,37 @@ class FarmerState {
   };
 
   factory FarmerState.fromJson(Map<String, dynamic> json) {
+    double safeDouble(Object? raw, double fallback) {
+      if (raw is! num) return fallback;
+      final v = raw.toDouble();
+      return (v.isNaN || v.isInfinite) ? fallback : v;
+    }
+
+    final carried = <ProductId>[];
+    final rawCarried = json['carriedCrates'];
+    if (rawCarried is List<dynamic>) {
+      for (final item in rawCarried) {
+        if (item is String) {
+          for (final p in ProductId.values) {
+            if (p.name == item) {
+              carried.add(p);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    final rawCharges = json['waterCharges'];
+    final charges = rawCharges is num ? rawCharges.toInt().clamp(0, 99) : 5;
+
     return FarmerState(
-      x: (json['x'] as num).toDouble(),
-      y: (json['y'] as num).toDouble(),
-      facingX: (json['facingX'] as num?)?.toDouble() ?? 0.0,
-      facingY: (json['facingY'] as num?)?.toDouble() ?? 1.0,
-      waterCharges: json['waterCharges'] as int? ?? 5,
-      carriedCrates: ((json['carriedCrates'] as List<dynamic>?) ?? const [])
-          .map((e) => ProductId.values.byName(e as String))
-          .toList(),
+      x: safeDouble(json['x'], 3.0),
+      y: safeDouble(json['y'], 3.0),
+      facingX: safeDouble(json['facingX'], 0.0),
+      facingY: safeDouble(json['facingY'], 1.0),
+      waterCharges: charges,
+      carriedCrates: carried,
     );
   }
 }
@@ -418,56 +440,164 @@ class GameState {
   };
 
   factory GameState.fromJson(Map<String, dynamic> json) {
-    final rawBarn = json['barnStock'] as Map<String, dynamic>? ?? const {};
-    final rawUpgrades =
-        json['upgradeTiers'] as Map<String, dynamic>? ?? const {};
+    T enumByNameOr<T extends Enum>(List<T> values, Object? raw, T fallback) {
+      if (raw is String) {
+        for (final v in values) {
+          if (v.name == raw) return v;
+        }
+      }
+      return fallback;
+    }
+
+    final rawGridSize = json['gridSize'];
+    if (rawGridSize is! num) {
+      throw const FormatException('Missing gridSize in save');
+    }
+    final gridSize = rawGridSize.toInt();
+    if (gridSize < SolvilleCatalog.starterGridSize || gridSize > 64) {
+      throw FormatException('Invalid gridSize in save: $gridSize');
+    }
+
+    final rawTiles = json['tiles'];
+    if (rawTiles is! List<dynamic> ||
+        rawTiles.length != gridSize * gridSize) {
+      throw const FormatException('Corrupted tile array length in save');
+    }
+
+    final tiles = rawTiles
+        .map((t) => TileState.fromJson(t as Map<String, dynamic>))
+        .toList();
+
+    final parsedFarmer = FarmerState.fromJson(
+      json['farmer'] as Map<String, dynamic>,
+    );
+    final maxCoord = (gridSize - 1).toDouble();
+    final farmer = parsedFarmer.copyWith(
+      x: parsedFarmer.x.clamp(0.0, maxCoord),
+      y: parsedFarmer.y.clamp(0.0, maxCoord),
+    );
+
+    final actionQueue = <QueuedAction>[];
+    final rawQueue = json['actionQueue'];
+    if (rawQueue is List<dynamic>) {
+      for (final item in rawQueue) {
+        if (item is Map<String, dynamic>) {
+          try {
+            final parsed = QueuedAction.fromJson(item);
+            if (parsed.target.x >= 0 &&
+                parsed.target.y >= 0 &&
+                parsed.target.x < gridSize &&
+                parsed.target.y < gridSize) {
+              actionQueue.add(parsed);
+            }
+          } catch (_) {}
+        }
+      }
+    }
+
+    final unlockedSeeds = <ProductId>{ProductId.tomato, ProductId.carrot};
+    final rawUnlockedSeeds = json['unlockedSeeds'];
+    if (rawUnlockedSeeds is List<dynamic>) {
+      for (final s in rawUnlockedSeeds) {
+        if (s is String) {
+          for (final p in ProductId.values) {
+            if (p.name == s) {
+              unlockedSeeds.add(p);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    final barnStock = <ProductId, int>{};
+    final rawBarn = json['barnStock'];
+    if (rawBarn is Map<String, dynamic>) {
+      for (final entry in rawBarn.entries) {
+        final count = entry.value is num ? (entry.value as num).toInt() : 0;
+        if (count > 0) {
+          for (final p in ProductId.values) {
+            if (p.name == entry.key) {
+              barnStock[p] = count;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    final upgradeTiers = <UpgradeTrack, int>{};
+    final rawUpgrades = json['upgradeTiers'];
+    if (rawUpgrades is Map<String, dynamic>) {
+      for (final entry in rawUpgrades.entries) {
+        final tier = entry.value is num ? (entry.value as num).toInt() : 0;
+        if (tier > 0) {
+          for (final u in UpgradeTrack.values) {
+            if (u.name == entry.key) {
+              upgradeTiers[u] = tier;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    final rawDayProgress = json['dayProgress'];
+    var dayProgress = rawDayProgress is num ? rawDayProgress.toDouble() : 0.15;
+    if (dayProgress.isNaN || dayProgress.isInfinite) {
+      dayProgress = 0.15;
+    } else {
+      dayProgress = dayProgress.clamp(0.0, 1.0);
+    }
+
+    int safeInt(Object? raw, int fallback, {int min = 0}) {
+      if (raw is! num) return fallback;
+      final v = raw.toInt();
+      return v < min ? min : v;
+    }
 
     return GameState(
-      gridSize: json['gridSize'] as int,
-      tiles: (json['tiles'] as List<dynamic>)
-          .map((t) => TileState.fromJson(t as Map<String, dynamic>))
-          .toList(),
-      farmer: FarmerState.fromJson(json['farmer'] as Map<String, dynamic>),
-      actionQueue: ((json['actionQueue'] as List<dynamic>?) ?? const [])
-          .map((a) => QueuedAction.fromJson(a as Map<String, dynamic>))
-          .toList(),
-      nextActionId: json['nextActionId'] as int? ?? 1,
-      coins: json['coins'] as int? ?? 90,
-      lifetimeCoinsEarned: json['lifetimeCoinsEarned'] as int? ?? 0,
-      day: json['day'] as int? ?? 1,
-      dayProgress: (json['dayProgress'] as num?)?.toDouble() ?? 0.15,
-      weather: json['weather'] != null
-          ? WeatherType.values.byName(json['weather'] as String)
-          : WeatherType.sunny,
-      activeTool: json['activeTool'] != null
-          ? ToolMode.values.byName(json['activeTool'] as String)
-          : ToolMode.smart,
-      selectedSeed: json['selectedSeed'] != null
-          ? ProductId.values.byName(json['selectedSeed'] as String)
-          : ProductId.tomato,
-      selectedBuildItem: json['selectedBuildItem'] != null
-          ? BuildItemType.values.byName(json['selectedBuildItem'] as String)
-          : BuildItemType.sprinklerRotary,
-      unlockedSeeds: ((json['unlockedSeeds'] as List<dynamic>?) ?? const [])
-          .map((s) => ProductId.values.byName(s as String))
-          .toSet(),
-      barnStock: <ProductId, int>{
-        for (final entry in rawBarn.entries)
-          ProductId.values.byName(entry.key): entry.value as int,
-      },
+      gridSize: gridSize,
+      tiles: tiles,
+      farmer: farmer,
+      actionQueue: actionQueue,
+      nextActionId: safeInt(json['nextActionId'], 1, min: 1),
+      coins: safeInt(json['coins'], 90),
+      lifetimeCoinsEarned: safeInt(json['lifetimeCoinsEarned'], 0),
+      day: safeInt(json['day'], 1, min: 1),
+      dayProgress: dayProgress,
+      weather: enumByNameOr(
+        WeatherType.values,
+        json['weather'],
+        WeatherType.sunny,
+      ),
+      activeTool: enumByNameOr(
+        ToolMode.values,
+        json['activeTool'],
+        ToolMode.smart,
+      ),
+      selectedSeed: enumByNameOr(
+        ProductId.values,
+        json['selectedSeed'],
+        ProductId.tomato,
+      ),
+      selectedBuildItem: enumByNameOr(
+        BuildItemType.values,
+        json['selectedBuildItem'],
+        BuildItemType.sprinklerRotary,
+      ),
+      unlockedSeeds: unlockedSeeds,
+      barnStock: barnStock,
       market: MarketState.fromJson(json['market'] as Map<String, dynamic>),
-      upgradeTiers: <UpgradeTrack, int>{
-        for (final entry in rawUpgrades.entries)
-          UpgradeTrack.values.byName(entry.key): entry.value as int,
-      },
+      upgradeTiers: upgradeTiers,
       unlockedTrophies:
           ((json['unlockedTrophies'] as List<dynamic>?) ?? const [])
-              .map((e) => e as String)
+              .whereType<String>()
               .toSet(),
-      totalCratesHarvested: json['totalCratesHarvested'] as int? ?? 0,
-      boomCratesSold: json['boomCratesSold'] as int? ?? 0,
-      compostedPlotsCount: json['compostedPlotsCount'] as int? ?? 0,
-      requestsCompleted: json['requestsCompleted'] as int? ?? 0,
+      totalCratesHarvested: safeInt(json['totalCratesHarvested'], 0),
+      boomCratesSold: safeInt(json['boomCratesSold'], 0),
+      compostedPlotsCount: safeInt(json['compostedPlotsCount'], 0),
+      requestsCompleted: safeInt(json['requestsCompleted'], 0),
     );
   }
 }

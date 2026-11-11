@@ -68,8 +68,8 @@ class TileInspectorPill extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
+                    horizontal: 10,
+                    vertical: 5,
                   ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFE082),
@@ -94,8 +94,8 @@ class TileInspectorPill extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
+                    horizontal: 10,
+                    vertical: 5,
                   ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFE8F5E9),
@@ -119,10 +119,10 @@ class TileInspectorPill extends StatelessWidget {
                 onTap: controller.clearInspectedTile,
                 borderRadius: BorderRadius.circular(10),
                 child: const Padding(
-                  padding: EdgeInsets.all(2),
+                  padding: EdgeInsets.all(6),
                   child: Icon(
                     Icons.close_rounded,
-                    size: 14,
+                    size: 16,
                     color: SolvilleTheme.timberDark,
                   ),
                 ),

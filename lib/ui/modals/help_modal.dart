@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../l10n/solville_l10n_extensions.dart';
 import '../theme/solville_theme.dart';
 import '../view_models/solville_controller.dart';
 import '../widgets/solville_dialog_shell.dart';
@@ -14,6 +15,7 @@ class HelpAndControlsModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final isMobile = MediaQuery.sizeOf(context).shortestSide < 600;
     return SolvilleDialogShell(
       emoji: '🌻',
       title: l10n.helpTitle,
@@ -53,7 +55,10 @@ class HelpAndControlsModal extends StatelessWidget {
           _GuideSection(title: l10n.helpSec3Title, body: l10n.helpSec3Body),
           _GuideSection(title: l10n.helpSec4Title, body: l10n.helpSec4Body),
           _GuideSection(title: l10n.helpSec5Title, body: l10n.helpSec5Body),
-          _GuideSection(title: l10n.helpSec6Title, body: l10n.helpSec6Body),
+          _GuideSection(
+            title: l10n.helpSec6Title,
+            body: l10n.adaptiveHelpControlsBody(isMobile: isMobile),
+          ),
         ],
       ),
     );

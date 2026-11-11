@@ -2,3 +2,5 @@
 Future<void> writeSaveFileJson(String jsonContent) async {}
 
 Future<String?> readSaveFileJson() async => null;
+
+Future<String?> readBackupSaveFileJson() async => null;

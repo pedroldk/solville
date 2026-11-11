@@ -171,6 +171,7 @@ class SolvilleController extends ChangeNotifier {
 
   void onAppBackgrounded() {
     unawaited(_sound.pauseBgm());
+    unawaited(_saveRepo.saveGame(_state));
   }
 
   void onAppResumed() {
@@ -674,13 +675,34 @@ class SolvilleController extends ChangeNotifier {
     );
   }
 
-  Future<void> saveNow() async {
+  Future<void> saveNow({bool showToast = true}) async {
     await _saveRepo.saveGame(_state);
-    _showToast(
-      '💾 Farm progress saved!',
-      toast: const SolvilleToast(SolvilleToastKind.farmSaved),
-    );
-    notifyListeners();
+    if (showToast) {
+      _showToast(
+        '💾 Farm progress saved!',
+        toast: const SolvilleToast(SolvilleToastKind.farmSaved),
+      );
+      notifyListeners();
+    }
+  }
+
+  /// Handles Android system back gestures on the root screen by dismissing
+  /// transient selections/queues first and auto-saving farm state.
+  bool handleBackNavigation() {
+    if (_inspectedTile != null) {
+      clearInspectedTile();
+      return true;
+    }
+    if (_state.actionQueue.isNotEmpty) {
+      clearActionQueue();
+      return true;
+    }
+    if (_state.activeTool != ToolMode.smart) {
+      selectTool(ToolMode.smart);
+      return true;
+    }
+    unawaited(_saveRepo.saveGame(_state));
+    return false;
   }
 
   Future<void> resetNewFarm() async {

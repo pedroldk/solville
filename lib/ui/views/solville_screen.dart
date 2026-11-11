@@ -1,4 +1,8 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../game/solville_game.dart';
 import '../../l10n/app_localizations.dart';
@@ -64,15 +68,23 @@ class _SolvilleScreenState extends State<SolvilleScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Auto-save cleanly and pause/resume BGM on Android backgrounding or resume!
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached) {
-      widget.controller.onAppBackgrounded();
-      widget.controller.saveNow();
-    } else if (state == AppLifecycleState.inactive) {
-      widget.controller.saveNow();
-    } else if (state == AppLifecycleState.resumed) {
-      widget.controller.onAppResumed();
+    // Auto-save cleanly and pause/resume BGM across all Android/iOS lifecycle states!
+    switch (state) {
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        widget.controller.onAppBackgrounded();
+        unawaited(widget.controller.saveNow(showToast: false));
+      case AppLifecycleState.resumed:
+        if (!kIsWeb &&
+            (defaultTargetPlatform == TargetPlatform.android ||
+                defaultTargetPlatform == TargetPlatform.iOS)) {
+          unawaited(
+            SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
+          );
+        }
+        widget.controller.onAppResumed();
     }
   }
 
@@ -126,81 +138,101 @@ class _SolvilleScreenState extends State<SolvilleScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        fit: StackFit.expand,
-        children: <Widget>[
-          // 1. 2.5D Isometric Flame Diorama isolated in its own RepaintBoundary
-          RepaintBoundary(child: GameViewportSurface(game: _game)),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          widget.controller.handleBackNavigation();
+        }
+      },
+      child: Scaffold(
+        body: Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            // 1. 2.5D Isometric Flame Diorama isolated in its own RepaintBoundary
+            RepaintBoundary(child: GameViewportSurface(game: _game)),
 
-          // 2. Safe-area responsive HUD overlays isolated in RepaintBoundary
-          SafeArea(
-            child: RepaintBoundary(
-              child: ListenableBuilder(
-                listenable: widget.controller,
-                builder: (context, _) {
-                  final l10n = AppLocalizations.of(context);
-                  final toastData = widget.controller.toast;
-                  final toast = toastData != null
-                      ? l10n.resolveToast(toastData)
-                      : widget.controller.toastMessage;
-                  return Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: <Widget>[
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          TopStatusBar(
-                            controller: widget.controller,
-                            onOpenShop: _openShop,
-                            onOpenMarket: _openMarket,
-                            onOpenTrophies: _openTrophies,
-                            onOpenAudio: _openAudioAndHomestead,
-                            onOpenHelp: _openHelp,
-                            onOpenSunPass: _openSunPass,
-                          ),
-                          TileInspectorPill(controller: widget.controller),
-                          if (toast != null)
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                top: 6,
-                                left: 16,
-                                right: 16,
-                              ),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 7,
+            // 2. Safe-area responsive HUD overlays isolated in RepaintBoundary
+            SafeArea(
+              child: RepaintBoundary(
+                child: ListenableBuilder(
+                  listenable: widget.controller,
+                  builder: (context, _) {
+                    final l10n = AppLocalizations.of(context);
+                    final toastData = widget.controller.toast;
+                    final toast = toastData != null
+                        ? l10n.resolveToast(toastData)
+                        : widget.controller.toastMessage;
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        Flexible(
+                          child: SingleChildScrollView(
+                            physics: const ClampingScrollPhysics(),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                TopStatusBar(
+                                  controller: widget.controller,
+                                  onOpenShop: _openShop,
+                                  onOpenMarket: _openMarket,
+                                  onOpenTrophies: _openTrophies,
+                                  onOpenAudio: _openAudioAndHomestead,
+                                  onOpenHelp: _openHelp,
+                                  onOpenSunPass: _openSunPass,
                                 ),
-                                decoration: SolvilleTheme.panelDecoration(
-                                  color: const Color(0xF5FFF8E1),
-                                  radius: 18,
+                                TileInspectorPill(
+                                  controller: widget.controller,
                                 ),
-                                child: Text(
-                                  toast,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: SolvilleTheme.timberDark,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 13,
+                                if (toast != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                      top: 6,
+                                      left: 16,
+                                      right: 16,
+                                    ),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 7,
+                                      ),
+                                      decoration: SolvilleTheme.panelDecoration(
+                                        color: const Color(0xF5FFF8E1),
+                                        radius: 18,
+                                      ),
+                                      child: Text(
+                                        toast,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: SolvilleTheme.timberDark,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
+                              ],
                             ),
-                        ],
-                      ),
-                      BottomToolDock(
-                        controller: widget.controller,
-                        game: _game,
-                        onOpenShop: _openShop,
-                      ),
-                    ],
-                  );
-                },
+                          ),
+                        ),
+                        Flexible(
+                          child: SingleChildScrollView(
+                            physics: const ClampingScrollPhysics(),
+                            child: BottomToolDock(
+                              controller: widget.controller,
+                              game: _game,
+                              onOpenShop: _openShop,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

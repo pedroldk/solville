@@ -104,40 +104,10 @@ class MarketAndBarnModal extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: SolvilleTheme.timberBorder),
                 ),
-                child: Row(
-                  children: <Widget>[
-                    Text(
-                      market.sunnySurgeActive ? '✨' : '🌦️',
-                      style: const TextStyle(fontSize: 24),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            market.sunnySurgeActive
-                                ? l10n.marketSurgeActiveTitle
-                                : l10n.marketSurgeInactiveTitle,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              color: SolvilleTheme.timberDark,
-                              fontSize: 13,
-                            ),
-                          ),
-                          Text(
-                            market.sunnySurgeActive
-                                ? l10n.marketSurgeActiveSubtitle
-                                : (controller.entitlements.isPermanentSupporter
-                                      ? l10n.marketSurgeSupporterSubtitle
-                                      : l10n.marketSurgeFreeSubtitle),
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton.tonal(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final stackButton = constraints.maxWidth < 380;
+                    final surgeBtn = FilledButton.tonal(
                       onPressed: controller.canClaimSunnySurgeToday
                           ? () => controller.activateSunnySurge()
                           : null,
@@ -148,8 +118,57 @@ class MarketAndBarnModal extends StatelessWidget {
                                   ? l10n.marketSurgeFreeBtn
                                   : l10n.marketSurgeWatchAdBtn),
                       ),
-                    ),
-                  ],
+                    );
+                    final infoRow = Row(
+                      children: <Widget>[
+                        Text(
+                          market.sunnySurgeActive ? '✨' : '🌦️',
+                          style: const TextStyle(fontSize: 24),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                market.sunnySurgeActive
+                                    ? l10n.marketSurgeActiveTitle
+                                    : l10n.marketSurgeInactiveTitle,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  color: SolvilleTheme.timberDark,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              Text(
+                                market.sunnySurgeActive
+                                    ? l10n.marketSurgeActiveSubtitle
+                                    : (controller
+                                              .entitlements
+                                              .isPermanentSupporter
+                                          ? l10n.marketSurgeSupporterSubtitle
+                                          : l10n.marketSurgeFreeSubtitle),
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (!stackButton) ...<Widget>[
+                          const SizedBox(width: 8),
+                          surgeBtn,
+                        ],
+                      ],
+                    );
+                    if (!stackButton) return infoRow;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        infoRow,
+                        const SizedBox(height: 8),
+                        surgeBtn,
+                      ],
+                    );
+                  },
                 ),
               ),
 
@@ -179,20 +198,21 @@ class MarketAndBarnModal extends StatelessWidget {
               const SizedBox(height: 14),
 
               // Stall & Barn Summary
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: <Widget>[
-                  Flexible(
-                    child: Text(
-                      l10n.marketCounterAndBarn(
-                        market.stallCrates.length,
-                        MarketState.maxStallSlots,
-                        state.totalBarnCrates,
-                      ),
-                      style: const TextStyle(
-                        color: SolvilleTheme.timberDark,
-                        fontWeight: FontWeight.w800,
-                      ),
+                  Text(
+                    l10n.marketCounterAndBarn(
+                      market.stallCrates.length,
+                      MarketState.maxStallSlots,
+                      state.totalBarnCrates,
+                    ),
+                    style: const TextStyle(
+                      color: SolvilleTheme.timberDark,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                   if (state.totalBarnCrates > 0)
@@ -260,71 +280,81 @@ class MarketAndBarnModal extends StatelessWidget {
       MarketTrend.surplus => const Color(0xFFE1F5FE),
     };
 
+    final trendChip = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: badgeColor,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        l10n.marketTrendLabel(trend),
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+      ),
+    );
+
     return Card(
       margin: const EdgeInsets.only(bottom: 7),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
-          children: <Widget>[
-            Text(
-              SolvilleCatalog.productEmoji(id),
-              style: const TextStyle(fontSize: 22),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    l10n.productName(id),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      color: SolvilleTheme.timberDark,
-                    ),
-                  ),
-                  if (barnCount > 0)
-                    Text(
-                      l10n.marketInBarnCount(barnCount),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF2E7D32),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: badgeColor,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                l10n.marketTrendLabel(trend),
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < 380 && barnCount > 0;
+            return Row(
+              children: <Widget>[
+                Text(
+                  SolvilleCatalog.productEmoji(id),
+                  style: const TextStyle(fontSize: 22),
                 ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              '$price☀️',
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 15,
-                color: SolvilleTheme.timberDark,
-              ),
-            ),
-            if (barnCount > 0) ...<Widget>[
-              const SizedBox(width: 8),
-              FilledButton.tonal(
-                onPressed: () => controller.stockStallFromBarn(id),
-                child: Text(l10n.marketSellOne),
-              ),
-            ],
-          ],
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        l10n.productName(id),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          color: SolvilleTheme.timberDark,
+                        ),
+                      ),
+                      if (barnCount > 0)
+                        Text(
+                          l10n.marketInBarnCount(barnCount),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF2E7D32),
+                          ),
+                        ),
+                      if (isNarrow) ...<Widget>[
+                        const SizedBox(height: 4),
+                        trendChip,
+                      ],
+                    ],
+                  ),
+                ),
+                if (!isNarrow) ...<Widget>[
+                  trendChip,
+                  const SizedBox(width: 10),
+                ],
+                Text(
+                  '$price☀️',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15,
+                    color: SolvilleTheme.timberDark,
+                  ),
+                ),
+                if (barnCount > 0) ...<Widget>[
+                  const SizedBox(width: 8),
+                  FilledButton.tonal(
+                    onPressed: () => controller.stockStallFromBarn(id),
+                    child: Text(l10n.marketSellOne),
+                  ),
+                ],
+              ],
+            );
+          },
         ),
       ),
     );

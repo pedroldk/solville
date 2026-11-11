@@ -166,27 +166,61 @@ class MarketState {
   };
 
   factory MarketState.fromJson(Map<String, dynamic> json) {
-    final rawTrends = json['trends'] as Map<String, dynamic>? ?? const {};
+    T? enumByNameOrNull<T extends Enum>(List<T> values, Object? raw) {
+      if (raw is String) {
+        for (final v in values) {
+          if (v.name == raw) return v;
+        }
+      }
+      return null;
+    }
+
+    final trends = <ProductId, MarketTrend>{};
+    final rawTrends = json['trends'];
+    if (rawTrends is Map<String, dynamic>) {
+      for (final entry in rawTrends.entries) {
+        final pid = enumByNameOrNull(ProductId.values, entry.key);
+        final trend = enumByNameOrNull(MarketTrend.values, entry.value);
+        if (pid != null && trend != null) {
+          trends[pid] = trend;
+        }
+      }
+    }
+
+    final stallCrates = <ProductId>[];
+    final rawStall = json['stallCrates'];
+    if (rawStall is List<dynamic>) {
+      for (final item in rawStall) {
+        final pid = enumByNameOrNull(ProductId.values, item);
+        if (pid != null && stallCrates.length < maxStallSlots) {
+          stallCrates.add(pid);
+        }
+      }
+    }
+
+    final rawCooldown = (json['saleCooldown'] as num?)?.toDouble() ?? 3.5;
+    final safeCooldown = (rawCooldown.isNaN || rawCooldown.isInfinite)
+        ? 3.5
+        : rawCooldown.clamp(0.0, 60.0);
+
+    VillageRequest? parsedRequest;
+    if (json['dailyRequest'] is Map<String, dynamic>) {
+      try {
+        parsedRequest = VillageRequest.fromJson(
+          json['dailyRequest'] as Map<String, dynamic>,
+        );
+      } catch (_) {}
+    }
+
     return MarketState(
-      trends: <ProductId, MarketTrend>{
-        for (final entry in rawTrends.entries)
-          ProductId.values.byName(entry.key): MarketTrend.values.byName(
-            entry.value as String,
-          ),
-      },
-      stallCrates: ((json['stallCrates'] as List<dynamic>?) ?? const [])
-          .map((e) => ProductId.values.byName(e as String))
-          .toList(),
-      pricing: json['pricing'] != null
-          ? PricingStance.values.byName(json['pricing'] as String)
-          : PricingStance.fair,
-      saleCooldown: (json['saleCooldown'] as num?)?.toDouble() ?? 3.5,
-      dailyRequest: json['dailyRequest'] != null
-          ? VillageRequest.fromJson(
-              json['dailyRequest'] as Map<String, dynamic>,
-            )
-          : null,
-      sunnySurgeActive: json['sunnySurgeActive'] as bool? ?? false,
+      trends: trends,
+      stallCrates: stallCrates,
+      pricing:
+          enumByNameOrNull(PricingStance.values, json['pricing']) ??
+          PricingStance.fair,
+      saleCooldown: safeCooldown,
+      dailyRequest: parsedRequest,
+      sunnySurgeActive: json['sunnySurgeActive'] == true,
     );
   }
 }

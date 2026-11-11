@@ -20,6 +20,7 @@ class HomesteadAndAudioModal extends StatelessWidget {
       listenable: controller,
       builder: (context, _) {
         final l10n = AppLocalizations.of(context);
+        final isMobile = MediaQuery.sizeOf(context).shortestSide < 600;
         final state = controller.state;
         final pctVol = (controller.bgmVolume * 100).round();
 
@@ -64,7 +65,7 @@ class HomesteadAndAudioModal extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        l10n.homesteadSoundscapeSubtitle,
+                        l10n.adaptiveSoundscapeSubtitle(isMobile: isMobile),
                         style: const TextStyle(
                           fontSize: 12.5,
                           color: Colors.black87,
@@ -101,12 +102,16 @@ class HomesteadAndAudioModal extends StatelessWidget {
                             color: SolvilleTheme.timberDark,
                           ),
                           const SizedBox(width: 6),
-                          Text(
-                            l10n.homesteadAmbienceVolume,
-                            style: const TextStyle(
-                              color: SolvilleTheme.timberDark,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
+                          Flexible(
+                            child: Text(
+                              l10n.homesteadAmbienceVolume,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: SolvilleTheme.timberDark,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
                             ),
                           ),
                           Expanded(
@@ -118,8 +123,8 @@ class HomesteadAndAudioModal extends StatelessWidget {
                               onChanged: controller.setBgmVolume,
                             ),
                           ),
-                          SizedBox(
-                            width: 40,
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(minWidth: 42),
                             child: Text(
                               '$pctVol%',
                               textAlign: TextAlign.end,

@@ -27,9 +27,14 @@ class SolvilleDialogShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.sizeOf(context);
+    final isCompact = screenSize.shortestSide < 600;
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(16),
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isCompact ? 10 : 16,
+        vertical: isCompact ? 8 : 16,
+      ),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
         child: Container(
@@ -43,7 +48,12 @@ class SolvilleDialogShell extends StatelessWidget {
               mainAxisSize: shrinkWrap ? MainAxisSize.min : MainAxisSize.max,
               children: <Widget>[
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 14, 12, 6),
+                  padding: EdgeInsets.fromLTRB(
+                    isCompact ? 14 : 20,
+                    isCompact ? 10 : 14,
+                    8,
+                    6,
+                  ),
                   child: Row(
                     children: <Widget>[
                       Text(emoji, style: const TextStyle(fontSize: 24)),
@@ -51,18 +61,24 @@ class SolvilleDialogShell extends StatelessWidget {
                       Expanded(
                         child: Text(
                           title,
-                          style: const TextStyle(
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
                             color: SolvilleTheme.timberDark,
-                            fontSize: 19,
+                            fontSize: isCompact ? 17 : 19,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
                       ),
                       if (trailing != null) ...<Widget>[
-                        trailing!,
                         const SizedBox(width: 6),
+                        Flexible(fit: FlexFit.loose, child: trailing!),
+                        const SizedBox(width: 4),
                       ],
                       IconButton(
+                        tooltip: MaterialLocalizations.of(
+                          context,
+                        ).closeButtonTooltip,
                         onPressed: () => Navigator.of(context).pop(),
                         icon: const Icon(Icons.close_rounded),
                       ),

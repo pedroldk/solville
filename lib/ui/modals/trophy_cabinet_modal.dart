@@ -45,9 +45,11 @@ class TrophyCabinetModal extends StatelessWidget {
           ),
           child: GridView.builder(
             padding: const EdgeInsets.all(14),
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
               maxCrossAxisExtent: 310,
-              mainAxisExtent: 124,
+              mainAxisExtent: MediaQuery.textScalerOf(
+                context,
+              ).scale(128.0).clamp(124.0, 185.0),
               crossAxisSpacing: 10,
               mainAxisSpacing: 10,
             ),
@@ -83,6 +85,8 @@ class TrophyCabinetModal extends StatelessWidget {
                         children: <Widget>[
                           Text(
                             l10n.trophyTitle(def.id),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontWeight: FontWeight.w800,
                               color: isDone
@@ -91,17 +95,21 @@ class TrophyCabinetModal extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 2),
-                          Text(
-                            l10n.trophyDescription(def.id),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 11.5),
+                          Flexible(
+                            child: Text(
+                              l10n.trophyDescription(def.id),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 11.5),
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             isDone
                                 ? l10n.trophyClaimed(def.rewardCoins)
                                 : l10n.trophyReward(def.rewardCoins),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w800,

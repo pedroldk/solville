@@ -47,8 +47,10 @@ class _TopStatusBarState extends State<TopStatusBar> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < 600;
-        final compact = constraints.maxWidth < 820;
+        final mediaSize = MediaQuery.sizeOf(context);
+        final isMobile =
+            constraints.maxWidth < 600 || mediaSize.shortestSide < 600;
+        final compact = constraints.maxWidth < 820 || isMobile;
 
         final statChildren = <Widget>[
           _StatChip(
@@ -84,7 +86,7 @@ class _TopStatusBarState extends State<TopStatusBar> {
         ];
 
         final pillPadding = isMobile
-            ? const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5)
+            ? const EdgeInsets.symmetric(horizontal: 8, vertical: 5)
             : const EdgeInsets.symmetric(horizontal: 10, vertical: 6);
         final pillRadius = isMobile ? 11.0 : 14.0;
         final pillFontSize = isMobile ? 11.0 : 12.5;
@@ -331,8 +333,8 @@ class _CompactHudIconButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(11),
           onTap: onTap,
           child: Container(
-            width: 26,
-            height: 26,
+            width: 34,
+            height: 34,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(11),
@@ -341,7 +343,7 @@ class _CompactHudIconButton extends StatelessWidget {
                 width: 1.3,
               ),
             ),
-            child: Icon(icon, color: SolvilleTheme.timberDark, size: 15.5),
+            child: Icon(icon, color: SolvilleTheme.timberDark, size: 17),
           ),
         ),
       ),
@@ -450,8 +452,8 @@ class _DayWeatherChip extends StatelessWidget {
             onTap: onNextMorning,
             child: Container(
               padding: EdgeInsets.symmetric(
-                horizontal: compact ? 6 : 8,
-                vertical: compact ? 2 : 3,
+                horizontal: compact ? 8 : 9,
+                vertical: compact ? 4 : 5,
               ),
               decoration: BoxDecoration(
                 color: const Color(0xFFFFE0B2),

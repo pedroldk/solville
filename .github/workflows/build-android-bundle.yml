@@ -39,9 +39,12 @@ jobs:
       - name: Decode Android signing keystore
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
-            echo "Missing ANDROID_KEYSTORE_BASE64 repository secret."
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEY_PASSWORD" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ]; then
+            echo "Missing required Android signing repository secrets (ANDROID_KEYSTORE_BASE64, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD, ANDROID_KEYSTORE_PASSWORD)."
             exit 1
           fi
 
@@ -54,6 +57,16 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: flutter build appbundle --release
+
+      - name: Verify release bundle signature
+        run: |
+          AAB_PATH="build/app/outputs/bundle/release/app-release.aab"
+          VERIFY_OUT=$(jarsigner -verify -verbose -certs "$AAB_PATH")
+          echo "$VERIFY_OUT" | grep -E "jar verified|CN="
+          if echo "$VERIFY_OUT" | grep -q "CN=Android Debug"; then
+            echo "Error: Release bundle was signed with the Android Debug key instead of the release upload key."
+            exit 1
+          fi
 
       - name: Clean up decoded keystore
         if: always()

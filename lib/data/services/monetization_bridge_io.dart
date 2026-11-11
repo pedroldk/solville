@@ -31,6 +31,7 @@ class PlatformMonetizationBridge {
   RewardedAd? _rewardedAd;
   bool _isLoadingAd = false;
   bool _mobileAdsInitialized = false;
+  bool _disposed = false;
   StreamSubscription<List<PurchaseDetails>>? _purchaseSub;
   void Function(String productId)? _onOwnedProductRestored;
 
@@ -61,41 +62,79 @@ class PlatformMonetizationBridge {
     void Function(String productId)? onOwnedProductRestored,
   }) async {
     _onOwnedProductRestored = onOwnedProductRestored;
-    if (!isSupported) return;
+    if (!isSupported || _disposed) return;
 
     if (!_mobileAdsInitialized) {
       _mobileAdsInitialized = true;
       try {
-        await MobileAds.instance.initialize();
+        await MobileAds.instance.initialize().timeout(
+          const Duration(seconds: 8),
+        );
         _preloadRewardedAd();
       } catch (_) {}
     }
 
-    _purchaseSub ??= InAppPurchase.instance.purchaseStream.listen(
-      _handlePurchaseUpdates,
-      onError: (_) {
-        _completePendingPurchase(MonetizationResult.unavailable);
-      },
-    );
+    if (_purchaseSub == null) {
+      try {
+        _purchaseSub = InAppPurchase.instance.purchaseStream.listen(
+          _handlePurchaseUpdates,
+          onError: (_) {
+            _completePendingPurchase(MonetizationResult.unavailable);
+          },
+        );
+        // On Android, Play Billing queries local Play Store cache silently
+        // without prompting a sign-in dialog, restoring entitlements after reinstall.
+        if (Platform.isAndroid) {
+          unawaited(_silentRestoreOnAndroid());
+        }
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _silentRestoreOnAndroid() async {
+    try {
+      final available = await InAppPurchase.instance.isAvailable().timeout(
+        const Duration(seconds: 6),
+        onTimeout: () => false,
+      );
+      if (!available || _disposed) return;
+      await InAppPurchase.instance.restorePurchases().timeout(
+        const Duration(seconds: 6),
+      );
+    } catch (_) {}
   }
 
   void _preloadRewardedAd() {
-    if (!isSupported || _isLoadingAd || _rewardedAd != null) return;
+    if (!isSupported || _disposed || _isLoadingAd || _rewardedAd != null) {
+      return;
+    }
     _isLoadingAd = true;
-    RewardedAd.load(
-      adUnitId: _rewardedAdUnitId,
-      request: const AdRequest(),
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) {
-          _isLoadingAd = false;
-          _rewardedAd = ad;
-        },
-        onAdFailedToLoad: (_) {
-          _isLoadingAd = false;
-          _rewardedAd = null;
-        },
-      ),
-    );
+    try {
+      RewardedAd.load(
+        adUnitId: _rewardedAdUnitId,
+        request: const AdRequest(),
+        rewardedAdLoadCallback: RewardedAdLoadCallback(
+          onAdLoaded: (ad) {
+            _isLoadingAd = false;
+            if (_disposed) {
+              ad.dispose();
+              return;
+            }
+            if (_rewardedAd != null) {
+              ad.dispose();
+              return;
+            }
+            _rewardedAd = ad;
+          },
+          onAdFailedToLoad: (_) {
+            _isLoadingAd = false;
+            _rewardedAd = null;
+          },
+        ),
+      );
+    } catch (_) {
+      _isLoadingAd = false;
+    }
   }
 
   Future<RewardedAd?> _loadRewardedAdOnDemand() {
@@ -106,35 +145,56 @@ class PlatformMonetizationBridge {
     }
     final completer = Completer<RewardedAd?>();
     _isLoadingAd = true;
-    RewardedAd.load(
-      adUnitId: _rewardedAdUnitId,
-      request: const AdRequest(),
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) {
-          _isLoadingAd = false;
-          if (!completer.isCompleted) {
-            completer.complete(ad);
-          } else {
-            ad.dispose();
-          }
-        },
-        onAdFailedToLoad: (_) {
-          _isLoadingAd = false;
-          if (!completer.isCompleted) {
-            completer.complete(null);
-          }
-        },
-      ),
-    );
+    try {
+      RewardedAd.load(
+        adUnitId: _rewardedAdUnitId,
+        request: const AdRequest(),
+        rewardedAdLoadCallback: RewardedAdLoadCallback(
+          onAdLoaded: (ad) {
+            _isLoadingAd = false;
+            if (_disposed) {
+              ad.dispose();
+              if (!completer.isCompleted) completer.complete(null);
+              return;
+            }
+            if (!completer.isCompleted) {
+              completer.complete(ad);
+            } else if (_rewardedAd == null) {
+              // Cache late-arriving ad for the next request instead of wasting it.
+              _rewardedAd = ad;
+            } else {
+              ad.dispose();
+            }
+          },
+          onAdFailedToLoad: (_) {
+            _isLoadingAd = false;
+            if (!completer.isCompleted) {
+              completer.complete(null);
+            }
+          },
+        ),
+      );
+    } catch (_) {
+      _isLoadingAd = false;
+      if (!completer.isCompleted) {
+        completer.complete(null);
+      }
+    }
     return completer.future.timeout(
       const Duration(seconds: 8),
-      onTimeout: () => null,
+      onTimeout: () {
+        _isLoadingAd = false;
+        return null;
+      },
     );
   }
 
   Future<MonetizationResult> showRewardedAd() async {
     if (!isSupported) {
       return MonetizationResult.success;
+    }
+    if (_disposed) {
+      return MonetizationResult.unavailable;
     }
 
     final ad = await _loadRewardedAdOnDemand();
@@ -167,39 +227,58 @@ class PlatformMonetizationBridge {
       },
     );
 
-    await ad.show(
-      onUserEarnedReward: (_, _) {
-        earnedReward = true;
-      },
-    );
+    try {
+      await ad.show(
+        onUserEarnedReward: (_, _) {
+          earnedReward = true;
+        },
+      );
+    } catch (_) {
+      ad.dispose();
+      _preloadRewardedAd();
+      if (!completer.isCompleted) {
+        completer.complete(MonetizationResult.unavailable);
+      }
+    }
 
-    return completer.future;
+    return completer.future.timeout(
+      const Duration(minutes: 2),
+      onTimeout: () =>
+          earnedReward ? MonetizationResult.success : MonetizationResult.unavailable,
+    );
   }
 
   Future<MonetizationResult> purchaseProduct(String productId) async {
     if (!isSupported) {
       return MonetizationResult.success;
     }
+    if (_disposed) {
+      return MonetizationResult.unavailable;
+    }
 
     try {
-      final available = await InAppPurchase.instance.isAvailable();
+      final available = await InAppPurchase.instance.isAvailable().timeout(
+        const Duration(seconds: 8),
+        onTimeout: () => false,
+      );
       if (!available) return MonetizationResult.unavailable;
 
-      final response = await InAppPurchase.instance.queryProductDetails(
-        <String>{productId},
-      );
-      if (response.productDetails.isEmpty) {
+      final response = await InAppPurchase.instance
+          .queryProductDetails(<String>{productId})
+          .timeout(const Duration(seconds: 10));
+      if (response.error != null || response.productDetails.isEmpty) {
         return MonetizationResult.unavailable;
       }
 
+      _completePendingPurchase(MonetizationResult.cancelled);
       final completer = Completer<MonetizationResult>();
       _pendingPurchaseCompleter = completer;
       _pendingPurchaseProductId = productId;
 
       final param = PurchaseParam(productDetails: response.productDetails.first);
-      final started = await InAppPurchase.instance.buyNonConsumable(
-        purchaseParam: param,
-      );
+      final started = await InAppPurchase.instance
+          .buyNonConsumable(purchaseParam: param)
+          .timeout(const Duration(seconds: 15), onTimeout: () => false);
       if (!started) {
         _completePendingPurchase(MonetizationResult.cancelled);
       }
@@ -218,42 +297,81 @@ class PlatformMonetizationBridge {
   }
 
   Future<Set<String>> restorePurchases() async {
-    if (!isSupported) {
+    if (!isSupported || _disposed) {
       return const <String>{};
     }
 
     try {
-      final available = await InAppPurchase.instance.isAvailable();
+      final available = await InAppPurchase.instance.isAvailable().timeout(
+        const Duration(seconds: 8),
+        onTimeout: () => false,
+      );
       if (!available) return const <String>{};
       _restoredProductIds.clear();
-      await InAppPurchase.instance.restorePurchases();
+      await InAppPurchase.instance.restorePurchases().timeout(
+        const Duration(seconds: 8),
+      );
       await Future<void>.delayed(const Duration(seconds: 2));
       return Set<String>.from(_restoredProductIds);
     } catch (_) {
-      return const <String>{};
+      return Set<String>.from(_restoredProductIds);
     }
+  }
+
+  bool _isAlreadyOwnedError(PurchaseDetails purchase) {
+    final code = (purchase.error?.code ?? '').toLowerCase();
+    final msg = (purchase.error?.message ?? '').toLowerCase();
+    final details = (purchase.error?.details?.toString() ?? '').toLowerCase();
+    return code.contains('already_owned') ||
+        code.contains('itemalreadyowned') ||
+        msg.contains('already_owned') ||
+        msg.contains('itemalreadyowned') ||
+        msg.contains('already owned') ||
+        details.contains('already_owned') ||
+        details.contains('itemalreadyowned');
   }
 
   Future<void> _handlePurchaseUpdates(List<PurchaseDetails> purchases) async {
     for (final purchase in purchases) {
+      final pid = purchase.productID;
+      final matchesPending =
+          _pendingPurchaseProductId != null &&
+          (_pendingPurchaseProductId == pid || pid.isEmpty);
+
       if (purchase.status == PurchaseStatus.purchased ||
           purchase.status == PurchaseStatus.restored) {
-        _restoredProductIds.add(purchase.productID);
-        _onOwnedProductRestored?.call(purchase.productID);
+        final effectiveProductId =
+            pid.isNotEmpty ? pid : (_pendingPurchaseProductId ?? '');
+        if (effectiveProductId.isNotEmpty) {
+          _restoredProductIds.add(effectiveProductId);
+          _onOwnedProductRestored?.call(effectiveProductId);
+        }
         if (purchase.pendingCompletePurchase) {
           try {
-            await InAppPurchase.instance.completePurchase(purchase);
+            await InAppPurchase.instance
+                .completePurchase(purchase)
+                .timeout(const Duration(seconds: 8));
           } catch (_) {}
         }
-        if (_pendingPurchaseProductId == purchase.productID) {
+        if (matchesPending) {
           _completePendingPurchase(MonetizationResult.success);
         }
       } else if (purchase.status == PurchaseStatus.canceled) {
-        if (_pendingPurchaseProductId == purchase.productID) {
+        if (matchesPending) {
           _completePendingPurchase(MonetizationResult.cancelled);
         }
       } else if (purchase.status == PurchaseStatus.error) {
-        if (_pendingPurchaseProductId == purchase.productID) {
+        if (_isAlreadyOwnedError(purchase)) {
+          final ownedId =
+              pid.isNotEmpty ? pid : (_pendingPurchaseProductId ?? '');
+          if (ownedId.isNotEmpty) {
+            _restoredProductIds.add(ownedId);
+            _onOwnedProductRestored?.call(ownedId);
+          }
+          if (matchesPending) {
+            _completePendingPurchase(MonetizationResult.success);
+          }
+        } else if (matchesPending) {
           _completePendingPurchase(MonetizationResult.unavailable);
         }
       }
@@ -270,6 +388,8 @@ class PlatformMonetizationBridge {
   }
 
   void dispose() {
+    _disposed = true;
+    _completePendingPurchase(MonetizationResult.cancelled);
     _rewardedAd?.dispose();
     _rewardedAd = null;
     unawaited(_purchaseSub?.cancel());

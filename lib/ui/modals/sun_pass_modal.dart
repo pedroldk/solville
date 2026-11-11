@@ -184,33 +184,10 @@ class SunPassModal extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: SolvilleTheme.timberBorder),
                   ),
-                  child: Row(
-                    children: <Widget>[
-                      const Text('🌦️', style: TextStyle(fontSize: 24)),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
-                              l10n.sunPassSurgeCardTitle,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                color: SolvilleTheme.timberDark,
-                                fontSize: 13,
-                              ),
-                            ),
-                            Text(
-                              ent.isPermanentSupporter
-                                  ? l10n.sunPassSurgeSupporterDesc
-                                  : l10n.sunPassSurgeFreeDesc,
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      OutlinedButton(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final stackBtn = constraints.maxWidth < 380;
+                      final surgeBtn = OutlinedButton(
                         onPressed: (!busy && controller.canClaimSunnySurgeToday)
                             ? () => controller.activateSunnySurge()
                             : null,
@@ -221,8 +198,48 @@ class SunPassModal extends StatelessWidget {
                                     ? l10n.sunPassClaimFreeSurge
                                     : l10n.sunPassWatchAdSurge),
                         ),
-                      ),
-                    ],
+                      );
+                      final topRow = Row(
+                        children: <Widget>[
+                          const Text('🌦️', style: TextStyle(fontSize: 24)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  l10n.sunPassSurgeCardTitle,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    color: SolvilleTheme.timberDark,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                Text(
+                                  ent.isPermanentSupporter
+                                      ? l10n.sunPassSurgeSupporterDesc
+                                      : l10n.sunPassSurgeFreeDesc,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (!stackBtn) ...<Widget>[
+                            const SizedBox(width: 8),
+                            surgeBtn,
+                          ],
+                        ],
+                      );
+                      if (!stackBtn) return topRow;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          topRow,
+                          const SizedBox(height: 8),
+                          surgeBtn,
+                        ],
+                      );
+                    },
                   ),
                 ),
 
@@ -342,56 +359,68 @@ class _OfferCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: SolvilleTheme.timberBorder, width: 1.4),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: <Widget>[
-          Text(emoji, style: const TextStyle(fontSize: 30)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Container(
-                  margin: const EdgeInsets.only(bottom: 4),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 7,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: badgeColor,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    badgeText,
-                    style: const TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w900,
-                      color: SolvilleTheme.timberDark,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final stackTrailing = constraints.maxWidth < 380;
+          final mainRow = Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              Text(emoji, style: const TextStyle(fontSize: 30)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: badgeColor,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        badgeText,
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w900,
+                          color: SolvilleTheme.timberDark,
+                        ),
+                      ),
                     ),
-                  ),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                        color: SolvilleTheme.timberDark,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      description,
+                      style: const TextStyle(
+                        fontSize: 12.2,
+                        color: SolvilleTheme.timberDark,
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 14,
-                    color: SolvilleTheme.timberDark,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  description,
-                  style: const TextStyle(
-                    fontSize: 12.2,
-                    color: SolvilleTheme.timberDark,
-                  ),
-                ),
+              ),
+              if (!stackTrailing) ...<Widget>[
+                const SizedBox(width: 10),
+                trailing,
               ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          trailing,
-        ],
+            ],
+          );
+          if (!stackTrailing) return mainRow;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[mainRow, const SizedBox(height: 10), trailing],
+          );
+        },
       ),
     );
   }

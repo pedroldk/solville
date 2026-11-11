@@ -28,6 +28,7 @@ class BottomToolDock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final isMobile = MediaQuery.sizeOf(context).shortestSide < 600;
     final state = controller.state;
     final showSeeds =
         state.activeTool == ToolMode.smart || state.activeTool == ToolMode.seed;
@@ -36,7 +37,7 @@ class BottomToolDock extends StatelessWidget {
     final thirstyPlots = state.thirstyPlotCount;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+      padding: EdgeInsets.fromLTRB(10, 0, 10, isMobile ? 6 : 10),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
@@ -76,8 +77,8 @@ class BottomToolDock extends StatelessWidget {
                           borderRadius: BorderRadius.circular(10),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
+                              horizontal: 10,
+                              vertical: 4,
                             ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFFCDD2),
@@ -100,7 +101,9 @@ class BottomToolDock extends StatelessWidget {
                   SolvillePillButton(
                     emoji: '🌾',
                     label: l10n.dockHarvestRipe(readyHarvests),
-                    tooltip: l10n.dockHarvestRipeTooltip,
+                    tooltip: l10n.adaptiveHarvestRipeTooltip(
+                      isMobile: isMobile,
+                    ),
                     backgroundColor: const Color(0xFFE8F5E9),
                     borderRadius: 18,
                     padding: const EdgeInsets.symmetric(
@@ -135,7 +138,9 @@ class BottomToolDock extends StatelessWidget {
                     children: <Widget>[
                       IconButton(
                         visualDensity: VisualDensity.compact,
-                        tooltip: l10n.dockCenterCameraTooltip,
+                        tooltip: l10n.adaptiveCenterCameraTooltip(
+                          isMobile: isMobile,
+                        ),
                         onPressed: game.centerCameraOnFarmer,
                         icon: const Icon(
                           Icons.my_location_rounded,
@@ -191,6 +196,7 @@ class BottomToolDock extends StatelessWidget {
                     children: <Widget>[
                       _ToolSlotButton(
                         hotkey: '1',
+                        showHotkey: !isMobile,
                         emoji: '🖐️',
                         label: l10n.toolSmart,
                         selected: state.activeTool == ToolMode.smart,
@@ -198,6 +204,7 @@ class BottomToolDock extends StatelessWidget {
                       ),
                       _ToolSlotButton(
                         hotkey: '2',
+                        showHotkey: !isMobile,
                         emoji: '🪏',
                         label: l10n.toolDig,
                         selected: state.activeTool == ToolMode.dig,
@@ -205,6 +212,7 @@ class BottomToolDock extends StatelessWidget {
                       ),
                       _ToolSlotButton(
                         hotkey: '3',
+                        showHotkey: !isMobile,
                         emoji: SolvilleCatalog.productEmoji(state.selectedSeed),
                         label: l10n.toolSeed,
                         selected: state.activeTool == ToolMode.seed,
@@ -212,6 +220,7 @@ class BottomToolDock extends StatelessWidget {
                       ),
                       _ToolSlotButton(
                         hotkey: '4',
+                        showHotkey: !isMobile,
                         emoji: '🪣',
                         label: l10n.toolWater,
                         selected: state.activeTool == ToolMode.water,
@@ -219,6 +228,7 @@ class BottomToolDock extends StatelessWidget {
                       ),
                       _ToolSlotButton(
                         hotkey: '5',
+                        showHotkey: !isMobile,
                         emoji: '✨',
                         label: l10n.toolCompost,
                         subLabel: '${SolvilleCatalog.compostCost}☀️',
@@ -227,6 +237,7 @@ class BottomToolDock extends StatelessWidget {
                       ),
                       _ToolSlotButton(
                         hotkey: '6',
+                        showHotkey: !isMobile,
                         emoji: '🔨',
                         label: l10n.toolBuild,
                         selected: state.activeTool == ToolMode.build,
@@ -234,6 +245,7 @@ class BottomToolDock extends StatelessWidget {
                       ),
                       _ToolSlotButton(
                         hotkey: '7',
+                        showHotkey: !isMobile,
                         emoji: '🌿',
                         label: l10n.toolRemove,
                         subLabel: l10n.toolRemoveSub,
@@ -419,6 +431,7 @@ class _ToolSlotButton extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.showHotkey = true,
     this.subLabel,
   });
 
@@ -427,6 +440,7 @@ class _ToolSlotButton extends StatelessWidget {
   final String label;
   final String? subLabel;
   final bool selected;
+  final bool showHotkey;
   final VoidCallback onTap;
 
   @override
@@ -440,7 +454,7 @@ class _ToolSlotButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           onTap: onTap,
           child: Container(
-            constraints: const BoxConstraints(minWidth: 68),
+            constraints: const BoxConstraints(minWidth: 68, minHeight: 48),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
@@ -453,19 +467,22 @@ class _ToolSlotButton extends StatelessWidget {
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Text(
-                      hotkey,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0x994E342E),
+                    if (showHotkey) ...<Widget>[
+                      Text(
+                        hotkey,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0x994E342E),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 4),
+                      const SizedBox(width: 4),
+                    ],
                     Text(emoji, style: const TextStyle(fontSize: 17)),
                   ],
                 ),

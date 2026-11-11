@@ -92,6 +92,47 @@ extension SolvilleL10nX on AppLocalizations {
     };
   }
 
+  /// Strips PC-only hotkey suffix `(Hotkey: H)` on mobile viewports.
+  String adaptiveHarvestRipeTooltip({required bool isMobile}) {
+    if (!isMobile) return dockHarvestRipeTooltip;
+    return dockHarvestRipeTooltip.replaceFirst(
+      RegExp(r'\s*\([^)]*\)\s*$'),
+      '',
+    );
+  }
+
+  /// Strips PC-only hotkey suffix `(Space / C)` on mobile viewports.
+  String adaptiveCenterCameraTooltip({required bool isMobile}) {
+    if (!isMobile) return dockCenterCameraTooltip;
+    return dockCenterCameraTooltip.replaceFirst(
+      RegExp(r'\s*\([^)]*\)\s*$'),
+      '',
+    );
+  }
+
+  /// Strips PC-only `(press M anytime on PC to cycle)` hint on mobile viewports.
+  String adaptiveSoundscapeSubtitle({required bool isMobile}) {
+    if (!isMobile) return homesteadSoundscapeSubtitle;
+    return homesteadSoundscapeSubtitle.replaceFirst(
+      RegExp(r'\s*\([^)]*\)(?=:?\s*$)'),
+      '',
+    );
+  }
+
+  /// Omits PC-only keyboard/mouse lines (such as `Shift + Drag (PC)`) on mobile
+  /// viewports so touch players see clean, relevant controls.
+  String adaptiveHelpControlsBody({required bool isMobile}) {
+    if (!isMobile) return helpSec6Body;
+    final lines = helpSec6Body.split('\n');
+    final filtered = lines.where((line) {
+      final lower = line.toLowerCase();
+      return !lower.contains('shift +') &&
+          !lower.contains('mayús +') &&
+          !lower.contains('maj +');
+    }).toList();
+    return filtered.join('\n');
+  }
+
   String weatherLabel(WeatherType weather) => switch (weather) {
     WeatherType.sunny => weatherSunny,
     WeatherType.goldenBreeze => weatherGoldenBreeze,

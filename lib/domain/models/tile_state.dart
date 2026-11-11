@@ -124,11 +124,19 @@ class PlantedCrop {
   };
 
   factory PlantedCrop.fromJson(Map<String, dynamic> json) {
+    final rawGrowth = (json['growth'] as num?)?.toDouble() ?? 0.0;
+    final safeGrowth = (rawGrowth.isNaN || rawGrowth.isInfinite)
+        ? 0.0
+        : rawGrowth.clamp(0.0, 1.0);
+    final rawThirsty = (json['thirstySeconds'] as num?)?.toDouble() ?? 0.0;
+    final safeThirsty = (rawThirsty.isNaN || rawThirsty.isInfinite)
+        ? 0.0
+        : (rawThirsty < 0.0 ? 0.0 : rawThirsty);
     return PlantedCrop(
       cropId: ProductId.values.byName(json['cropId'] as String),
-      growth: (json['growth'] as num).toDouble(),
-      harvestsLeft: json['harvestsLeft'] as int,
-      thirstySeconds: (json['thirstySeconds'] as num?)?.toDouble() ?? 0.0,
+      growth: safeGrowth,
+      harvestsLeft: ((json['harvestsLeft'] as num?)?.toInt() ?? 1).clamp(1, 99),
+      thirstySeconds: safeThirsty,
     );
   }
 }
@@ -171,11 +179,17 @@ class AnimalUnitState {
   };
 
   factory AnimalUnitState.fromJson(Map<String, dynamic> json) {
+    double clamp01(Object? raw, double fallback) {
+      if (raw is! num) return fallback;
+      final v = raw.toDouble();
+      return (v.isNaN || v.isInfinite) ? fallback : v.clamp(0.0, 1.0);
+    }
+
     return AnimalUnitState(
       type: AnimalType.values.byName(json['type'] as String),
-      progress: (json['progress'] as num).toDouble(),
-      feedLevel: (json['feedLevel'] as num).toDouble(),
-      readyCrates: json['readyCrates'] as int,
+      progress: clamp01(json['progress'], 0.0),
+      feedLevel: clamp01(json['feedLevel'], 1.0),
+      readyCrates: ((json['readyCrates'] as num?)?.toInt() ?? 0).clamp(0, 99),
     );
   }
 }
@@ -294,24 +308,79 @@ class TileState {
   };
 
   factory TileState.fromJson(Map<String, dynamic> json) {
+    T enumByNameOr<T extends Enum>(List<T> values, Object? raw, T fallback) {
+      if (raw is String) {
+        for (final v in values) {
+          if (v.name == raw) return v;
+        }
+      }
+      return fallback;
+    }
+
+    T? enumByNameOrNull<T extends Enum>(List<T> values, Object? raw) {
+      if (raw is String) {
+        for (final v in values) {
+          if (v.name == raw) return v;
+        }
+      }
+      return null;
+    }
+
+    double safeDouble(
+      Object? raw,
+      double fallback, {
+      double min = 0.0,
+      double max = 1.0,
+    }) {
+      if (raw is! num) return fallback;
+      final v = raw.toDouble();
+      return (v.isNaN || v.isInfinite) ? fallback : v.clamp(min, max);
+    }
+
+    PlantedCrop? parsedCrop;
+    if (json['crop'] is Map<String, dynamic>) {
+      try {
+        parsedCrop = PlantedCrop.fromJson(json['crop'] as Map<String, dynamic>);
+      } catch (_) {}
+    }
+
+    AnimalUnitState? parsedAnimal;
+    if (json['animal'] is Map<String, dynamic>) {
+      try {
+        parsedAnimal = AnimalUnitState.fromJson(
+          json['animal'] as Map<String, dynamic>,
+        );
+      } catch (_) {}
+    }
+
     return TileState(
-      ground: GroundType.values.byName(json['ground'] as String),
-      structure: StructureType.values.byName(json['structure'] as String),
-      fertilized: json['fertilized'] as bool? ?? false,
-      moisture: (json['moisture'] as num?)?.toDouble() ?? 0.0,
-      crop: json['crop'] != null
-          ? PlantedCrop.fromJson(json['crop'] as Map<String, dynamic>)
-          : null,
-      animal: json['animal'] != null
-          ? AnimalUnitState.fromJson(json['animal'] as Map<String, dynamic>)
-          : null,
-      droppedCrate: json['droppedCrate'] != null
-          ? ProductId.values.byName(json['droppedCrate'] as String)
-          : null,
-      sprinklerCooldown: (json['sprinklerCooldown'] as num?)?.toDouble() ?? 2.0,
-      producerProgress: (json['producerProgress'] as num?)?.toDouble() ?? 0.0,
-      producerCrates: json['producerCrates'] as int? ?? 0,
-      producerActive: json['producerActive'] as bool? ?? false,
+      ground: enumByNameOr(
+        GroundType.values,
+        json['ground'],
+        GroundType.grass,
+      ),
+      structure: enumByNameOr(
+        StructureType.values,
+        json['structure'],
+        StructureType.none,
+      ),
+      fertilized: json['fertilized'] == true,
+      moisture: safeDouble(json['moisture'], 0.0),
+      crop: parsedCrop,
+      animal: parsedAnimal,
+      droppedCrate: enumByNameOrNull(ProductId.values, json['droppedCrate']),
+      sprinklerCooldown: safeDouble(
+        json['sprinklerCooldown'],
+        2.0,
+        min: 0.0,
+        max: 60.0,
+      ),
+      producerProgress: safeDouble(json['producerProgress'], 0.0),
+      producerCrates: ((json['producerCrates'] as num?)?.toInt() ?? 0).clamp(
+        0,
+        99,
+      ),
+      producerActive: json['producerActive'] == true,
     );
   }
 }

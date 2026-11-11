@@ -99,8 +99,11 @@ class EntitlementState {
 
   /// Whether the daily "Sunny Surge" (instant Sunshower + +25% Market Boost)
   /// is still available to claim on [currentDay].
+  ///
+  /// Uses inequality (`lastSunnySurgeDay != currentDay`) so starting a fresh
+  /// farm (which resets `day` back to `1`) never locks out Sunny Surge.
   bool canClaimSunnySurgeOnDay(int currentDay) =>
-      lastSunnySurgeDay < currentDay;
+      currentDay > 0 && lastSunnySurgeDay != currentDay;
 
   /// Formats remaining ad pass duration cleanly (e.g. `47h 59m`, `23h 14m`, `42m`).
   String formatRemainingTime([DateTime? nowUtc]) {
@@ -163,14 +166,15 @@ class EntitlementState {
   };
 
   factory EntitlementState.fromJson(Map<String, dynamic> json) {
-    final rawExpiry = json['adPassExpiresAtUtc'] as String?;
+    final rawExpiry = json['adPassExpiresAtUtc'];
+    final rawSurgeDay = json['lastSunnySurgeDay'];
     return EntitlementState(
-      adPassExpiresAtUtc: rawExpiry != null
+      adPassExpiresAtUtc: rawExpiry is String
           ? DateTime.tryParse(rawExpiry)?.toUtc()
           : null,
-      hasAnnualPass: json['hasAnnualPass'] as bool? ?? false,
-      hasLifetimePass: json['hasLifetimePass'] as bool? ?? false,
-      lastSunnySurgeDay: json['lastSunnySurgeDay'] as int? ?? 0,
+      hasAnnualPass: json['hasAnnualPass'] == true,
+      hasLifetimePass: json['hasLifetimePass'] == true,
+      lastSunnySurgeDay: rawSurgeDay is num ? rawSurgeDay.toInt() : 0,
     );
   }
 }
