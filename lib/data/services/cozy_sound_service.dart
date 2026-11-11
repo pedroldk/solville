@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -39,6 +40,40 @@ class CozySoundService {
   final List<AudioPlayer> _sfxPool = <AudioPlayer>[];
   int _poolCursor = 0;
   AudioPlayer? _bgmPlayer;
+  StreamSubscription<PlayerState>? _bgmStateSub;
+
+  static final AudioContext _bgmAudioContext = AudioContext(
+    android: const AudioContextAndroid(
+      isSpeakerphoneOn: false,
+      stayAwake: false,
+      contentType: AndroidContentType.music,
+      usageType: AndroidUsageType.game,
+      audioFocus: AndroidAudioFocus.gain,
+    ),
+    iOS: AudioContextIOS(
+      category: AVAudioSessionCategory.ambient,
+      options: const <AVAudioSessionOptions>{
+        AVAudioSessionOptions.mixWithOthers,
+      },
+    ),
+  );
+
+  static final AudioContext _sfxAudioContext = AudioContext(
+    android: const AudioContextAndroid(
+      isSpeakerphoneOn: false,
+      stayAwake: false,
+      contentType: AndroidContentType.sonification,
+      usageType: AndroidUsageType.game,
+      // Crucial on Android: never steal audio focus from the looping BGM player.
+      audioFocus: AndroidAudioFocus.none,
+    ),
+    iOS: AudioContextIOS(
+      category: AVAudioSessionCategory.ambient,
+      options: const <AVAudioSessionOptions>{
+        AVAudioSessionOptions.mixWithOthers,
+      },
+    ),
+  );
 
   // Static process-wide caches so WAV synthesis happens at most once per track/SFX.
   static final Map<SimEventType, Uint8List> _cachedSfx =
@@ -117,8 +152,21 @@ class CozySoundService {
     }
 
     try {
-      _bgmPlayer ??= AudioPlayer();
-      await _bgmPlayer!.setReleaseMode(ReleaseMode.loop);
+      if (_bgmPlayer == null) {
+        final player = AudioPlayer();
+        await player.setAudioContext(_bgmAudioContext);
+        await player.setReleaseMode(ReleaseMode.loop);
+        _bgmStateSub = player.onPlayerStateChanged.listen((state) {
+          if (state == PlayerState.paused ||
+              state == PlayerState.stopped ||
+              state == PlayerState.completed) {
+            _bgmPlaying = false;
+          }
+        });
+        _bgmPlayer = player;
+      } else {
+        await _bgmPlayer!.setReleaseMode(ReleaseMode.loop);
+      }
       await _bgmPlayer!.setVolume(bgmVolume);
 
       if (!_bgmPlaying || _loadedBgmTrack != bgmTrack) {
@@ -134,8 +182,17 @@ class CozySoundService {
     }
   }
 
-  /// Called on user interaction so Web browsers with autoplay gates seamlessly
-  /// start the soothing background ambience on the very first click/tap.
+  /// Pauses looping BGM cleanly when the app moves to the background.
+  Future<void> pauseBgm() async {
+    _bgmPlaying = false;
+    if (silentPlatformOutput) return;
+    try {
+      await _bgmPlayer?.pause();
+    } catch (_) {}
+  }
+
+  /// Called on user interaction (or app resume) so background ambience starts
+  /// or recovers seamlessly after interruptions (e.g. rewarded ads).
   Future<void> ensureBgmActive() async {
     if (bgmTrack != BgmTrack.off && !_bgmPlaying && bgmVolume > 0.01) {
       await applyBgmSettings();
@@ -151,6 +208,7 @@ class CozySoundService {
     try {
       if (_sfxPool.length < 4) {
         final p = AudioPlayer();
+        await p.setAudioContext(_sfxAudioContext);
         await p.setReleaseMode(ReleaseMode.stop);
         _sfxPool.add(p);
       }
@@ -161,6 +219,8 @@ class CozySoundService {
   }
 
   Future<void> dispose() async {
+    await _bgmStateSub?.cancel();
+    _bgmStateSub = null;
     for (final p in _sfxPool) {
       try {
         await p.dispose();

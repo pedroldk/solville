@@ -62,11 +62,15 @@ class _SolvilleScreenState extends State<SolvilleScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Auto-save cleanly on Android backgrounding or desktop window close!
+    // Auto-save cleanly and pause/resume BGM on Android backgrounding or resume!
     if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
         state == AppLifecycleState.detached) {
+      widget.controller.onAppBackgrounded();
       widget.controller.saveNow();
+    } else if (state == AppLifecycleState.inactive) {
+      widget.controller.saveNow();
+    } else if (state == AppLifecycleState.resumed) {
+      widget.controller.onAppResumed();
     }
   }
 

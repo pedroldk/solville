@@ -144,6 +144,14 @@ class SolvilleController extends ChangeNotifier {
     unawaited(_sound.ensureBgmActive());
   }
 
+  void onAppBackgrounded() {
+    unawaited(_sound.pauseBgm());
+  }
+
+  void onAppResumed() {
+    unawaited(_sound.ensureBgmActive());
+  }
+
   double beeFlowerBonusAt(GridPos pos) =>
       _engine.computeBeeFlowerBonusAt(_state, pos);
 
@@ -415,6 +423,7 @@ class SolvilleController extends ChangeNotifier {
     }
     notifyListeners();
     final res = await _monetization.showRewardedAd();
+    unawaited(_sound.ensureBgmActive());
     if (!res.isSuccess) {
       _showToast('Ad cancelled or unavailable right now.');
       notifyListeners();
@@ -446,6 +455,7 @@ class SolvilleController extends ChangeNotifier {
     if (!_entitlements.isPermanentSupporter) {
       notifyListeners();
       final adRes = await _monetization.showRewardedAd();
+      unawaited(_sound.ensureBgmActive());
       if (!adRes.isSuccess) {
         _showToast('Ad cancelled — Sunny Surge was not activated.');
         notifyListeners();
