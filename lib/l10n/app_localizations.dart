@@ -2355,6 +2355,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'🌱 Started a fresh sunny farm in Solville!'**
   String get toastStartedFreshFarm;
+
+  /// No description provided for @parentalGateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Grown-Up Check'**
+  String get parentalGateTitle;
+
+  /// No description provided for @parentalGateSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Please solve this quick math problem to continue:'**
+  String get parentalGateSubtitle;
+
+  /// No description provided for @parentalGateQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'What is {a} × {b}?'**
+  String parentalGateQuestion(int a, int b);
+
+  /// No description provided for @parentalGateHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer'**
+  String get parentalGateHint;
+
+  /// No description provided for @parentalGateWrong.
+  ///
+  /// In en, this message translates to:
+  /// **'That wasn\'t quite right. Please ask a grown-up!'**
+  String get parentalGateWrong;
+
+  /// No description provided for @parentalGateContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get parentalGateContinue;
+
+  /// No description provided for @parentalGateCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get parentalGateCancel;
 }
 
 class _AppLocalizationsDelegate

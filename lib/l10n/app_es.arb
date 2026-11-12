@@ -393,5 +393,12 @@
   "toastNoPreviousPurchases": "No se encontraron compras anteriores para esta cuenta.",
   "toastAmbienceChanged": "Ambiente: {track}",
   "toastFarmSaved": "💾 ¡Progreso de la granja guardado!",
-  "toastStartedFreshFarm": "🌱 ¡Empezaste una nueva granja soleada en Solville!"
+  "toastStartedFreshFarm": "🌱 ¡Empezaste una nueva granja soleada en Solville!",
+  "parentalGateTitle": "Control para Adultos",
+  "parentalGateSubtitle": "Resuelve esta operación rápida para continuar:",
+  "parentalGateQuestion": "¿Cuánto es {a} × {b}?",
+  "parentalGateHint": "Respuesta",
+  "parentalGateWrong": "No es correcto. ¡Pide ayuda a un adulto!",
+  "parentalGateContinue": "Continuar",
+  "parentalGateCancel": "Cancelar"
 }

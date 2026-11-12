@@ -393,5 +393,12 @@
   "toastNoPreviousPurchases": "Aucun achat précédent trouvé pour ce compte.",
   "toastAmbienceChanged": "Ambiance : {track}",
   "toastFarmSaved": "💾 Progression sauvegardée !",
-  "toastStartedFreshFarm": "🌱 Nouvelle ferme ensoleillée commencée à Solville !"
+  "toastStartedFreshFarm": "🌱 Nouvelle ferme ensoleillée commencée à Solville !",
+  "parentalGateTitle": "Vérification Parentale",
+  "parentalGateSubtitle": "Résous ce petit calcul pour continuer :",
+  "parentalGateQuestion": "Combien font {a} × {b} ?",
+  "parentalGateHint": "Réponse",
+  "parentalGateWrong": "Ce n'est pas tout à fait ça. Demande à un adulte !",
+  "parentalGateContinue": "Continuer",
+  "parentalGateCancel": "Annuler"
 }

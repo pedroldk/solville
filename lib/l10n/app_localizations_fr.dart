@@ -1433,4 +1433,28 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get toastStartedFreshFarm =>
       '🌱 Nouvelle ferme ensoleillée commencée à Solville !';
+
+  @override
+  String get parentalGateTitle => 'Vérification Parentale';
+
+  @override
+  String get parentalGateSubtitle => 'Résous ce petit calcul pour continuer :';
+
+  @override
+  String parentalGateQuestion(int a, int b) {
+    return 'Combien font $a × $b ?';
+  }
+
+  @override
+  String get parentalGateHint => 'Réponse';
+
+  @override
+  String get parentalGateWrong =>
+      'Ce n\'est pas tout à fait ça. Demande à un adulte !';
+
+  @override
+  String get parentalGateContinue => 'Continuer';
+
+  @override
+  String get parentalGateCancel => 'Annuler';
 }

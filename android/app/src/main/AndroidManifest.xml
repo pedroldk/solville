@@ -2,7 +2,14 @@
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
+    <!-- Families / 6-7+ compliance: remove Advertising ID permissions pulled in by
+         play-services-ads so the app does not collect or transmit AD_ID. -->
+    <uses-permission
+        android:name="com.google.android.gms.permission.AD_ID"
+        tools:node="remove"/>
+    <uses-permission
+        android:name="android.permission.ACCESS_ADSERVICES_AD_ID"
+        tools:node="remove"/>
     <!-- Remove unused transitive WorkManager foreground service permission pulled in by
          play-services-ads; Solville does not run foreground services (prevents Android 14+
          Play Console foreground service policy blocks). -->

@@ -1429,6 +1429,30 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get toastStartedFreshFarm =>
       '🌱 Começaste uma nova quinta ensolarada em Solville!';
+
+  @override
+  String get parentalGateTitle => 'Verificação de Adulto';
+
+  @override
+  String get parentalGateSubtitle =>
+      'Resolve esta conta rápida para continuar:';
+
+  @override
+  String parentalGateQuestion(int a, int b) {
+    return 'Quanto é $a × $b?';
+  }
+
+  @override
+  String get parentalGateHint => 'Resposta';
+
+  @override
+  String get parentalGateWrong => 'Não está certo. Pede ajuda a um adulto!';
+
+  @override
+  String get parentalGateContinue => 'Continuar';
+
+  @override
+  String get parentalGateCancel => 'Cancelar';
 }
 
 /// The translations for Portuguese, as used in Portugal (`pt_PT`).

@@ -908,5 +908,18 @@
     }
   },
   "toastFarmSaved": "💾 Farm progress saved!",
-  "toastStartedFreshFarm": "🌱 Started a fresh sunny farm in Solville!"
+  "toastStartedFreshFarm": "🌱 Started a fresh sunny farm in Solville!",
+  "parentalGateTitle": "Grown-Up Check",
+  "parentalGateSubtitle": "Please solve this quick math problem to continue:",
+  "parentalGateQuestion": "What is {a} × {b}?",
+  "@parentalGateQuestion": {
+    "placeholders": {
+      "a": { "type": "int" },
+      "b": { "type": "int" }
+    }
+  },
+  "parentalGateHint": "Answer",
+  "parentalGateWrong": "That wasn't quite right. Please ask a grown-up!",
+  "parentalGateContinue": "Continue",
+  "parentalGateCancel": "Cancel"
 }

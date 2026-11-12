@@ -393,5 +393,12 @@
   "toastNoPreviousPurchases": "Keine früheren Käufe für dieses Konto gefunden.",
   "toastAmbienceChanged": "Klangwelt: {track}",
   "toastFarmSaved": "💾 Hoffortschritt gespeichert!",
-  "toastStartedFreshFarm": "🌱 Frischen Sonnenhof in Solville gestartet!"
+  "toastStartedFreshFarm": "🌱 Frischen Sonnenhof in Solville gestartet!",
+  "parentalGateTitle": "Eltern-Check",
+  "parentalGateSubtitle": "Bitte löse diese kurze Rechenaufgabe, um fortzufahren:",
+  "parentalGateQuestion": "Was ist {a} × {b}?",
+  "parentalGateHint": "Antwort",
+  "parentalGateWrong": "Das war leider falsch. Bitte frag einen Erwachsenen!",
+  "parentalGateContinue": "Weiter",
+  "parentalGateCancel": "Abbrechen"
 }

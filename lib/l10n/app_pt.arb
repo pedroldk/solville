@@ -393,5 +393,12 @@
   "toastNoPreviousPurchases": "Não foram encontradas compras anteriores nesta conta.",
   "toastAmbienceChanged": "Ambiente: {track}",
   "toastFarmSaved": "💾 Progresso da quinta guardado!",
-  "toastStartedFreshFarm": "🌱 Começaste uma nova quinta ensolarada em Solville!"
+  "toastStartedFreshFarm": "🌱 Começaste uma nova quinta ensolarada em Solville!",
+  "parentalGateTitle": "Verificação de Adulto",
+  "parentalGateSubtitle": "Resolve esta conta rápida para continuar:",
+  "parentalGateQuestion": "Quanto é {a} × {b}?",
+  "parentalGateHint": "Resposta",
+  "parentalGateWrong": "Não está certo. Pede ajuda a um adulto!",
+  "parentalGateContinue": "Continuar",
+  "parentalGateCancel": "Cancelar"
 }

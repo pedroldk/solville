@@ -67,6 +67,17 @@ class PlatformMonetizationBridge {
     if (!_mobileAdsInitialized) {
       _mobileAdsInitialized = true;
       try {
+        // Configure AdMob for Google Play Families / 6-7+ compliance before
+        // initializing or requesting ads: strictly G-rated, non-personalized,
+        // and child-directed.
+        await MobileAds.instance
+            .updateRequestConfiguration(
+              RequestConfiguration(
+                ageRestrictedTreatment: AgeRestrictedTreatment.child,
+                maxAdContentRating: MaxAdContentRating.g,
+              ),
+            )
+            .timeout(const Duration(seconds: 4));
         await MobileAds.instance.initialize().timeout(
           const Duration(seconds: 8),
         );

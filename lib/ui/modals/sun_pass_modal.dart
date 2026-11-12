@@ -1,4 +1,7 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../domain/models/entitlement_state.dart';
 import '../../l10n/app_localizations.dart';
@@ -137,7 +140,10 @@ class SunPassModal extends StatelessWidget {
                   description: l10n.sunPassAnnualDesc,
                   trailing: FilledButton(
                     onPressed: (!busy && !ent.isPermanentSupporter)
-                        ? () => controller.purchaseAnnualPass()
+                        ? () => _runWithParentalGate(
+                              context,
+                              controller.purchaseAnnualPass,
+                            )
                         : null,
                     child: Text(
                       ent.hasAnnualPass || ent.hasLifetimePass
@@ -161,7 +167,10 @@ class SunPassModal extends StatelessWidget {
                   description: l10n.sunPassLifetimeDesc,
                   trailing: FilledButton(
                     onPressed: (!busy && !ent.hasLifetimePass)
-                        ? () => controller.purchaseLifetimePass()
+                        ? () => _runWithParentalGate(
+                              context,
+                              controller.purchaseLifetimePass,
+                            )
                         : null,
                     child: Text(
                       ent.hasLifetimePass
@@ -249,7 +258,12 @@ class SunPassModal extends StatelessWidget {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(
-                    onPressed: busy ? null : controller.restorePurchases,
+                    onPressed: busy
+                        ? null
+                        : () => _runWithParentalGate(
+                              context,
+                              controller.restorePurchases,
+                            ),
                     icon: const Icon(Icons.restore_rounded, size: 17),
                     label: Text(l10n.sunPassRestorePurchases),
                   ),
@@ -259,6 +273,119 @@ class SunPassModal extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Future<void> _runWithParentalGate(
+    BuildContext context,
+    Future<void> Function() action,
+  ) async {
+    final passed = await showDialog<bool>(
+      context: context,
+      builder: (_) => const _ParentalGateDialog(),
+    );
+    if (passed == true) {
+      await action();
+    }
+  }
+}
+
+class _ParentalGateDialog extends StatefulWidget {
+  const _ParentalGateDialog();
+
+  @override
+  State<_ParentalGateDialog> createState() => _ParentalGateDialogState();
+}
+
+class _ParentalGateDialogState extends State<_ParentalGateDialog> {
+  late final int _a;
+  late final int _b;
+  final TextEditingController _answerController = TextEditingController();
+  bool _showError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final rng = Random();
+    _a = 6 + rng.nextInt(4); // 6..9
+    _b = 4 + rng.nextInt(6); // 4..9
+  }
+
+  @override
+  void dispose() {
+    _answerController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final parsed = int.tryParse(_answerController.text.trim());
+    if (parsed == _a * _b) {
+      Navigator.of(context).pop(true);
+    } else {
+      setState(() {
+        _showError = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AlertDialog(
+      backgroundColor: SolvilleTheme.parchment,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: SolvilleTheme.timberBorder, width: 2),
+      ),
+      title: Text(
+        l10n.parentalGateTitle,
+        style: const TextStyle(
+          fontWeight: FontWeight.w800,
+          color: SolvilleTheme.timberDark,
+        ),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(l10n.parentalGateSubtitle),
+          const SizedBox(height: 10),
+          Text(
+            l10n.parentalGateQuestion(_a, _b),
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: SolvilleTheme.timberDark,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _answerController,
+            keyboardType: TextInputType.number,
+            inputFormatters: <TextInputFormatter>[
+              FilteringTextInputFormatter.digitsOnly,
+            ],
+            autofocus: true,
+            onSubmitted: (_) => _submit(),
+            decoration: InputDecoration(
+              hintText: l10n.parentalGateHint,
+              errorText: _showError ? l10n.parentalGateWrong : null,
+              border: const OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(l10n.parentalGateCancel),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(l10n.parentalGateContinue),
+        ),
+      ],
     );
   }
 }

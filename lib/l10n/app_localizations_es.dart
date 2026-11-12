@@ -1432,4 +1432,28 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get toastStartedFreshFarm =>
       '🌱 ¡Empezaste una nueva granja soleada en Solville!';
+
+  @override
+  String get parentalGateTitle => 'Control para Adultos';
+
+  @override
+  String get parentalGateSubtitle =>
+      'Resuelve esta operación rápida para continuar:';
+
+  @override
+  String parentalGateQuestion(int a, int b) {
+    return '¿Cuánto es $a × $b?';
+  }
+
+  @override
+  String get parentalGateHint => 'Respuesta';
+
+  @override
+  String get parentalGateWrong => 'No es correcto. ¡Pide ayuda a un adulto!';
+
+  @override
+  String get parentalGateContinue => 'Continuar';
+
+  @override
+  String get parentalGateCancel => 'Cancelar';
 }

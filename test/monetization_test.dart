@@ -255,5 +255,73 @@ void main() {
         controller.dispose();
       },
     );
+
+    testWidgets(
+      'Parental gate blocks accidental IAP taps until solved',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1280, 720);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final controller = SolvilleController(
+          soundService: CozySoundService(silentPlatformOutput: true),
+          initialEntitlements: const EntitlementState(
+            isFullEditionBuild: false,
+          ),
+        );
+        await controller.initialize();
+
+        await tester.pumpWidget(SolvilleApp(controller: controller));
+        await tester.pump(const Duration(milliseconds: 50));
+
+        await tester.tap(find.text('Sun Pass'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+
+        // Tap Subscribe -> Parental Gate appears, purchase does not run yet
+        await tester.ensureVisible(find.text('Subscribe 2,99€/yr'));
+        await tester.pump();
+        await tester.tap(find.text('Subscribe 2,99€/yr'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        expect(find.text('Grown-Up Check'), findsOneWidget);
+        expect(controller.entitlements.hasAnnualPass, isFalse);
+
+        // Wrong answer keeps the dialog open and shows an error
+        await tester.enterText(find.byType(TextField), '1');
+        await tester.tap(find.text('Continue'));
+        await tester.pump();
+        expect(
+          find.text("That wasn't quite right. Please ask a grown-up!"),
+          findsOneWidget,
+        );
+        expect(controller.entitlements.hasAnnualPass, isFalse);
+
+        // Solve the multiplication question to unlock the purchase
+        final questionFinder = find.textContaining('What is ');
+        final questionText = tester.widget<Text>(questionFinder).data!;
+        final match = RegExp(r'What is (\d+) × (\d+)\?').firstMatch(
+          questionText,
+        )!;
+        final expectedAnswer =
+            int.parse(match.group(1)!) * int.parse(match.group(2)!);
+
+        await tester.enterText(
+          find.byType(TextField),
+          expectedAnswer.toString(),
+        );
+        await tester.tap(find.text('Continue'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+
+        expect(find.text('Grown-Up Check'), findsNothing);
+        expect(controller.entitlements.hasAnnualPass, isTrue);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        controller.dispose();
+      },
+    );
   });
 }
