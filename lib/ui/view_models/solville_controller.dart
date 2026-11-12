@@ -65,8 +65,8 @@ class SolvilleController extends ChangeNotifier {
 
   late bool _wasSunPassActiveLastTick;
 
-  GridPos? _hoveredTile;
-  GridPos? get hoveredTile => _hoveredTile;
+  final ValueNotifier<GridPos?> hoverNotifier = ValueNotifier<GridPos?>(null);
+  GridPos? get hoveredTile => hoverNotifier.value;
 
   GridPos? _inspectedTile;
   GridPos? get inspectedTile => _inspectedTile;
@@ -235,9 +235,8 @@ class SolvilleController extends ChangeNotifier {
   }
 
   void setHoveredTile(GridPos? pos) {
-    if (_hoveredTile == pos) return;
-    _hoveredTile = pos;
-    notifyListeners();
+    if (hoverNotifier.value == pos) return;
+    hoverNotifier.value = pos;
   }
 
   void handleTileTap(GridPos pos) {
@@ -280,7 +279,16 @@ class SolvilleController extends ChangeNotifier {
     _applyStep(result, haptic: result.state.actionQueue.length > prevQueueLen);
   }
 
-  /// Shift+Drag row painting on PC/Steam.
+  /// Shift+Drag row painting on PC/Steam or Sweep-mode drag on touch devices.
+  bool _paintSweepMode = false;
+  bool get paintSweepMode => _paintSweepMode;
+
+  void togglePaintSweepMode() {
+    _paintSweepMode = !_paintSweepMode;
+    _triggerGentleHaptic();
+    notifyListeners();
+  }
+
   void resetPaintDrag() {
     _lastPaintDragTile = null;
   }
@@ -304,7 +312,13 @@ class SolvilleController extends ChangeNotifier {
       return;
     }
 
-    _applyStep(_engine.enqueueTileTap(_state, pos), gestureAudio: false);
+    final prevLen = _state.actionQueue.length;
+    final result = _engine.enqueueTileTap(_state, pos);
+    _applyStep(
+      result,
+      gestureAudio: false,
+      haptic: result.state.actionQueue.length > prevLen,
+    );
   }
 
   void handleTileSecondaryTap(GridPos pos) {
@@ -803,6 +817,7 @@ class SolvilleController extends ChangeNotifier {
 
   @override
   void dispose() {
+    hoverNotifier.dispose();
     _monetization.dispose();
     unawaited(_saveRepo.saveGame(_state));
     unawaited(_sound.dispose());

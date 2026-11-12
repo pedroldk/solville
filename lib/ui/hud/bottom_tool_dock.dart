@@ -168,6 +168,42 @@ class BottomToolDock extends StatelessWidget {
                           color: SolvilleTheme.timberDark,
                         ),
                       ),
+                      Container(
+                        width: 1,
+                        height: 18,
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        color: const Color(0x33795548),
+                      ),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: controller.togglePaintSweepMode,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: controller.paintSweepMode
+                                ? const Color(0xFFFFD54F)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                            border: controller.paintSweepMode
+                                ? Border.all(
+                                    color: const Color(0xFFE65100),
+                                    width: 1.5,
+                                  )
+                                : null,
+                          ),
+                          child: Icon(
+                            Icons.gesture_rounded,
+                            size: 18,
+                            color: controller.paintSweepMode
+                                ? const Color(0xFFE65100)
+                                : SolvilleTheme.timberDark,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -448,15 +484,26 @@ class _ToolSlotButton extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 3),
       child: Material(
-        color: selected ? const Color(0xFFFFD54F) : SolvilleTheme.warmCream,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
           onTap: onTap,
-          child: Container(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            curve: Curves.easeOutCubic,
+            transform: Matrix4.translationValues(0, selected ? -3.5 : 0, 0),
             constraints: const BoxConstraints(minWidth: 68, minHeight: 48),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
+              gradient: selected
+                  ? const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: <Color>[Color(0xFFFFE082), Color(0xFFFFCA28)],
+                    )
+                  : null,
+              color: selected ? null : SolvilleTheme.warmCream,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: selected
@@ -464,6 +511,15 @@ class _ToolSlotButton extends StatelessWidget {
                     : const Color(0x55795548),
                 width: selected ? 2.2 : 1.2,
               ),
+              boxShadow: selected
+                  ? const <BoxShadow>[
+                      BoxShadow(
+                        color: Color(0x4DFFCA28),
+                        blurRadius: 8,
+                        offset: Offset(0, 3),
+                      ),
+                    ]
+                  : null,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -473,12 +529,24 @@ class _ToolSlotButton extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     if (showHotkey) ...<Widget>[
-                      Text(
-                        hotkey,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0x994E342E),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? const Color(0x33E65100)
+                              : const Color(0x1F4E342E),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: Text(
+                          hotkey,
+                          style: const TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xBB4E342E),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 4),

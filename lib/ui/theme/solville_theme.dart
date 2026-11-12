@@ -46,6 +46,7 @@ abstract final class SolvilleTheme {
   static ThemeData buildTheme() {
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'GoogleSansFlex',
       colorScheme: ColorScheme.fromSeed(
         seedColor: sunGold,
         surface: parchment,

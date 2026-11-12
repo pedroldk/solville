@@ -54,6 +54,10 @@ class LandmarksAndStructuresPainter {
       _drawLaneScenery(canvas, cx, cy, pos, animTime);
     }
 
+    if (tile.structure != StructureType.none) {
+      _drawStructureShadow(canvas, cx, cy, tile.structure, dayProgress);
+    }
+
     switch (tile.structure) {
       case StructureType.farmhouse:
         _drawFarmhouse(canvas, cx, cy, dayProgress, animTime);
@@ -105,6 +109,41 @@ class LandmarksAndStructuresPainter {
         scale: 0.95,
       );
     }
+  }
+
+  void _drawStructureShadow(
+    Canvas canvas,
+    double cx,
+    double cy,
+    StructureType structure,
+    double dayProgress,
+  ) {
+    final sunOffsetX = (dayProgress - 0.45) * 8.0;
+    final (double w, double h, double dy) = switch (structure) {
+      StructureType.farmhouse => (68.0, 30.0, 6.0),
+      StructureType.barn => (66.0, 28.0, 6.0),
+      StructureType.marketStall => (60.0, 25.0, 5.0),
+      StructureType.cowPaddock => (64.0, 28.0, 5.0),
+      StructureType.well ||
+      StructureType.henhouse ||
+      StructureType.flowerArch => (44.0, 20.0, 4.0),
+      StructureType.lemonTree || StructureType.artisanPress => (40.0, 18.0, 4.0),
+      StructureType.beehive => (32.0, 14.0, 3.0),
+      StructureType.sprinklerRotary ||
+      StructureType.sprinklerSolar ||
+      StructureType.lantern => (24.0, 11.0, 3.0),
+      StructureType.none => (0.0, 0.0, 0.0),
+    };
+    if (w <= 0) return;
+    _fillPaint.color = const Color(0x24000000);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(cx + sunOffsetX, cy + dy),
+        width: w,
+        height: h,
+      ),
+      _fillPaint,
+    );
   }
 
   void drawQueueMarkers(
@@ -301,6 +340,18 @@ class LandmarksAndStructuresPainter {
     canvas.drawOval(
       Rect.fromCenter(center: Offset(cx, cy - 13), width: 30, height: 12),
       _fillPaint,
+    );
+    final ripplePhase = (animTime * 0.85) % 1.0;
+    _strokePaint
+      ..color = Color.fromRGBO(255, 255, 255, (1.0 - ripplePhase) * 0.45)
+      ..strokeWidth = 1.2;
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(cx, cy - 13),
+        width: 10.0 + ripplePhase * 16.0,
+        height: 4.0 + ripplePhase * 6.5,
+      ),
+      _strokePaint,
     );
 
     _strokePaint

@@ -2,13 +2,16 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flame/components.dart';
+import 'package:flutter/painting.dart' show TextStyle;
 
 import '../../domain/iso/iso_projection.dart';
+import '../../domain/models/catalog.dart';
 import '../../domain/models/game_state.dart';
 import '../../domain/models/grid_pos.dart';
 import '../../domain/models/tile_state.dart';
 import '../../domain/simulation/farm_simulation_engine.dart';
 import '../../ui/view_models/solville_controller.dart';
+import '../painters/canvas_draw_helpers.dart';
 import '../painters/characters_and_fx_painter.dart';
 import '../painters/iso_prism_painter.dart';
 import '../painters/landmarks_and_structures_painter.dart';
@@ -39,6 +42,9 @@ class IsometricDioramaWorldComponent extends Component
   final math.Random _rng = math.Random();
   final List<FloatingVfx> _vfx = <FloatingVfx>[];
   final Map<GridPos, List<int>> _queueStepsByPos = <GridPos, List<int>>{};
+  final Paint _ghostBadgePaint = Paint();
+  List<GridPos> _cachedGridPos = const <GridPos>[];
+  int _cachedGridSize = -1;
 
   late final List<StrollingVillager> _villagers = <StrollingVillager>[
     StrollingVillager(
@@ -107,6 +113,14 @@ class IsometricDioramaWorldComponent extends Component
   void render(Canvas canvas) {
     final state = controller.state;
     final size = state.gridSize;
+    if (_cachedGridSize != size) {
+      _cachedGridSize = size;
+      _cachedGridPos = List<GridPos>.generate(
+        size * size,
+        (i) => GridPos(i % size, i ~/ size),
+        growable: false,
+      );
+    }
     final tiles = state.tiles;
     final hovered = controller.hoveredTile;
     final totalBarn = state.totalBarnCrates;
@@ -122,6 +136,9 @@ class IsometricDioramaWorldComponent extends Component
 
     // Pass 0: Soft drifting sky clouds behind floating island
     _fxPainter.drawSkyClouds(canvas, size, state.dayProgress, _animTime);
+
+    // Pass 0.5: Floating island drop shadow
+    _prismPainter.drawIslandDropShadow(canvas, size, state.dayProgress);
 
     final previewRadius = hovered != null
         ? _prismPainter.sprinklerPreviewRadius(state)
@@ -139,9 +156,13 @@ class IsometricDioramaWorldComponent extends Component
         final cx = (x - y) * halfTileW;
         if (cx < minVisX || cx > maxVisX) continue;
 
-        final pos = GridPos(x, y);
-        final tile = tiles[y * size + x];
+        final idx = y * size + x;
+        final pos = _cachedGridPos[idx];
+        final tile = tiles[idx];
         final isHovered = hovered != null && hovered.x == x && hovered.y == y;
+        final hoverValid = isHovered
+            ? _isPlacementValid(state, tile)
+            : true;
         final inSprinklerPreview =
             previewRadius > 0 &&
             hovered != null &&
@@ -156,6 +177,7 @@ class IsometricDioramaWorldComponent extends Component
           isHovered: isHovered,
           isInSprinklerPreview: inSprinklerPreview,
           animTime: _animTime,
+          hoverValid: hoverValid,
         );
       }
     }
@@ -200,13 +222,30 @@ class IsometricDioramaWorldComponent extends Component
         if (bestId == -1) break;
         if (bestId == 0) {
           v0Drawn = true;
-          _fxPainter.drawVillager(canvas, v0, boom0, _animTime);
+          _fxPainter.drawVillager(
+            canvas,
+            v0,
+            boom0,
+            _animTime,
+            dayProgress: state.dayProgress,
+          );
         } else if (bestId == 1) {
           v1Drawn = true;
-          _fxPainter.drawVillager(canvas, v1, boom1, _animTime);
+          _fxPainter.drawVillager(
+            canvas,
+            v1,
+            boom1,
+            _animTime,
+            dayProgress: state.dayProgress,
+          );
         } else {
           farmerDrawn = true;
-          _fxPainter.drawFarmer(canvas, farmer, _animTime);
+          _fxPainter.drawFarmer(
+            canvas,
+            farmer,
+            _animTime,
+            dayProgress: state.dayProgress,
+          );
         }
       }
     }
@@ -230,7 +269,7 @@ class IsometricDioramaWorldComponent extends Component
             if (cx < minVisX || cx > maxVisX) continue;
             _structuresPainter.drawTileContents(
               canvas,
-              pos: GridPos(x, y),
+              pos: _cachedGridPos[y * size + x],
               tile: tile,
               market: state.market,
               totalBarnCrates: totalBarn,
@@ -265,6 +304,13 @@ class IsometricDioramaWorldComponent extends Component
       }
     }
 
+    // Pass 3.5: Ghost placement preview on hovered tile in Seed / Build mode
+    if (hovered != null &&
+        (state.activeTool == ToolMode.seed ||
+            state.activeTool == ToolMode.build)) {
+      _drawGhostPreview(canvas, state, hovered);
+    }
+
     // Pass 4: Butterflies / twilight fireflies / rain & floating coin popups
     _fxPainter.drawAmbientButterfliesFirefliesAndRain(
       canvas,
@@ -274,5 +320,50 @@ class IsometricDioramaWorldComponent extends Component
       animTime: _animTime,
     );
     _fxPainter.drawFloatingVfx(canvas, _vfx);
+  }
+
+  static const TextStyle _ghostEmojiStyle = TextStyle(fontSize: 18);
+
+  bool _isPlacementValid(GameState state, TileState tile) {
+    switch (state.activeTool) {
+      case ToolMode.seed:
+        final crop = SolvilleCatalog.crops[state.selectedSeed];
+        return tile.ground == GroundType.soil &&
+            tile.crop == null &&
+            tile.structure == StructureType.none &&
+            (crop == null || state.coins >= crop.seedCost);
+      case ToolMode.build:
+        final def = SolvilleCatalog.buildItems[state.selectedBuildItem];
+        return (tile.ground == GroundType.grass ||
+                tile.ground == GroundType.stonePath) &&
+            tile.structure == StructureType.none &&
+            tile.crop == null &&
+            (def == null || state.coins >= def.cost);
+      default:
+        return true;
+    }
+  }
+
+  void _drawGhostPreview(Canvas canvas, GameState state, GridPos hovered) {
+    final tile = state.tileAt(hovered);
+    final valid = _isPlacementValid(state, tile);
+    final emoji = state.activeTool == ToolMode.seed
+        ? SolvilleCatalog.crops[state.selectedSeed]?.emoji
+        : SolvilleCatalog.buildItems[state.selectedBuildItem]?.emoji;
+    if (emoji == null) return;
+
+    final center = iso.tileCenterToWorld(hovered);
+    final bob = math.sin(_animTime * 5.0) * 2.5;
+    final badgeCenter = Offset(center.x, center.y - 18.0 + bob);
+    _ghostBadgePaint.color = valid
+        ? const Color(0xBBFFFDF6)
+        : const Color(0xBBFFCDD2);
+    canvas.drawCircle(badgeCenter, 14.0, _ghostBadgePaint);
+    CanvasDrawHelpers.drawCenteredText(
+      canvas,
+      emoji,
+      badgeCenter,
+      _ghostEmojiStyle,
+    );
   }
 }

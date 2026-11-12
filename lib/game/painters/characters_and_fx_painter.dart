@@ -70,6 +70,34 @@ class CharactersAndFxPainter {
   static const TextStyle _workEmojiStyle = TextStyle(fontSize: 15);
   static const TextStyle _villagerCravingStyle = TextStyle(fontSize: 11);
 
+  final Map<int, List<TextStyle?>> _floatingTextStyleCache =
+      <int, List<TextStyle?>>{};
+
+  TextStyle _getFloatingTextStyle(Color baseColor, int alphaStep) {
+    final styles = _floatingTextStyleCache.putIfAbsent(
+      baseColor.toARGB32(),
+      () => List<TextStyle?>.filled(21, null),
+    );
+    var cached = styles[alphaStep];
+    if (cached == null) {
+      final qAlpha = alphaStep / 20.0;
+      cached = TextStyle(
+        color: baseColor.withValues(alpha: qAlpha),
+        fontSize: 14.0,
+        fontWeight: FontWeight.w900,
+        shadows: <Shadow>[
+          Shadow(
+            color: const Color(0xAA3E2723).withValues(alpha: qAlpha),
+            offset: const Offset(0, 1.5),
+            blurRadius: 2,
+          ),
+        ],
+      );
+      styles[alphaStep] = cached;
+    }
+    return cached;
+  }
+
   void drawSkyClouds(
     Canvas canvas,
     int gridSize,
@@ -124,7 +152,12 @@ class CharactersAndFxPainter {
     }
   }
 
-  void drawFarmer(Canvas canvas, FarmerState farmer, double animTime) {
+  void drawFarmer(
+    Canvas canvas,
+    FarmerState farmer,
+    double animTime, {
+    double dayProgress = 0.35,
+  }) {
     final world = iso.gridToWorld(farmer.x, farmer.y);
     final isMoving = farmer.activePath.isNotEmpty;
     final bob = isMoving ? math.sin(farmer.walkBobPhase).abs() * 4.5 : 0.0;
@@ -134,11 +167,12 @@ class CharactersAndFxPainter {
 
     final cx = world.x + workTilt;
     final cy = world.y;
+    final sunOffsetX = (dayProgress - 0.45) * 7.0;
 
     _fillPaint.color = const Color(0x3D000000);
     canvas.drawOval(
       Rect.fromCenter(
-        center: Offset(world.x, world.y + 3),
+        center: Offset(world.x + sunOffsetX, world.y + 3),
         width: 28,
         height: 13,
       ),
@@ -146,6 +180,17 @@ class CharactersAndFxPainter {
     );
 
     final step = isMoving ? math.sin(farmer.walkBobPhase) * 3.5 : 0.0;
+    final workSquash = farmer.workTimer > 0
+        ? math.sin(farmer.workTimer * 26.0) * 0.08
+        : 0.0;
+    final sx = 1.0 + workSquash;
+    final sy = 1.0 - workSquash;
+
+    canvas.save();
+    canvas.translate(cx, cy);
+    canvas.scale(sx, sy);
+    canvas.translate(-cx, -cy);
+
     _fillPaint.color = const Color(0xFF5D4037);
     canvas.drawCircle(Offset(cx - 4 + step * 0.5, cy - 1), 3.5, _fillPaint);
     canvas.drawCircle(Offset(cx + 4 - step * 0.5, cy - 1), 3.5, _fillPaint);
@@ -194,6 +239,8 @@ class CharactersAndFxPainter {
       _strokePaint,
     );
 
+    canvas.restore();
+
     // Stacked wooden crates carried in Sol's arms
     if (farmer.carriedCrates.isNotEmpty) {
       final dirSign = (farmer.facingX - farmer.facingY) >= 0 ? 1.0 : -1.0;
@@ -223,18 +270,24 @@ class CharactersAndFxPainter {
     Canvas canvas,
     StrollingVillager villager,
     ProductId? boomHighlight,
-    double animTime,
-  ) {
+    double animTime, {
+    double dayProgress = 0.35,
+  }) {
     final world = iso.gridToWorld(villager.gx, 0.0);
     final bob = villager.pauseTimer > 0
         ? 0.0
         : math.sin(animTime * 7.5 + villager.gx * 2.0).abs() * 3.0;
     final cx = world.x;
     final cy = world.y;
+    final sunOffsetX = (dayProgress - 0.45) * 6.0;
 
     _fillPaint.color = const Color(0x30000000);
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy + 2), width: 22, height: 10),
+      Rect.fromCenter(
+        center: Offset(cx + sunOffsetX, cy + 2),
+        width: 22,
+        height: 10,
+      ),
       _fillPaint,
     );
     _fillPaint.color = villager.tunicColor;
@@ -285,25 +338,15 @@ class CharactersAndFxPainter {
       final fx = effects[i];
       final t = (fx.life / fx.maxLife).clamp(0.0, 1.0);
       if (fx.text != null) {
-        // Quantize alpha to 20 steps so TextPainter cache hits across frames.
-        final qAlpha = (t * 20.0).round() / 20.0;
-        if (qAlpha <= 0.0) continue;
+        // Quantize alpha to 20 steps and reuse cached TextStyle instances so
+        // TextPainter cache hits across frames.
+        final alphaStep = (t * 20.0).round().clamp(0, 20);
+        if (alphaStep <= 0) continue;
         CanvasDrawHelpers.drawCenteredText(
           canvas,
           fx.text!,
           Offset(fx.x, fx.y),
-          TextStyle(
-            color: fx.color.withValues(alpha: qAlpha),
-            fontSize: 14.0,
-            fontWeight: FontWeight.w900,
-            shadows: <Shadow>[
-              Shadow(
-                color: const Color(0xAA3E2723).withValues(alpha: qAlpha),
-                offset: const Offset(0, 1.5),
-                blurRadius: 2,
-              ),
-            ],
-          ),
+          _getFloatingTextStyle(fx.color, alphaStep),
         );
       } else if (fx.isRing) {
         final radius = fx.size * (1.8 - t * 0.8);
@@ -483,6 +526,19 @@ class CharactersAndFxPainter {
         }
       case SimEventType.coinsEarned:
         if (event.amount > 0) {
+          for (var i = 0; i < 6; i++) {
+            pool.add(
+              FloatingVfx(
+                x: world.x + (rng.nextDouble() - 0.5) * 24,
+                y: world.y - 24,
+                vx: (rng.nextDouble() - 0.5) * 42,
+                vy: -26 - rng.nextDouble() * 24,
+                color: const Color(0xFFFFE082),
+                maxLife: 0.65,
+                size: 3.4,
+              ),
+            );
+          }
           pool.add(
             FloatingVfx(
               x: world.x,

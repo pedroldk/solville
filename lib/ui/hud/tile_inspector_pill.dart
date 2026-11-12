@@ -17,120 +17,125 @@ class TileInspectorPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final pos = controller.hoveredTile ?? controller.inspectedTile;
-    if (pos == null || !controller.state.inBounds(pos)) {
-      return const SizedBox.shrink();
-    }
+    return ValueListenableBuilder<GridPos?>(
+      valueListenable: controller.hoverNotifier,
+      builder: (context, hoveredPos, _) {
+        final l10n = AppLocalizations.of(context);
+        final pos = hoveredPos ?? controller.inspectedTile;
+        if (pos == null || !controller.state.inBounds(pos)) {
+          return const SizedBox.shrink();
+        }
 
-    final state = controller.state;
-    final tile = state.tileAt(pos);
-    final summary = _describeTile(l10n, pos, tile);
-    if (summary == null) {
-      return const SizedBox.shrink();
-    }
+        final state = controller.state;
+        final tile = state.tileAt(pos);
+        final summary = _describeTile(l10n, pos, tile);
+        if (summary == null) {
+          return const SizedBox.shrink();
+        }
 
-    final showDismiss =
-        controller.hoveredTile == null && controller.inspectedTile != null;
-    final canQuickUntill = showDismiss && pos.y > 0 && tile.canQuickUntill;
-    final isSunPassPaused =
-        tile.structure.requiresSunPass && !controller.isSunPassActive;
+        final showDismiss =
+            hoveredPos == null && controller.inspectedTile != null;
+        final canQuickUntill = showDismiss && pos.y > 0 && tile.canQuickUntill;
+        final isSunPassPaused =
+            tile.structure.requiresSunPass && !controller.isSunPassActive;
 
-    return Padding(
-      padding: const EdgeInsets.only(top: 4, left: 16, right: 16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-        decoration: SolvilleTheme.panelDecoration(
-          color: const Color(0xECFFFDF7),
-          radius: 16,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Flexible(
-              child: Text(
-                isSunPassPaused
-                    ? l10n.inspectorSunPassPaused(summary)
-                    : summary,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: SolvilleTheme.timberDark,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                ),
-              ),
+        return Padding(
+          padding: const EdgeInsets.only(top: 4, left: 16, right: 16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: SolvilleTheme.panelDecoration(
+              color: const Color(0xECFFFDF7),
+              radius: 16,
             ),
-            if (isSunPassPaused) ...<Widget>[
-              const SizedBox(width: 8),
-              InkWell(
-                onTap: controller.openSunPassModal,
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFE082),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: SolvilleTheme.timberBorder),
-                  ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Flexible(
                   child: Text(
-                    l10n.inspectorUnlockBtn,
+                    isSunPassPaused
+                        ? l10n.inspectorSunPassPaused(summary)
+                        : summary,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: SolvilleTheme.timberDark,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
                     ),
                   ),
                 ),
-              ),
-            ],
-            if (canQuickUntill) ...<Widget>[
-              const SizedBox(width: 8),
-              InkWell(
-                onTap: () => controller.untillTile(pos),
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8F5E9),
+                if (isSunPassPaused) ...<Widget>[
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: controller.openSunPassModal,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: SolvilleTheme.timberBorder),
-                  ),
-                  child: Text(
-                    l10n.inspectorUntillBtn,
-                    style: const TextStyle(
-                      color: SolvilleTheme.timberDark,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 11,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFE082),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: SolvilleTheme.timberBorder),
+                      ),
+                      child: Text(
+                        l10n.inspectorUnlockBtn,
+                        style: const TextStyle(
+                          color: SolvilleTheme.timberDark,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 11,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ],
-            if (showDismiss) ...<Widget>[
-              const SizedBox(width: 6),
-              InkWell(
-                onTap: controller.clearInspectedTile,
-                borderRadius: BorderRadius.circular(10),
-                child: const Padding(
-                  padding: EdgeInsets.all(6),
-                  child: Icon(
-                    Icons.close_rounded,
-                    size: 16,
-                    color: SolvilleTheme.timberDark,
+                ],
+                if (canQuickUntill) ...<Widget>[
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () => controller.untillTile(pos),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F5E9),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: SolvilleTheme.timberBorder),
+                      ),
+                      child: Text(
+                        l10n.inspectorUntillBtn,
+                        style: const TextStyle(
+                          color: SolvilleTheme.timberDark,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
+                ],
+                if (showDismiss) ...<Widget>[
+                  const SizedBox(width: 6),
+                  InkWell(
+                    onTap: controller.clearInspectedTile,
+                    borderRadius: BorderRadius.circular(10),
+                    child: const Padding(
+                      padding: EdgeInsets.all(6),
+                      child: Icon(
+                        Icons.close_rounded,
+                        size: 16,
+                        color: SolvilleTheme.timberDark,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

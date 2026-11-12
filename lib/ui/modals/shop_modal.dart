@@ -132,6 +132,18 @@ class _UpgradesTab extends StatelessWidget {
     final upgradeName = l10n.upgradeName(track, nextDef.tier);
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
+      color: affordable && !lockedByPass
+          ? const Color(0xFFFFFBF0)
+          : SolvilleTheme.parchment,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: affordable && !lockedByPass
+              ? SolvilleTheme.sunGold
+              : SolvilleTheme.timberBorder.withValues(alpha: 0.45),
+          width: affordable && !lockedByPass ? 2.0 : 1.5,
+        ),
+      ),
       child: ListTile(
         leading: Text(nextDef.emoji, style: const TextStyle(fontSize: 28)),
         title: Text(

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import '../../domain/iso/iso_projection.dart';
@@ -52,6 +53,11 @@ class IsoPrismPainter {
     ..strokeWidth = 1.8
     ..strokeCap = StrokeCap.round;
   final Paint _grassFlowerPaint = Paint()..color = const Color(0xFFFFF9C4);
+  final Paint _moistureSheenPaint = Paint()
+    ..color = const Color(0x1EFFFFFF)
+    ..strokeWidth = 1.2
+    ..strokeCap = StrokeCap.round;
+  final Paint _pebblePaint = Paint()..color = const Color(0x285D4037);
 
   final Paint _sprinklerFillPaint = Paint()..color = const Color(0x4429B6F6);
   final Paint _sprinklerStrokePaint = Paint()
@@ -64,6 +70,54 @@ class IsoPrismPainter {
     ..color = const Color(0xFFFFF176)
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2.6;
+  final Paint _hoverInvalidFillPaint = Paint()..color = const Color(0x2AEF5350);
+  final Paint _hoverInvalidStrokePaint = Paint()
+    ..color = const Color(0xFFE53935)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2.6;
+
+  final Path _islandShadowPath = Path();
+  final Paint _islandShadowOuterPaint = Paint()..color = const Color(0x161A237E);
+  final Paint _islandShadowInnerPaint = Paint()..color = const Color(0x241A237E);
+
+  /// Draws a soft two-layered floating-island drop shadow beneath the entire
+  /// isometric grid, subtly shifting with the sun angle across the day.
+  void drawIslandDropShadow(
+    Canvas canvas,
+    int gridSize,
+    double dayProgress,
+  ) {
+    final hw = iso.tileWidth * 0.5;
+    final hh = iso.tileHeight * 0.5;
+    final sunOffsetX = (dayProgress - 0.45) * 16.0;
+
+    final topX = sunOffsetX;
+    final topY = -hh + 42.0;
+    final rightX = gridSize * hw + sunOffsetX;
+    final rightY = (gridSize - 1) * hh + 42.0;
+    final bottomX = sunOffsetX;
+    final bottomY = (2 * gridSize - 1) * hh + 48.0;
+    final leftX = -gridSize * hw + sunOffsetX;
+    final leftY = (gridSize - 1) * hh + 42.0;
+
+    _islandShadowPath
+      ..reset()
+      ..moveTo(topX, topY - 10.0)
+      ..lineTo(rightX + 20.0, rightY + 4.0)
+      ..lineTo(bottomX, bottomY + 18.0)
+      ..lineTo(leftX - 20.0, leftY + 4.0)
+      ..close();
+    canvas.drawPath(_islandShadowPath, _islandShadowOuterPaint);
+
+    _islandShadowPath
+      ..reset()
+      ..moveTo(topX, topY - 2.0)
+      ..lineTo(rightX + 8.0, rightY + 2.0)
+      ..lineTo(bottomX, bottomY + 6.0)
+      ..lineTo(leftX - 8.0, leftY + 2.0)
+      ..close();
+    canvas.drawPath(_islandShadowPath, _islandShadowInnerPaint);
+  }
 
   void drawTilePrism(
     Canvas canvas, {
@@ -73,6 +127,7 @@ class IsoPrismPainter {
     required bool isHovered,
     required bool isInSprinklerPreview,
     required double animTime,
+    bool hoverValid = true,
   }) {
     final center = iso.tileCenterToWorld(pos);
     final cx = center.x;
@@ -143,7 +198,7 @@ class IsoPrismPainter {
       case GroundType.weeds:
         _drawWeedDetails(canvas, cx, cy);
       case GroundType.grass:
-        _drawGrassAccent(canvas, cx, cy, pos);
+        _drawGrassAccent(canvas, cx, cy, pos, animTime);
     }
 
     // Sprinkler coverage preview overlay
@@ -154,8 +209,14 @@ class IsoPrismPainter {
 
     // Hover highlight diamond
     if (isHovered) {
-      canvas.drawPath(_topFacePath, _hoverFillPaint);
-      canvas.drawPath(_topFacePath, _hoverStrokePaint);
+      canvas.drawPath(
+        _topFacePath,
+        hoverValid ? _hoverFillPaint : _hoverInvalidFillPaint,
+      );
+      canvas.drawPath(
+        _topFacePath,
+        hoverValid ? _hoverStrokePaint : _hoverInvalidStrokePaint,
+      );
     }
   }
 
@@ -217,6 +278,19 @@ class IsoPrismPainter {
         Offset(cx - 18.0 + offset * 0.6, cy - 5.0 + offset * 0.5),
         Offset(cx + 12.0 + offset * 0.6, cy + 9.0 + offset * 0.5),
         _furrowPaint,
+      );
+    }
+
+    if (tile.moisture > 0.35) {
+      canvas.drawLine(
+        Offset(cx - 12.0, cy - 6.0),
+        Offset(cx + 8.0, cy + 3.5),
+        _moistureSheenPaint,
+      );
+      canvas.drawLine(
+        Offset(cx - 6.0, cy + 1.0),
+        Offset(cx + 12.0, cy + 9.5),
+        _moistureSheenPaint,
       );
     }
 
@@ -282,20 +356,38 @@ class IsoPrismPainter {
     canvas.drawCircle(Offset(cx + 9, cy - 14), 3.0, _dandelionPaint);
   }
 
-  void _drawGrassAccent(Canvas canvas, double cx, double cy, GridPos pos) {
-    if ((pos.x * 7 + pos.y * 13) % 4 != 0) return;
+  void _drawGrassAccent(
+    Canvas canvas,
+    double cx,
+    double cy,
+    GridPos pos,
+    double animTime,
+  ) {
+    final hash = pos.x * 7 + pos.y * 13;
+    if (hash % 7 == 0) {
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset(cx - 10, cy + 4), width: 4.5, height: 2.5),
+        _pebblePaint,
+      );
+    }
+    if (hash % 4 != 0) return;
+    final sway = math.sin(animTime * 2.2 + pos.x * 0.8 + pos.y * 0.6) * 1.5;
     canvas.drawLine(
       Offset(cx - 4, cy + 2),
-      Offset(cx - 6, cy - 4),
+      Offset(cx - 6 + sway, cy - 4),
       _grassBladePaint,
     );
     canvas.drawLine(
       Offset(cx - 1, cy + 2),
-      Offset(cx + 1, cy - 5),
+      Offset(cx + 1 + sway, cy - 5),
       _grassBladePaint,
     );
     if ((pos.x + pos.y) % 3 == 0) {
-      canvas.drawCircle(Offset(cx + 8, cy + 3), 2.0, _grassFlowerPaint);
+      canvas.drawCircle(
+        Offset(cx + 8 + sway * 0.4, cy + 3),
+        2.0,
+        _grassFlowerPaint,
+      );
     }
   }
 

@@ -28,6 +28,8 @@ class CropsPainter {
   static final Paint _thirstBgPaint = Paint()..color = const Color(0xDDFFFFFF);
   static final Paint _thirstDropPaint = Paint()
     ..color = const Color(0xFF29B6F6);
+  static final Paint _cropShadowPaint = Paint()
+    ..color = const Color(0x1E000000);
 
   void drawPlantedCrop(
     Canvas canvas,
@@ -60,6 +62,14 @@ class CropsPainter {
       }
     } else {
       final scale = (0.55 + crop.growth * 0.45).clamp(0.55, 1.0);
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: Offset(cx, cy + 3),
+          width: 20.0 * scale,
+          height: 9.0 * scale,
+        ),
+        _cropShadowPaint,
+      );
       _foliagePaint.color = stemColor;
       final primary = Color(def.primaryColorHex);
       final accent = Color(def.accentColorHex);
