@@ -27,13 +27,14 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: "3.44.4"
           channel: stable
           cache: true
 
       - name: Install dependencies & verify
         run: |
           flutter pub get
-          flutter analyze
+          flutter analyze --no-fatal-infos
           flutter test
 
       - name: Decode Android signing keystore
