@@ -63,6 +63,20 @@ void main() {
         expect(find.byType(Dialog), findsNothing);
       }
 
+      // Open Shop modal (always visible in TopStatusBar) and verify zero overflow
+      await tester.tap(find.text('Shop'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'shop modal overflow at $label',
+      );
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(Dialog), findsNothing);
+
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
       controller.dispose();

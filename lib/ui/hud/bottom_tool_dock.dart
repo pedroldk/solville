@@ -314,10 +314,15 @@ class _SeedSelectorStrip extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final state = controller.state;
     final unlockedCrops = SolvilleCatalog.crops.values
-        .where((c) => state.unlockedSeeds.contains(c.id))
+        .where(
+          (c) =>
+              state.unlockedSeeds.contains(c.id) ||
+              (state.trialSeeds[c.id] ?? 0) > 0,
+        )
         .toList();
-    final hasLocked =
-        unlockedCrops.length < SolvilleCatalog.crops.values.length;
+    final hasLocked = SolvilleCatalog.crops.values.any(
+      (c) => !state.unlockedSeeds.contains(c.id),
+    );
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
@@ -330,27 +335,43 @@ class _SeedSelectorStrip extends StatelessWidget {
             for (final crop in unlockedCrops)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 3),
-                child: ChoiceChip(
-                  selected: state.selectedSeed == crop.id,
-                  selectedColor: const Color(0xFFFFE082),
-                  backgroundColor:
-                      (crop.requiresSunPass && !controller.isSunPassActive)
-                      ? const Color(0xFFFFF3E0)
-                      : SolvilleTheme.parchment,
-                  label: Text(
-                    crop.requiresSunPass && !controller.isSunPassActive
-                        ? l10n.dockSeedLockedLabel(
-                            crop.emoji,
-                            l10n.productShortName(crop.id),
-                          )
-                        : '${crop.emoji} ${l10n.productShortName(crop.id)} (${crop.seedCost}☀️)',
-                    style: const TextStyle(
-                      color: SolvilleTheme.timberDark,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                    ),
-                  ),
-                  onSelected: (_) => controller.selectSeed(crop.id),
+                child: Builder(
+                  builder: (context) {
+                    final trialCount = state.trialSeeds[crop.id] ?? 0;
+                    final hasTrial = trialCount > 0;
+                    final isSunPassLocked =
+                        crop.requiresSunPass && !controller.isSunPassActive;
+                    final needsUnlock = !state.unlockedSeeds.contains(crop.id);
+                    final chipBg = (isSunPassLocked || needsUnlock) && hasTrial
+                        ? const Color(0xFFE8F5E9)
+                        : (isSunPassLocked
+                              ? const Color(0xFFFFF3E0)
+                              : SolvilleTheme.parchment);
+                    final chipLabel = hasTrial && (isSunPassLocked || needsUnlock)
+                        ? '${crop.emoji} ${l10n.productShortName(crop.id)} 🎁$trialCount'
+                        : (isSunPassLocked
+                              ? l10n.dockSeedLockedLabel(
+                                  crop.emoji,
+                                  l10n.productShortName(crop.id),
+                                )
+                              : (hasTrial
+                                    ? '${crop.emoji} ${l10n.productShortName(crop.id)} ${crop.seedCost}☀️ • 🎁$trialCount'
+                                    : '${crop.emoji} ${l10n.productShortName(crop.id)} ${crop.seedCost}☀️'));
+                    return ChoiceChip(
+                      selected: state.selectedSeed == crop.id,
+                      selectedColor: const Color(0xFFFFE082),
+                      backgroundColor: chipBg,
+                      label: Text(
+                        chipLabel,
+                        style: const TextStyle(
+                          color: SolvilleTheme.timberDark,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                      onSelected: (_) => controller.selectSeed(crop.id),
+                    );
+                  },
                 ),
               ),
             if (hasLocked)

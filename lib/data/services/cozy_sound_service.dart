@@ -89,6 +89,7 @@ class CozySoundService with WidgetsBindingObserver {
   // Static process-wide caches so WAV synthesis happens at most once per track/SFX.
   static final Map<SimEventType, Uint8List> _cachedSfx =
       <SimEventType, Uint8List>{};
+  static final List<Uint8List> _cachedComboSfx = <Uint8List>[];
   static final Map<BgmTrack, Uint8List> _cachedBgm = <BgmTrack, Uint8List>{};
 
   void initialize() {
@@ -129,6 +130,25 @@ class CozySoundService with WidgetsBindingObserver {
       _Note(523.25, 0.06, 0.28),
       _Note(659.25, 0.11, 0.30),
     ]);
+    _cachedSfx[SimEventType.goldenHarvest] = _buildNotesWav(const <_Note>[
+      _Note(659.25, 0.06, 0.30),
+      _Note(880.0, 0.07, 0.32),
+      _Note(1046.50, 0.08, 0.32),
+      _Note(1318.51, 0.16, 0.34),
+    ]);
+    _cachedSfx[SimEventType.weedTreasure] = _buildNotesWav(const <_Note>[
+      _Note(783.99, 0.05, 0.26),
+      _Note(987.77, 0.06, 0.28),
+      _Note(1174.66, 0.12, 0.30),
+    ]);
+    _cachedSfx[SimEventType.butterflyBoop] = _buildNotesWav(const <_Note>[
+      _Note(880.0, 0.045, 0.22),
+      _Note(1174.66, 0.09, 0.24),
+    ]);
+    _cachedSfx[SimEventType.kettleRecipeChanged] = _buildNotesWav(const <_Note>[
+      _Note(440.0, 0.05, 0.22),
+      _Note(587.33, 0.06, 0.24),
+    ]);
     _cachedSfx[SimEventType.coinsEarned] = _buildNotesWav(const <_Note>[
       _Note(880.0, 0.055, 0.25),
       _Note(1174.66, 0.12, 0.28),
@@ -144,7 +164,32 @@ class CozySoundService with WidgetsBindingObserver {
       _Note(783.99, 0.09, 0.32),
       _Note(1046.50, 0.20, 0.34),
     ]);
+    _cachedSfx[SimEventType.expressOrderFulfilled] =
+        _cachedSfx[SimEventType.trophyUnlocked]!;
+    _cachedSfx[SimEventType.landmarkDiscovered] =
+        _cachedSfx[SimEventType.goldenHarvest]!;
+    _cachedSfx[SimEventType.villageRushStarted] =
+        _cachedSfx[SimEventType.shopPurchase]!;
     _cachedSfx[SimEventType.newDay] = _cachedSfx[SimEventType.trophyUnlocked]!;
+
+    // Ascending F-major pentatonic combo chimes for rapid harvest streaks
+    const comboPitches = <double>[
+      587.33, // D5
+      698.46, // F5
+      783.99, // G5
+      880.00, // A5
+      1046.50, // C6
+      1174.66, // D6
+      1396.91, // F6
+    ];
+    for (final freq in comboPitches) {
+      _cachedComboSfx.add(
+        _buildNotesWav(<_Note>[
+          _Note(freq * 0.75, 0.045, 0.24),
+          _Note(freq, 0.11, 0.28),
+        ]),
+      );
+    }
   }
 
   @override
@@ -301,7 +346,19 @@ class CozySoundService with WidgetsBindingObserver {
     initialize();
     final bytes = _cachedSfx[type];
     if (bytes == null) return;
+    await _playSfxBytes(bytes);
+  }
 
+  /// Plays an ascending pentatonic chime matching the active harvest combo streak.
+  Future<void> playHarvestCombo(int streak) async {
+    if (!sfxEnabled || silentPlatformOutput || _disposed) return;
+    initialize();
+    if (_cachedComboSfx.isEmpty) return;
+    final idx = (streak - 1).clamp(0, _cachedComboSfx.length - 1);
+    await _playSfxBytes(_cachedComboSfx[idx]);
+  }
+
+  Future<void> _playSfxBytes(Uint8List bytes) async {
     AudioPlayer? player;
     try {
       if (_sfxPool.length + _creatingSfxPlayers < _maxSfxPoolSize) {

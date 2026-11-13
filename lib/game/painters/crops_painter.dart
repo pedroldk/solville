@@ -4,6 +4,7 @@ import 'dart:ui';
 import '../../domain/models/catalog.dart';
 import '../../domain/models/grid_pos.dart';
 import '../../domain/models/tile_state.dart';
+import 'canvas_draw_helpers.dart';
 
 /// Renders multi-stage growing crops, ripe sparkles, and thirst indicators
 /// using pre-allocated [Paint] objects to avoid per-frame allocations.
@@ -30,6 +31,11 @@ class CropsPainter {
     ..color = const Color(0xFF29B6F6);
   static final Paint _cropShadowPaint = Paint()
     ..color = const Color(0x1E000000);
+  static final Paint _goldenHaloPaint = Paint()
+    ..color = const Color(0x55FFD54F);
+  static final Paint _gaugeBgPaint = Paint()..color = const Color(0xDDFFFDF6);
+  static final Paint _moistureFillPaint = Paint()
+    ..color = const Color(0xFF29B6F6);
 
   void drawPlantedCrop(
     Canvas canvas,
@@ -38,8 +44,9 @@ class CropsPainter {
     GridPos pos,
     PlantedCrop crop,
     double moisture,
-    double animTime,
-  ) {
+    double animTime, {
+    bool showDetailedMeters = false,
+  }) {
     final def = SolvilleCatalog.crops[crop.cropId]!;
     final sway =
         math.sin(animTime * 2.8 + pos.x * 0.9 + pos.y * 0.7) *
@@ -210,11 +217,22 @@ class CropsPainter {
         case ProductId.honey:
         case ProductId.milk:
         case ProductId.preserves:
+        case ProductId.berryJam:
+        case ProductId.villageSalsa:
+        case ProductId.autumnLatte:
           break;
       }
     }
 
-    if (crop.isRipe) {
+    if (crop.isGolden) {
+      final shimmer = 0.75 + 0.25 * math.sin(animTime * 6.5 + pos.x);
+      _goldenHaloPaint.color = Color.fromRGBO(255, 213, 79, 0.42 * shimmer);
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset(cx, cy - 6), width: 38, height: 22),
+        _goldenHaloPaint,
+      );
+      CanvasDrawHelpers.drawFloatingStatusPill(canvas, cx, cy - 34, '✨2×');
+    } else if (crop.isRipe) {
       final pulse = (math.sin(animTime * 5.0 + pos.x) + 1.0) * 0.5;
       canvas.drawCircle(
         Offset(cx, cy - 28 - pulse * 4.0),
@@ -224,6 +242,36 @@ class CropsPainter {
     } else if (moisture < 0.18) {
       canvas.drawCircle(Offset(cx + 12, cy - 22), 6.5, _thirstBgPaint);
       canvas.drawCircle(Offset(cx + 12, cy - 22), 3.6, _thirstDropPaint);
+    }
+
+    // Pure on-canvas hover/inspect growth ring + moisture bar (no top HUD text)
+    if (showDetailedMeters && !crop.isRipe) {
+      final ringCenter = Offset(cx - 14, cy - 24);
+      canvas.drawCircle(ringCenter, 8.5, _gaugeBgPaint);
+      CanvasDrawHelpers.drawProgressArc(
+        canvas,
+        ringCenter,
+        6.5,
+        crop.growth,
+        const Color(0xFF43A047),
+        trackColor: const Color(0x336D4C41),
+        strokeWidth: 2.6,
+      );
+      final barRect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(cx + 8, cy - 30, 5.5, 16.0),
+        const Radius.circular(3),
+      );
+      canvas.drawRRect(barRect, _gaugeBgPaint);
+      final fillH = (moisture.clamp(0.0, 1.0)) * 13.0;
+      if (fillH > 0.5) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(cx + 9.2, cy - 15.5 - fillH, 3.1, fillH),
+            const Radius.circular(2),
+          ),
+          _moistureFillPaint,
+        );
+      }
     }
   }
 }

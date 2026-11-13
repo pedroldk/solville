@@ -98,6 +98,110 @@ class VillageRequest {
   }
 }
 
+/// Timed flash order requested at the Market Stall by a named villager.
+class ExpressOrder {
+  const ExpressOrder({
+    required this.villagerName,
+    required this.villagerVariant,
+    required this.product,
+    required this.requiredCount,
+    required this.deliveredCount,
+    required this.remainingSeconds,
+    required this.totalSeconds,
+    required this.bonusCoins,
+    this.bonusTrialSeed,
+  });
+
+  final String villagerName;
+  final int villagerVariant;
+  final ProductId product;
+  final int requiredCount;
+  final int deliveredCount;
+  final double remainingSeconds;
+  final double totalSeconds;
+  final int bonusCoins;
+  final ProductId? bonusTrialSeed;
+
+  bool get isCompleted => deliveredCount >= requiredCount;
+  bool get isExpired => remainingSeconds <= 0.0;
+  double get progressFraction => totalSeconds <= 0.0
+      ? 0.0
+      : (remainingSeconds / totalSeconds).clamp(0.0, 1.0);
+
+  ExpressOrder copyWith({
+    String? villagerName,
+    int? villagerVariant,
+    ProductId? product,
+    int? requiredCount,
+    int? deliveredCount,
+    double? remainingSeconds,
+    double? totalSeconds,
+    int? bonusCoins,
+    ProductId? bonusTrialSeed,
+  }) {
+    return ExpressOrder(
+      villagerName: villagerName ?? this.villagerName,
+      villagerVariant: villagerVariant ?? this.villagerVariant,
+      product: product ?? this.product,
+      requiredCount: requiredCount ?? this.requiredCount,
+      deliveredCount: deliveredCount ?? this.deliveredCount,
+      remainingSeconds: remainingSeconds ?? this.remainingSeconds,
+      totalSeconds: totalSeconds ?? this.totalSeconds,
+      bonusCoins: bonusCoins ?? this.bonusCoins,
+      bonusTrialSeed: bonusTrialSeed ?? this.bonusTrialSeed,
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'villagerName': villagerName,
+    'villagerVariant': villagerVariant,
+    'product': product.name,
+    'requiredCount': requiredCount,
+    'deliveredCount': deliveredCount,
+    'remainingSeconds': remainingSeconds,
+    'totalSeconds': totalSeconds,
+    'bonusCoins': bonusCoins,
+    if (bonusTrialSeed != null) 'bonusTrialSeed': bonusTrialSeed!.name,
+  };
+
+  factory ExpressOrder.fromJson(Map<String, dynamic> json) {
+    final rem = (json['remainingSeconds'] as num?)?.toDouble() ?? 45.0;
+    final tot = (json['totalSeconds'] as num?)?.toDouble() ?? 60.0;
+    ProductId? parsedBonus;
+    final rawBonus = json['bonusTrialSeed'];
+    if (rawBonus is String) {
+      for (final p in ProductId.values) {
+        if (p.name == rawBonus) {
+          parsedBonus = p;
+          break;
+        }
+      }
+    }
+    return ExpressOrder(
+      villagerName: json['villagerName'] as String,
+      villagerVariant: ((json['villagerVariant'] as num?)?.toInt() ?? 0).clamp(
+        0,
+        4,
+      ),
+      product: ProductId.values.byName(json['product'] as String),
+      requiredCount: ((json['requiredCount'] as num?)?.toInt() ?? 1).clamp(
+        1,
+        10,
+      ),
+      deliveredCount: ((json['deliveredCount'] as num?)?.toInt() ?? 0).clamp(
+        0,
+        10,
+      ),
+      remainingSeconds: (rem.isNaN || rem.isInfinite) ? 45.0 : rem.clamp(0, 300),
+      totalSeconds: (tot.isNaN || tot.isInfinite) ? 60.0 : tot.clamp(10, 300),
+      bonusCoins: ((json['bonusCoins'] as num?)?.toInt() ?? 25).clamp(1, 9999),
+      bonusTrialSeed: parsedBonus,
+    );
+  }
+}
+
+const Object _marketUnset = Object();
+
 class MarketState {
   MarketState({
     required this.trends,
@@ -106,6 +210,9 @@ class MarketState {
     this.saleCooldown = 3.5,
     this.dailyRequest,
     this.sunnySurgeActive = false,
+    this.expressOrder,
+    this.rushSecondsRemaining = 0.0,
+    this.expressSpawnCooldown = 28.0,
   });
 
   static const int maxStallSlots = 8;
@@ -118,6 +225,17 @@ class MarketState {
 
   /// True when the daily "Sunny Surge" (+25% Golden Market Boost) is active today.
   final bool sunnySurgeActive;
+
+  /// Optional timed villager craving order at the Market Stall.
+  final ExpressOrder? expressOrder;
+
+  /// Active Village Rush timer (`> 0` speeds up customer purchases and arrivals).
+  final double rushSecondsRemaining;
+
+  /// Countdown before the next Express Order can appear.
+  final double expressSpawnCooldown;
+
+  bool get isRushActive => rushSecondsRemaining > 0.0;
 
   MarketTrend trendFor(ProductId id) => trends[id] ?? MarketTrend.steady;
 
@@ -143,6 +261,9 @@ class MarketState {
     double? saleCooldown,
     VillageRequest? dailyRequest,
     bool? sunnySurgeActive,
+    Object? expressOrder = _marketUnset,
+    double? rushSecondsRemaining,
+    double? expressSpawnCooldown,
   }) {
     return MarketState(
       trends: trends ?? this.trends,
@@ -151,6 +272,11 @@ class MarketState {
       saleCooldown: saleCooldown ?? this.saleCooldown,
       dailyRequest: dailyRequest ?? this.dailyRequest,
       sunnySurgeActive: sunnySurgeActive ?? this.sunnySurgeActive,
+      expressOrder: identical(expressOrder, _marketUnset)
+          ? this.expressOrder
+          : expressOrder as ExpressOrder?,
+      rushSecondsRemaining: rushSecondsRemaining ?? this.rushSecondsRemaining,
+      expressSpawnCooldown: expressSpawnCooldown ?? this.expressSpawnCooldown,
     );
   }
 
@@ -163,6 +289,9 @@ class MarketState {
     'saleCooldown': saleCooldown,
     if (dailyRequest != null) 'dailyRequest': dailyRequest!.toJson(),
     'sunnySurgeActive': sunnySurgeActive,
+    if (expressOrder != null) 'expressOrder': expressOrder!.toJson(),
+    if (rushSecondsRemaining > 0.0) 'rushSecondsRemaining': rushSecondsRemaining,
+    'expressSpawnCooldown': expressSpawnCooldown,
   };
 
   factory MarketState.fromJson(Map<String, dynamic> json) {
@@ -212,6 +341,18 @@ class MarketState {
       } catch (_) {}
     }
 
+    ExpressOrder? parsedExpress;
+    if (json['expressOrder'] is Map<String, dynamic>) {
+      try {
+        parsedExpress = ExpressOrder.fromJson(
+          json['expressOrder'] as Map<String, dynamic>,
+        );
+      } catch (_) {}
+    }
+
+    final rawRush = (json['rushSecondsRemaining'] as num?)?.toDouble() ?? 0.0;
+    final rawSpawn = (json['expressSpawnCooldown'] as num?)?.toDouble() ?? 28.0;
+
     return MarketState(
       trends: trends,
       stallCrates: stallCrates,
@@ -221,6 +362,13 @@ class MarketState {
       saleCooldown: safeCooldown,
       dailyRequest: parsedRequest,
       sunnySurgeActive: json['sunnySurgeActive'] == true,
+      expressOrder: parsedExpress,
+      rushSecondsRemaining: (rawRush.isNaN || rawRush.isInfinite)
+          ? 0.0
+          : rawRush.clamp(0.0, 120.0),
+      expressSpawnCooldown: (rawSpawn.isNaN || rawSpawn.isInfinite)
+          ? 28.0
+          : rawSpawn.clamp(0.0, 180.0),
     );
   }
 }

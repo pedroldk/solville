@@ -21,9 +21,9 @@
   "trendSteady": "• Steady",
   "trendSurplus": "▽ Surplus -15%",
 
-  "pricingBargain": "Bargain (-10%, Fast Sales)",
-  "pricingFair": "Fair Price (Balanced)",
-  "pricingPremium": "Boutique (+15%, Slower)",
+  "pricingBargain": "🏷️ -10% Fast",
+  "pricingFair": "⚖️ Fair",
+  "pricingPremium": "✨ +15% Rich",
 
   "toolSmart": "Smart",
   "toolDig": "Dig",
@@ -45,6 +45,9 @@
   "productHoney": "Wildflower Honey",
   "productMilk": "Creamy Milk",
   "productPreserves": "Artisan Preserves",
+  "productBerryJam": "Berry Jam",
+  "productVillageSalsa": "Village Salsa",
+  "productAutumnLatte": "Autumn Latte",
 
   "productShortTomato": "Tomato",
   "productShortCarrot": "Carrot",
@@ -163,13 +166,13 @@
   "hudSolsTooltip": "Sols (Solville Coins)",
   "hudWaterTooltip": "Watering Can charges (refill at Stone Well)",
   "hudCratesTooltip": "Carried Crates (deliver to Market Stall or Barn)",
-  "hudMarketCompact": "Market {boomEmojis}",
+  "hudMarketCompact": "{boomEmojis}",
   "@hudMarketCompact": {
     "placeholders": {
       "boomEmojis": { "type": "String" }
     }
   },
-  "hudMarketFull": "Market 🔥 {boomEmojis} ({count}/8)",
+  "hudMarketFull": "🔥 {boomEmojis} {count}/8",
   "@hudMarketFull": {
     "placeholders": {
       "boomEmojis": { "type": "String" },
@@ -237,14 +240,14 @@
     }
   },
   "dockClear": "✕ Clear",
-  "dockHarvestRipe": "Harvest Ripe ({count})",
+  "dockHarvestRipe": "{count}",
   "@dockHarvestRipe": {
     "placeholders": {
       "count": { "type": "int" }
     }
   },
   "dockHarvestRipeTooltip": "Queue all ripe harvests & crates (Hotkey: H)",
-  "dockWaterDry": "Water Dry ({count})",
+  "dockWaterDry": "{count}",
   "@dockWaterDry": {
     "placeholders": {
       "count": { "type": "int" }
@@ -921,5 +924,47 @@
   "parentalGateHint": "Answer",
   "parentalGateWrong": "That wasn't quite right. Please ask a grown-up!",
   "parentalGateContinue": "Continue",
-  "parentalGateCancel": "Cancel"
+  "parentalGateCancel": "Cancel",
+
+  "toastExpressOrderComplete": "⚡ {villager}: +{bonus}☀️!",
+  "@toastExpressOrderComplete": {
+    "placeholders": {
+      "villager": { "type": "String" },
+      "bonus": { "type": "int" }
+    }
+  },
+  "toastLandmarkDiscovered": "🏝️ Treasure! +{reward}☀️",
+  "@toastLandmarkDiscovered": {
+    "placeholders": {
+      "reward": { "type": "int" }
+    }
+  },
+  "toastGoldenHarvest": "✨ Golden! 2× Sols",
+  "toastVillageRushStarted": "🎪 Village Rush! 1.65×",
+  "shopGlovesSpotlight": "✨ CARRY 2×",
+  "hudRushBadge": "🎪 RUSH",
+  "marketExpressHeading": "⚡ {villager} Wants",
+  "@marketExpressHeading": {
+    "placeholders": {
+      "villager": { "type": "String" }
+    }
+  },
+  "marketExpressTimer": "{seconds}s",
+  "@marketExpressTimer": {
+    "placeholders": {
+      "seconds": { "type": "int" }
+    }
+  },
+  "sunPassPerkCrops": "3 Gourmet Crops",
+  "sunPassPerkArtisan": "Orchard & Ranch",
+  "sunPassPerkIsle": "35×35 & Tier 2",
+  "sunPassPerkCozy": "Builds Kept Forever",
+  "helpLoopStep1": "Dig",
+  "helpLoopStep2": "Sow",
+  "helpLoopStep3": "Water",
+  "helpLoopStep4": "Sell",
+  "helpTouchControls": "Tap 1–3×  •  Pinch Zoom  •  Drag",
+  "helpPcControls": "Click 1–3×  •  Shift+Drag  •  1–7  •  H  •  Space",
+  "helpTipKettle": "Idle Kettle tap = Recipe  •  Lavender + Bees = ⚡ Honey",
+  "helpTipMarket": "🔥 Boom +45%  •  🏚️ Hold Barn  •  🎪 Rush 1.65×"
 }

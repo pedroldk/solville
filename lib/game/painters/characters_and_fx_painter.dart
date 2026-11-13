@@ -6,6 +6,7 @@ import 'package:flutter/painting.dart' show FontWeight, TextStyle;
 import '../../domain/iso/iso_projection.dart';
 import '../../domain/models/catalog.dart';
 import '../../domain/models/game_state.dart';
+import '../../domain/models/grid_pos.dart';
 import 'canvas_draw_helpers.dart';
 
 /// Floating particle / text popup in world coordinates.
@@ -34,20 +35,25 @@ class FloatingVfx {
   final bool isRing;
 }
 
-/// Ambient villager strolling along Solville's northern cobble lane (`y = 0`).
+/// Named villager strolling along Solville's northern cobble lane (`y = 0`).
 class StrollingVillager {
   StrollingVillager({
+    required this.name,
+    required this.variant,
     required this.gx,
     required this.speed,
     required this.tunicColor,
     required this.hairColor,
   });
 
+  final String name;
+  final int variant;
   double gx;
   double speed;
   final Color tunicColor;
   final Color hairColor;
   double pauseTimer = 0.0;
+  double heartTimer = 0.0;
 }
 
 /// Renders sky clouds, A* stepping dots, Sol (with stacked crates & work tool
@@ -313,11 +319,60 @@ class CharactersAndFxPainter {
       _fillPaint,
     );
 
-    // Villager craving thought bubble hinting at today's hot Boom good!
-    if (boomHighlight != null &&
+    // Signature villager hat / accessory per townsfolk identity (0..4)
+    if (villager.variant == 0 || villager.variant == 1) {
+      // Baker Mateo & Chef Clara crisp white toque
+      _fillPaint.color = const Color(0xFFFFFFFF);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: Offset(cx, cy - 30 - bob),
+            width: 11,
+            height: 7,
+          ),
+          const Radius.circular(3),
+        ),
+        _fillPaint,
+      );
+    } else if (villager.variant == 2) {
+      // Florist Mina blossom pin
+      _fillPaint.color = const Color(0xFFEC407A);
+      canvas.drawCircle(Offset(cx + 5, cy - 27 - bob), 3.0, _fillPaint);
+    } else if (villager.variant == 3) {
+      // Grandpa Leo cozy tweed cap brim
+      _fillPaint.color = const Color(0xFF8D6E63);
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: Offset(cx, cy - 28 - bob),
+          width: 17,
+          height: 5,
+        ),
+        _fillPaint,
+      );
+    } else if (villager.variant == 4) {
+      // Mayor Sunny golden crown-ribbon band
+      _fillPaint.color = const Color(0xFFFFCA28);
+      canvas.drawRect(
+        Rect.fromCenter(
+          center: Offset(cx, cy - 27 - bob),
+          width: 12,
+          height: 3.2,
+        ),
+        _fillPaint,
+      );
+    }
+
+    if (villager.heartTimer > 0.0) {
+      CanvasDrawHelpers.drawCenteredText(
+        canvas,
+        '💛',
+        Offset(cx, cy - 39 - bob),
+        _villagerCravingStyle,
+      );
+    } else if (boomHighlight != null &&
         (villager.pauseTimer > 0 ||
             (animTime.floor() + villager.gx.round()) % 5 == 0)) {
-      final bubbleCenter = Offset(cx, cy - 40 - bob);
+      final bubbleCenter = Offset(cx, cy - 41 - bob);
       final bubble = RRect.fromRectAndRadius(
         Rect.fromCenter(center: bubbleCenter, width: 26, height: 18),
         const Radius.circular(9),
@@ -429,9 +484,7 @@ class CharactersAndFxPainter {
 
     // Daytime meadow butterflies
     for (var b = 0; b < 3; b++) {
-      final gx = 4.2 + math.sin(animTime * 0.55 + b * 2.4) * 3.0;
-      final gy = 4.2 + math.cos(animTime * 0.45 + b * 1.9) * 2.7;
-      final w = iso.gridToWorld(gx, gy, gz: 1.2);
+      final pos = butterflyWorldPos(iso, b, animTime);
       final flap = (math.sin(animTime * 12.0 + b) + 1.0) * 2.2 + 1.5;
       _fillPaint.color = switch (b) {
         0 => const Color(0xFFFFF176),
@@ -440,7 +493,7 @@ class CharactersAndFxPainter {
       };
       canvas.drawOval(
         Rect.fromCenter(
-          center: Offset(w.x - flap * 0.6, w.y),
+          center: Offset(pos.dx - flap * 0.6, pos.dy),
           width: flap,
           height: 5,
         ),
@@ -448,13 +501,63 @@ class CharactersAndFxPainter {
       );
       canvas.drawOval(
         Rect.fromCenter(
-          center: Offset(w.x + flap * 0.6, w.y),
+          center: Offset(pos.dx + flap * 0.6, pos.dy),
           width: flap,
           height: 5,
         ),
         _fillPaint,
       );
     }
+  }
+
+  /// Computes deterministic world coordinates for butterfly [b] at [animTime].
+  static Offset butterflyWorldPos(IsoProjection iso, int b, double animTime) {
+    final gx = 4.2 + math.sin(animTime * 0.55 + b * 2.4) * 3.0;
+    final gy = 4.2 + math.cos(animTime * 0.45 + b * 1.9) * 2.7;
+    final w = iso.gridToWorld(gx, gy, gz: 1.2);
+    return Offset(w.x, w.y);
+  }
+
+  /// Draws zero-text bouncing visual spotlight for the 3-step opening tutorial.
+  void drawOnboardingSpotlight(
+    Canvas canvas,
+    GridPos targetPos,
+    String hintEmoji,
+    double animTime,
+  ) {
+    final center = iso.tileCenterToWorld(targetPos);
+    final bounce = math.sin(animTime * 5.2).abs() * 7.0;
+    final pulse = 0.65 + 0.35 * math.sin(animTime * 4.5);
+
+    _strokePaint
+      ..color = Color.fromRGBO(255, 193, 7, 0.85 * pulse)
+      ..strokeWidth = 3.0;
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(center.x, center.y + 1),
+        width: 58 + pulse * 6,
+        height: 29 + pulse * 3,
+      ),
+      _strokePaint,
+    );
+
+    final badgeCenter = Offset(center.x, center.y - 46 - bounce);
+    final pill = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: badgeCenter, width: 54, height: 26),
+      const Radius.circular(13),
+    );
+    _fillPaint.color = const Color(0xFAFFFDE7);
+    canvas.drawRRect(pill, _fillPaint);
+    _strokePaint
+      ..color = const Color(0xFFFF8F00)
+      ..strokeWidth = 2.0;
+    canvas.drawRRect(pill, _strokePaint);
+    CanvasDrawHelpers.drawCenteredText(
+      canvas,
+      hintEmoji,
+      badgeCenter,
+      _villagerCravingStyle,
+    );
   }
 
   void spawnForSimEvent(
@@ -510,7 +613,6 @@ class CharactersAndFxPainter {
         );
       case SimEventType.plant:
       case SimEventType.compost:
-      case SimEventType.harvest:
         for (var i = 0; i < 7; i++) {
           pool.add(
             FloatingVfx(
@@ -521,6 +623,146 @@ class CharactersAndFxPainter {
               color: const Color(0xFFFFEE58),
               maxLife: 0.60,
               size: 3.8,
+            ),
+          );
+        }
+      case SimEventType.harvest:
+        for (var i = 0; i < 9; i++) {
+          pool.add(
+            FloatingVfx(
+              x: world.x + (rng.nextDouble() - 0.5) * 24,
+              y: world.y - 12,
+              vx: (rng.nextDouble() - 0.5) * 44,
+              vy: -34 - rng.nextDouble() * 28,
+              color: const Color(0xFFFFEE58),
+              maxLife: 0.65,
+              size: 4.0,
+            ),
+          );
+        }
+        if (event.amount >= 2) {
+          pool.add(
+            FloatingVfx(
+              x: world.x,
+              y: world.y - 38,
+              vx: 0,
+              vy: -30,
+              color: const Color(0xFFFF8F00),
+              maxLife: 1.05,
+              text: '×${event.amount}!',
+            ),
+          );
+        }
+      case SimEventType.goldenHarvest:
+        pool.add(
+          FloatingVfx(
+            x: world.x,
+            y: world.y - 6,
+            vx: 0,
+            vy: 0,
+            color: const Color(0xFFFFD54F),
+            maxLife: 0.85,
+            size: 36.0,
+            isRing: true,
+          ),
+        );
+        for (var i = 0; i < 16; i++) {
+          pool.add(
+            FloatingVfx(
+              x: world.x + (rng.nextDouble() - 0.5) * 28,
+              y: world.y - 18,
+              vx: (rng.nextDouble() - 0.5) * 68,
+              vy: -42 - rng.nextDouble() * 34,
+              color: i.isEven
+                  ? const Color(0xFFFFCA28)
+                  : const Color(0xFFFF80AB),
+              maxLife: 0.90,
+              size: 4.4,
+            ),
+          );
+        }
+        pool.add(
+          FloatingVfx(
+            x: world.x,
+            y: world.y - 44,
+            vx: 0,
+            vy: -30,
+            color: const Color(0xFFFFCA28),
+            maxLife: 1.45,
+            text: event.message ?? '✨ 2×!',
+          ),
+        );
+      case SimEventType.weedTreasure:
+      case SimEventType.butterflyBoop:
+      case SimEventType.kettleRecipeChanged:
+        for (var i = 0; i < 7; i++) {
+          pool.add(
+            FloatingVfx(
+              x: world.x + (rng.nextDouble() - 0.5) * 20,
+              y: world.y - 14,
+              vx: (rng.nextDouble() - 0.5) * 38,
+              vy: -28 - rng.nextDouble() * 24,
+              color: event.type == SimEventType.butterflyBoop
+                  ? const Color(0xFFF48FB1)
+                  : const Color(0xFFA5D6A7),
+              maxLife: 0.60,
+              size: 3.6,
+            ),
+          );
+        }
+        if (event.message != null) {
+          pool.add(
+            FloatingVfx(
+              x: world.x,
+              y: world.y - 36,
+              vx: 0,
+              vy: -26,
+              color: const Color(0xFFFFF59D),
+              maxLife: 1.25,
+              text: event.message,
+            ),
+          );
+        }
+      case SimEventType.expressOrderFulfilled:
+      case SimEventType.landmarkDiscovered:
+      case SimEventType.villageRushStarted:
+        pool.add(
+          FloatingVfx(
+            x: world.x,
+            y: world.y - 8,
+            vx: 0,
+            vy: 0,
+            color: const Color(0xFF4DD0E1),
+            maxLife: 0.90,
+            size: 42.0,
+            isRing: true,
+          ),
+        );
+        for (var i = 0; i < 14; i++) {
+          pool.add(
+            FloatingVfx(
+              x: world.x + (rng.nextDouble() - 0.5) * 26,
+              y: world.y - 20,
+              vx: (rng.nextDouble() - 0.5) * 60,
+              vy: -36 - rng.nextDouble() * 32,
+              color: i.isEven
+                  ? const Color(0xFFFFD54F)
+                  : const Color(0xFF4FC3F7),
+              maxLife: 0.85,
+              size: 4.2,
+            ),
+          );
+        }
+        if (event.amount > 0) {
+          pool.add(
+            FloatingVfx(
+              x: world.x,
+              y: world.y - 46,
+              vx: 0,
+              vy: -30,
+              color: const Color(0xFFFFCA28),
+              maxLife: 1.45,
+              text: '+${event.amount}☀️',
             ),
           );
         }

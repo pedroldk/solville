@@ -60,13 +60,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trendSurplus => '▽ Surplus -15%';
 
   @override
-  String get pricingBargain => 'Bargain (-10%, Fast Sales)';
+  String get pricingBargain => '🏷️ -10% Fast';
 
   @override
-  String get pricingFair => 'Fair Price (Balanced)';
+  String get pricingFair => '⚖️ Fair';
 
   @override
-  String get pricingPremium => 'Boutique (+15%, Slower)';
+  String get pricingPremium => '✨ +15% Rich';
 
   @override
   String get toolSmart => 'Smart';
@@ -124,6 +124,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get productPreserves => 'Artisan Preserves';
+
+  @override
+  String get productBerryJam => 'Berry Jam';
+
+  @override
+  String get productVillageSalsa => 'Village Salsa';
+
+  @override
+  String get productAutumnLatte => 'Autumn Latte';
 
   @override
   String get productShortTomato => 'Tomato';
@@ -444,12 +453,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String hudMarketCompact(String boomEmojis) {
-    return 'Market $boomEmojis';
+    return '$boomEmojis';
   }
 
   @override
   String hudMarketFull(String boomEmojis, int count) {
-    return 'Market 🔥 $boomEmojis ($count/8)';
+    return '🔥 $boomEmojis $count/8';
   }
 
   @override
@@ -546,7 +555,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String dockHarvestRipe(int count) {
-    return 'Harvest Ripe ($count)';
+    return '$count';
   }
 
   @override
@@ -555,7 +564,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String dockWaterDry(int count) {
-    return 'Water Dry ($count)';
+    return '$count';
   }
 
   @override
@@ -1451,6 +1460,77 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get parentalGateCancel => 'Cancel';
+
+  @override
+  String toastExpressOrderComplete(String villager, int bonus) {
+    return '⚡ $villager: +$bonus☀️!';
+  }
+
+  @override
+  String toastLandmarkDiscovered(int reward) {
+    return '🏝️ Treasure! +$reward☀️';
+  }
+
+  @override
+  String get toastGoldenHarvest => '✨ Golden! 2× Sols';
+
+  @override
+  String get toastVillageRushStarted => '🎪 Village Rush! 1.65×';
+
+  @override
+  String get shopGlovesSpotlight => '✨ CARRY 2×';
+
+  @override
+  String get hudRushBadge => '🎪 RUSH';
+
+  @override
+  String marketExpressHeading(String villager) {
+    return '⚡ $villager Wants';
+  }
+
+  @override
+  String marketExpressTimer(int seconds) {
+    return '${seconds}s';
+  }
+
+  @override
+  String get sunPassPerkCrops => '3 Gourmet Crops';
+
+  @override
+  String get sunPassPerkArtisan => 'Orchard & Ranch';
+
+  @override
+  String get sunPassPerkIsle => '35×35 & Tier 2';
+
+  @override
+  String get sunPassPerkCozy => 'Builds Kept Forever';
+
+  @override
+  String get helpLoopStep1 => 'Dig';
+
+  @override
+  String get helpLoopStep2 => 'Sow';
+
+  @override
+  String get helpLoopStep3 => 'Water';
+
+  @override
+  String get helpLoopStep4 => 'Sell';
+
+  @override
+  String get helpTouchControls => 'Tap 1–3×  •  Pinch Zoom  •  Drag';
+
+  @override
+  String get helpPcControls =>
+      'Click 1–3×  •  Shift+Drag  •  1–7  •  H  •  Space';
+
+  @override
+  String get helpTipKettle =>
+      'Idle Kettle tap = Recipe  •  Lavender + Bees = ⚡ Honey';
+
+  @override
+  String get helpTipMarket =>
+      '🔥 Boom +45%  •  🏚️ Hold Barn  •  🎪 Rush 1.65×';
 }
 
 /// The translations for English, as used in the United Kingdom (`en_GB`).

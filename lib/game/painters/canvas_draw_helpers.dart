@@ -1,4 +1,5 @@
 import 'dart:collection';
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/painting.dart'
@@ -134,5 +135,58 @@ abstract final class CanvasDrawHelpers {
       4.2 * scale,
       _crateDotPaint,
     );
+  }
+
+  static final Paint _arcTrackPaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round;
+  static final Paint _arcFillPaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round;
+  static final Paint _circleBgPaint = Paint();
+  static final Paint _circleBorderPaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.8;
+  static const TextStyle _circleEmojiStyle = TextStyle(fontSize: 13);
+
+  /// Draws a compact circular progress arc clockwise from 12 o'clock.
+  static void drawProgressArc(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    double progress,
+    Color color, {
+    Color trackColor = const Color(0x66FFFFFF),
+    double strokeWidth = 3.2,
+  }) {
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    _arcTrackPaint
+      ..color = trackColor
+      ..strokeWidth = strokeWidth;
+    canvas.drawArc(rect, 0, math.pi * 2, false, _arcTrackPaint);
+
+    final sweep = progress.clamp(0.0, 1.0) * math.pi * 2;
+    if (sweep > 0.01) {
+      _arcFillPaint
+        ..color = color
+        ..strokeWidth = strokeWidth;
+      canvas.drawArc(rect, -math.pi * 0.5, sweep, false, _arcFillPaint);
+    }
+  }
+
+  /// Draws a crisp interactive circular action icon badge in world space.
+  static void drawActionCircleBadge(
+    Canvas canvas,
+    Offset center,
+    String emoji, {
+    Color background = const Color(0xF5FFFDF6),
+    Color border = const Color(0xFFFFB300),
+    double radius = 12.5,
+  }) {
+    _circleBgPaint.color = background;
+    _circleBorderPaint.color = border;
+    canvas.drawCircle(center, radius, _circleBgPaint);
+    canvas.drawCircle(center, radius, _circleBorderPaint);
+    drawCenteredText(canvas, emoji, center, _circleEmojiStyle);
   }
 }

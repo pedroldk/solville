@@ -54,6 +54,10 @@ enum SolvilleToastKind {
   ambienceChanged,
   farmSaved,
   startedFreshFarm,
+  expressOrderComplete,
+  landmarkDiscovered,
+  goldenHarvest,
+  villageRushStarted,
 }
 
 /// Structured toast payload carrying parameters for localized formatting.

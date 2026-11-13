@@ -75,16 +75,16 @@ abstract final class FarmMapGenerator {
       setTile(p.x, p.y, const TileState(ground: GroundType.stonePath));
     }
 
-    // Starter garden beds: 2 ripening tomatoes, 2 tilled beds, 6 weed patches
+    // Starter garden beds: 1 ripe tomato ready immediately, 1 nearly ripe tomato, 2 tilled beds
     setTile(
       4,
       3,
       const TileState(
         ground: GroundType.soil,
-        moisture: 0.85,
+        moisture: 0.90,
         crop: PlantedCrop(
           cropId: ProductId.tomato,
-          growth: 0.78,
+          growth: 1.0,
           harvestsLeft: 3,
         ),
       ),
@@ -94,10 +94,10 @@ abstract final class FarmMapGenerator {
       3,
       const TileState(
         ground: GroundType.soil,
-        moisture: 0.70,
+        moisture: 0.72,
         crop: PlantedCrop(
           cropId: ProductId.tomato,
-          growth: 0.55,
+          growth: 0.65,
           harvestsLeft: 3,
         ),
       ),
@@ -138,6 +138,28 @@ abstract final class FarmMapGenerator {
         ground: sprinkleWeeds ? GroundType.weeds : GroundType.grass,
       );
     });
+
+    // Discoverable Expansion Landmarks on newly unlocked frontier rings
+    final cachePos = GridPos(newSize - 2, 2);
+    if (cachePos.x >= oldSize || cachePos.y >= oldSize) {
+      newTiles[cachePos.y * newSize + cachePos.x] = const TileState(
+        ground: GroundType.grass,
+        landmark: LandmarkKind.treasureCache,
+      );
+    }
+    final secondaryPos = GridPos(2, newSize - 2);
+    if (secondaryPos.x >= oldSize || secondaryPos.y >= oldSize) {
+      final isEvenTier = ((newSize - SolvilleCatalog.starterGridSize) ~/
+              SolvilleCatalog.expansionStepSize)
+          .isEven;
+      newTiles[secondaryPos.y * newSize + secondaryPos.x] = TileState(
+        ground: isEvenTier ? GroundType.stonePath : GroundType.grass,
+        landmark: isEvenTier
+            ? LandmarkKind.oasisFountain
+            : LandmarkKind.wildflowerShrine,
+      );
+    }
+
     return state.copyWith(gridSize: newSize, tiles: newTiles);
   }
 
@@ -158,6 +180,7 @@ abstract final class FarmMapGenerator {
         final t = state.tiles[y * oldSize + x];
         final hasPlayerContent =
             t.structure != StructureType.none ||
+            t.landmark != LandmarkKind.none ||
             t.crop != null ||
             t.animal != null ||
             t.droppedCrate != null ||

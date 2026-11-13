@@ -12,6 +12,8 @@ class SolvillePillButton extends StatelessWidget {
     required this.backgroundColor,
     required this.onTap,
     this.tooltip,
+    this.badgeEmoji,
+    this.highlighted = false,
     this.borderRadius = 14,
     this.padding = const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     this.fontSize = 12.5,
@@ -23,6 +25,8 @@ class SolvillePillButton extends StatelessWidget {
   final Color backgroundColor;
   final VoidCallback onTap;
   final String? tooltip;
+  final String? badgeEmoji;
+  final bool highlighted;
   final double borderRadius;
   final EdgeInsetsGeometry padding;
   final double fontSize;
@@ -40,7 +44,21 @@ class SolvillePillButton extends StatelessWidget {
           padding: padding,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(borderRadius),
-            border: Border.all(color: SolvilleTheme.timberBorder, width: 1.4),
+            border: Border.all(
+              color: highlighted
+                  ? const Color(0xFFE65100)
+                  : SolvilleTheme.timberBorder,
+              width: highlighted ? 2.0 : 1.4,
+            ),
+            boxShadow: highlighted
+                ? const <BoxShadow>[
+                    BoxShadow(
+                      color: Color(0x66FFCA28),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : null,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -54,6 +72,23 @@ class SolvillePillButton extends StatelessWidget {
                     color: SolvilleTheme.timberDark,
                     fontWeight: FontWeight.w800,
                     fontSize: fontSize,
+                  ),
+                ),
+              ],
+              if (badgeEmoji != null && badgeEmoji!.isNotEmpty) ...<Widget>[
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFCA28),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    badgeEmoji!,
+                    style: TextStyle(fontSize: (emojiSize - 1).clamp(10, 14)),
                   ),
                 ),
               ],

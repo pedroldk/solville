@@ -36,6 +36,7 @@ enum ActionKind {
   loadArtisan,
   placeBuild,
   removeStructure,
+  claimLandmark,
 }
 
 class QueuedAction {
@@ -183,10 +184,17 @@ enum SimEventType {
   refill,
   compost,
   harvest,
+  goldenHarvest,
+  weedTreasure,
+  butterflyBoop,
   sprinklerPulse,
   coinsEarned,
   shopPurchase,
   trophyUnlocked,
+  expressOrderFulfilled,
+  landmarkDiscovered,
+  kettleRecipeChanged,
+  villageRushStarted,
   newDay,
   statusHint,
 }
@@ -236,6 +244,10 @@ class GameState {
     required this.boomCratesSold,
     required this.compostedPlotsCount,
     required this.requestsCompleted,
+    this.onboardingStep = 3,
+    this.comboStreak = 0,
+    this.comboTimer = 0.0,
+    this.trialSeeds = const <ProductId, int>{},
   });
 
   final int gridSize;
@@ -270,6 +282,27 @@ class GameState {
   final int boomCratesSold;
   final int compostedPlotsCount;
   final int requestsCompleted;
+
+  /// Zero-text visual onboarding progress (`0`: Harvest -> `1`: Sell -> `2`: Till -> `3`: Complete).
+  final int onboardingStep;
+
+  /// Active rapid harvest/sale combo streak (`0` when inactive).
+  final int comboStreak;
+  final double comboTimer;
+
+  /// Single-use sample seed pouches discovered from weeds, landmarks, or villagers.
+  final Map<ProductId, int> trialSeeds;
+
+  bool get isOnboardingActive => onboardingStep < 3;
+
+  bool hasSeedAccess(ProductId seed) =>
+      unlockedSeeds.contains(seed) || (trialSeeds[seed] ?? 0) > 0;
+
+  /// Spotlights Crate Stacker Gloves (`90☀️`) after the first 1-crate harvest.
+  bool get shouldSpotlightGloves =>
+      upgradeTier(UpgradeTrack.crateStacker) == 0 &&
+      totalCratesHarvested >= 1 &&
+      (coins >= 90 || totalCratesHarvested >= 2);
 
   bool inBounds(GridPos pos) =>
       pos.x >= 0 && pos.y >= 0 && pos.x < gridSize && pos.y < gridSize;
@@ -381,6 +414,10 @@ class GameState {
     int? boomCratesSold,
     int? compostedPlotsCount,
     int? requestsCompleted,
+    int? onboardingStep,
+    int? comboStreak,
+    double? comboTimer,
+    Map<ProductId, int>? trialSeeds,
   }) {
     return GameState(
       gridSize: gridSize ?? this.gridSize,
@@ -405,6 +442,10 @@ class GameState {
       boomCratesSold: boomCratesSold ?? this.boomCratesSold,
       compostedPlotsCount: compostedPlotsCount ?? this.compostedPlotsCount,
       requestsCompleted: requestsCompleted ?? this.requestsCompleted,
+      onboardingStep: onboardingStep ?? this.onboardingStep,
+      comboStreak: comboStreak ?? this.comboStreak,
+      comboTimer: comboTimer ?? this.comboTimer,
+      trialSeeds: trialSeeds ?? this.trialSeeds,
     );
   }
 
@@ -437,6 +478,12 @@ class GameState {
     'boomCratesSold': boomCratesSold,
     'compostedPlotsCount': compostedPlotsCount,
     'requestsCompleted': requestsCompleted,
+    'onboardingStep': onboardingStep,
+    if (trialSeeds.isNotEmpty)
+      'trialSeeds': <String, int>{
+        for (final entry in trialSeeds.entries)
+          if (entry.value > 0) entry.key.name: entry.value,
+      },
   };
 
   factory GameState.fromJson(Map<String, dynamic> json) {
@@ -556,6 +603,28 @@ class GameState {
       return v < min ? min : v;
     }
 
+    final trialSeeds = <ProductId, int>{};
+    final rawTrials = json['trialSeeds'];
+    if (rawTrials is Map<String, dynamic>) {
+      for (final entry in rawTrials.entries) {
+        final count = entry.value is num ? (entry.value as num).toInt() : 0;
+        if (count > 0) {
+          for (final p in ProductId.values) {
+            if (p.name == entry.key) {
+              trialSeeds[p] = count;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    final parsedHarvested = safeInt(json['totalCratesHarvested'], 0);
+    final parsedDay = safeInt(json['day'], 1, min: 1);
+    final parsedLifetime = safeInt(json['lifetimeCoinsEarned'], 0);
+    final defaultOnboarding =
+        (parsedHarvested > 0 || parsedDay > 1 || parsedLifetime > 0) ? 3 : 0;
+
     return GameState(
       gridSize: gridSize,
       tiles: tiles,
@@ -563,8 +632,8 @@ class GameState {
       actionQueue: actionQueue,
       nextActionId: safeInt(json['nextActionId'], 1, min: 1),
       coins: safeInt(json['coins'], 90),
-      lifetimeCoinsEarned: safeInt(json['lifetimeCoinsEarned'], 0),
-      day: safeInt(json['day'], 1, min: 1),
+      lifetimeCoinsEarned: parsedLifetime,
+      day: parsedDay,
       dayProgress: dayProgress,
       weather: enumByNameOr(
         WeatherType.values,
@@ -594,10 +663,15 @@ class GameState {
           ((json['unlockedTrophies'] as List<dynamic>?) ?? const [])
               .whereType<String>()
               .toSet(),
-      totalCratesHarvested: safeInt(json['totalCratesHarvested'], 0),
+      totalCratesHarvested: parsedHarvested,
       boomCratesSold: safeInt(json['boomCratesSold'], 0),
       compostedPlotsCount: safeInt(json['compostedPlotsCount'], 0),
       requestsCompleted: safeInt(json['requestsCompleted'], 0),
+      onboardingStep: safeInt(json['onboardingStep'], defaultOnboarding).clamp(
+        0,
+        3,
+      ),
+      trialSeeds: trialSeeds,
     );
   }
 }

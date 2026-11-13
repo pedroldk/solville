@@ -164,6 +164,9 @@ extension SolvilleL10nX on AppLocalizations {
     ProductId.honey => productHoney,
     ProductId.milk => productMilk,
     ProductId.preserves => productPreserves,
+    ProductId.berryJam => productBerryJam,
+    ProductId.villageSalsa => productVillageSalsa,
+    ProductId.autumnLatte => productAutumnLatte,
   };
 
   String productShortName(ProductId id) => switch (id) {
@@ -471,6 +474,17 @@ extension SolvilleL10nX on AppLocalizations {
         return toastFarmSaved;
       case SolvilleToastKind.startedFreshFarm:
         return toastStartedFreshFarm;
+      case SolvilleToastKind.expressOrderComplete:
+        return toastExpressOrderComplete(
+          villagerName(toast.villagerName ?? ''),
+          toast.coins ?? 0,
+        );
+      case SolvilleToastKind.landmarkDiscovered:
+        return toastLandmarkDiscovered(toast.coins ?? 0);
+      case SolvilleToastKind.goldenHarvest:
+        return toastGoldenHarvest;
+      case SolvilleToastKind.villageRushStarted:
+        return toastVillageRushStarted;
     }
   }
 }

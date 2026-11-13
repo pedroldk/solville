@@ -32,11 +32,21 @@ enum ProductId {
   eggs,
   honey,
   milk,
-  preserves;
+  preserves,
+  berryJam,
+  villageSalsa,
+  autumnLatte;
 
   bool get isCrop => switch (this) {
     tomato || carrot || strawberry || corn || lavender || pumpkin => true,
-    lemon || eggs || honey || milk || preserves => false,
+    lemon ||
+    eggs ||
+    honey ||
+    milk ||
+    preserves ||
+    berryJam ||
+    villageSalsa ||
+    autumnLatte => false,
   };
 
   /// Whether this raw farm produce can be simmered into Gourmet Preserves.
@@ -48,7 +58,64 @@ enum ProductId {
     lavender ||
     pumpkin ||
     lemon => true,
-    eggs || honey || milk || preserves => false,
+    eggs ||
+    honey ||
+    milk ||
+    preserves ||
+    berryJam ||
+    villageSalsa ||
+    autumnLatte => false,
+  };
+
+  /// Whether this item is a specialty Kettle craft (shown once unlocked or stocked).
+  bool get isSpecialtyCraft => switch (this) {
+    berryJam || villageSalsa || autumnLatte => true,
+    _ => false,
+  };
+}
+
+/// Craft recipes selectable on the Artisan Kettle.
+enum KettleRecipeId {
+  autoMix,
+  berryJam,
+  villageSalsa,
+  autumnLatte;
+
+  ProductId get outputProduct => switch (this) {
+    autoMix => ProductId.preserves,
+    berryJam => ProductId.berryJam,
+    villageSalsa => ProductId.villageSalsa,
+    autumnLatte => ProductId.autumnLatte,
+  };
+
+  List<ProductId> get requiredIngredients => switch (this) {
+    autoMix => const <ProductId>[],
+    berryJam => const <ProductId>[ProductId.strawberry, ProductId.honey],
+    villageSalsa => const <ProductId>[ProductId.tomato, ProductId.corn],
+    autumnLatte => const <ProductId>[ProductId.pumpkin, ProductId.milk],
+  };
+
+  String get formulaEmoji => switch (this) {
+    autoMix => '🌱→🫙',
+    berryJam => '🍓+🍯',
+    villageSalsa => '🍅+🌽',
+    autumnLatte => '🎃+🥛',
+  };
+
+  KettleRecipeId get next =>
+      KettleRecipeId.values[(index + 1) % KettleRecipeId.values.length];
+}
+
+/// Discoverable landmarks revealed on newly expanded outer island rings.
+enum LandmarkKind {
+  none,
+  treasureCache,
+  oasisFountain,
+  wildflowerShrine;
+
+  bool get isWalkable => switch (this) {
+    none || treasureCache || wildflowerShrine => true,
+    oasisFountain => false,
   };
 }
 
@@ -317,6 +384,9 @@ abstract final class SolvilleCatalog {
     ProductId.honey: 52,
     ProductId.milk: 76,
     ProductId.preserves: 96,
+    ProductId.berryJam: 128,
+    ProductId.villageSalsa: 92,
+    ProductId.autumnLatte: 210,
   };
 
   static String productName(ProductId id) => switch (id) {
@@ -331,6 +401,9 @@ abstract final class SolvilleCatalog {
     ProductId.honey => 'Wildflower Honey',
     ProductId.milk => 'Creamy Milk',
     ProductId.preserves => 'Artisan Preserves',
+    ProductId.berryJam => 'Berry Honey Jam',
+    ProductId.villageSalsa => 'Village Salsa',
+    ProductId.autumnLatte => 'Pumpkin Latte',
   };
 
   static String productEmoji(ProductId id) => switch (id) {
@@ -345,6 +418,9 @@ abstract final class SolvilleCatalog {
     ProductId.honey => '🍯',
     ProductId.milk => '🥛',
     ProductId.preserves => '🫙',
+    ProductId.berryJam => '🥧',
+    ProductId.villageSalsa => '🌶️',
+    ProductId.autumnLatte => '☕',
   };
 
   static int productColorHex(ProductId id) => switch (id) {
@@ -359,6 +435,9 @@ abstract final class SolvilleCatalog {
     ProductId.honey => 0xFFFFB300,
     ProductId.milk => 0xFFE1F5FE,
     ProductId.preserves => 0xFFAD1457,
+    ProductId.berryJam => 0xFFC2185B,
+    ProductId.villageSalsa => 0xFFD84315,
+    ProductId.autumnLatte => 0xFF6D4C41,
   };
 
   static const Map<AnimalType, AnimalDef> animals = <AnimalType, AnimalDef>{

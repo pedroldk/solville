@@ -5,6 +5,7 @@ import 'package:flutter/painting.dart' show FontWeight, TextStyle;
 
 import '../../domain/iso/iso_projection.dart';
 import '../../domain/models/catalog.dart';
+import '../../domain/models/game_state.dart';
 import '../../domain/models/grid_pos.dart';
 import '../../domain/models/market_state.dart';
 import '../../domain/models/tile_state.dart';
@@ -32,7 +33,12 @@ class LandmarksAndStructuresPainter {
 
   static const TextStyle _queueBadgeTextStyle = TextStyle(
     color: Color(0xFF3E2723),
-    fontSize: 11.5,
+    fontSize: 10.5,
+    fontWeight: FontWeight.w800,
+  );
+  static const TextStyle _recipeTextStyle = TextStyle(
+    color: Color(0xFF3E2723),
+    fontSize: 10.5,
     fontWeight: FontWeight.w800,
   );
 
@@ -44,6 +50,8 @@ class LandmarksAndStructuresPainter {
     required int totalBarnCrates,
     required double dayProgress,
     required double animTime,
+    bool isSunPassActive = true,
+    bool showDetailedMeters = false,
   }) {
     final center = iso.tileCenterToWorld(pos);
     final cx = center.x;
@@ -67,6 +75,20 @@ class LandmarksAndStructuresPainter {
         _drawBarn(canvas, cx, cy, totalBarnCrates);
       case StructureType.marketStall:
         _drawMarketStall(canvas, cx, cy, market.stallCrates, animTime);
+        CanvasDrawHelpers.drawActionCircleBadge(
+          canvas,
+          Offset(cx - 26, cy - 52),
+          '📈',
+          radius: 11.5,
+        );
+        if (market.expressOrder != null) {
+          _drawExpressOrderBubble(
+            canvas,
+            cx + 22,
+            cy - 54,
+            market.expressOrder!,
+          );
+        }
       case StructureType.sprinklerRotary:
         _drawRotarySprinkler(canvas, cx, cy, animTime);
       case StructureType.sprinklerSolar:
@@ -74,7 +96,14 @@ class LandmarksAndStructuresPainter {
       case StructureType.lemonTree:
         _drawLemonTree(canvas, cx, cy, pos, tile, animTime);
       case StructureType.artisanPress:
-        _drawArtisanPress(canvas, cx, cy, tile, animTime);
+        _drawArtisanPress(
+          canvas,
+          cx,
+          cy,
+          tile,
+          animTime,
+          isSunPassActive: isSunPassActive,
+        );
       case StructureType.henhouse:
         _drawHenhouse(canvas, cx, cy, tile.animal, animTime);
       case StructureType.beehive:
@@ -89,6 +118,24 @@ class LandmarksAndStructuresPainter {
         break;
     }
 
+    if (tile.structure.requiresSunPass &&
+        !isSunPassActive &&
+        !tile.isReadyToHarvest) {
+      final pulse = 0.8 + 0.2 * math.sin(animTime * 3.5);
+      CanvasDrawHelpers.drawActionCircleBadge(
+        canvas,
+        Offset(cx, cy - 42),
+        '🔒',
+        background: Color.fromRGBO(255, 248, 225, 0.92 * pulse),
+        border: const Color(0xFFFFB300),
+        radius: 11.5,
+      );
+    }
+
+    if (tile.landmark != LandmarkKind.none) {
+      _drawExpansionLandmark(canvas, cx, cy, tile, animTime);
+    }
+
     if (tile.crop != null) {
       cropsPainter.drawPlantedCrop(
         canvas,
@@ -98,6 +145,7 @@ class LandmarksAndStructuresPainter {
         tile.crop!,
         tile.moisture,
         animTime,
+        showDetailedMeters: showDetailedMeters,
       );
     }
 
@@ -149,15 +197,15 @@ class LandmarksAndStructuresPainter {
   void drawQueueMarkers(
     Canvas canvas,
     GridPos pos,
-    List<int> stepNumbers,
+    List<({int step, ActionKind kind})> entries,
     double animTime,
   ) {
-    if (stepNumbers.isEmpty) return;
+    if (entries.isEmpty) return;
     final center = iso.tileCenterToWorld(pos);
     final bob = math.sin(animTime * 4.5 + pos.x) * 3.0;
-    final label = stepNumbers.length == 1
-        ? '${stepNumbers.first}'
-        : stepNumbers.join(',');
+    final label = entries
+        .map((e) => '${e.step}${_actionEmojiFor(e.kind)}')
+        .join(' ');
     final badgeCenter = Offset(center.x, center.y - 34.0 + bob);
 
     _strokePaint
@@ -170,7 +218,7 @@ class LandmarksAndStructuresPainter {
       _strokePaint,
     );
 
-    final badgeWidth = label.length > 2 ? 32.0 : 24.0;
+    final badgeWidth = (entries.length * 26.0 + 10.0).clamp(32.0, 110.0);
     final rrect = RRect.fromRectAndRadius(
       Rect.fromCenter(center: badgeCenter, width: badgeWidth, height: 22),
       const Radius.circular(11),
@@ -190,6 +238,90 @@ class LandmarksAndStructuresPainter {
       badgeCenter,
       _queueBadgeTextStyle,
     );
+  }
+
+  String _actionEmojiFor(ActionKind kind) => switch (kind) {
+    ActionKind.dig => '🪏',
+    ActionKind.plant => '🌱',
+    ActionKind.water => '💧',
+    ActionKind.refillWater => '💧',
+    ActionKind.compost => '✨',
+    ActionKind.harvest || ActionKind.pickupCrate => '📦',
+    ActionKind.sellAtStall => '🪙',
+    ActionKind.storeInBarn => '🏠',
+    ActionKind.tendAnimal => '🌾',
+    ActionKind.loadArtisan => '🫙',
+    ActionKind.placeBuild => '🔨',
+    ActionKind.removeStructure => '🌿',
+    ActionKind.claimLandmark => '🗺️',
+    ActionKind.smart => '•',
+  };
+
+  /// Draws the floating `[🌿]` quick-untill badge on the inspected tile.
+  void drawInspectedActionPill(
+    Canvas canvas,
+    GridPos pos,
+    double animTime,
+  ) {
+    final center = iso.tileCenterToWorld(pos);
+    final bob = math.sin(animTime * 4.0) * 1.5;
+    CanvasDrawHelpers.drawActionCircleBadge(
+      canvas,
+      Offset(center.x + 26, center.y - 34 + bob),
+      '🌿',
+      background: const Color(0xF6FFEBEE),
+      border: const Color(0xFF66BB6A),
+      radius: 13.0,
+    );
+  }
+
+  /// Draws golden dashed synergy rays from a hovered Beehive to nearby blooms.
+  void drawBeeSynergyLinks(
+    Canvas canvas,
+    GameState state,
+    GridPos hivePos,
+    double bonus,
+    double animTime,
+  ) {
+    final origin = iso.tileCenterToWorld(hivePos);
+    _strokePaint
+      ..color = Color.fromRGBO(
+        255,
+        193,
+        7,
+        0.55 + 0.25 * math.sin(animTime * 4.5),
+      )
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round;
+
+    for (var dy = -2; dy <= 2; dy++) {
+      for (var dx = -2; dx <= 2; dx++) {
+        if (dx == 0 && dy == 0) continue;
+        final np = GridPos(hivePos.x + dx, hivePos.y + dy);
+        if (!state.inBounds(np)) continue;
+        final nTile = state.tileAt(np);
+        final boostsBee =
+            (nTile.crop != null && nTile.crop!.growth >= 0.45) ||
+            nTile.structure == StructureType.flowerArch ||
+            nTile.structure == StructureType.lemonTree;
+        if (!boostsBee) continue;
+        final target = iso.tileCenterToWorld(np);
+        canvas.drawLine(
+          Offset(origin.x, origin.y - 16),
+          Offset(target.x, target.y - 10),
+          _strokePaint,
+        );
+      }
+    }
+    if (bonus > 0.01) {
+      final pct = (bonus * 100).round();
+      CanvasDrawHelpers.drawFloatingStatusPill(
+        canvas,
+        origin.x,
+        origin.y - 54,
+        '🐝+$pct%',
+      );
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -574,13 +706,119 @@ class LandmarksAndStructuresPainter {
     }
   }
 
-  void _drawArtisanPress(
+  void _drawExpressOrderBubble(
+    Canvas canvas,
+    double x,
+    double y,
+    ExpressOrder order,
+  ) {
+    final pill = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset(x, y), width: 48, height: 26),
+      const Radius.circular(13),
+    );
+    _fillPaint.color = const Color(0xF6FFF8E1);
+    canvas.drawRRect(pill, _fillPaint);
+    _strokePaint
+      ..color = const Color(0xFFFF6F00)
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.butt;
+    canvas.drawRRect(pill, _strokePaint);
+    CanvasDrawHelpers.drawProgressArc(
+      canvas,
+      Offset(x - 14, y),
+      8.0,
+      order.progressFraction,
+      const Color(0xFFFF6F00),
+      trackColor: const Color(0x33FF6F00),
+      strokeWidth: 2.5,
+    );
+    CanvasDrawHelpers.drawCenteredText(
+      canvas,
+      '${SolvilleCatalog.productEmoji(order.product)}${order.deliveredCount}/${order.requiredCount}',
+      Offset(x + 7, y),
+      _recipeTextStyle,
+    );
+  }
+
+  void _drawExpansionLandmark(
     Canvas canvas,
     double cx,
     double cy,
     TileState tile,
     double time,
   ) {
+    final bob = math.sin(time * 3.5) * 2.5;
+    switch (tile.landmark) {
+      case LandmarkKind.treasureCache:
+        final chest = RRect.fromRectAndRadius(
+          Rect.fromCenter(center: Offset(cx, cy - 8), width: 26, height: 18),
+          const Radius.circular(5),
+        );
+        _fillPaint.color = const Color(0xFF8D6E63);
+        canvas.drawRRect(chest, _fillPaint);
+        _fillPaint.color = const Color(0xFFFFCA28);
+        canvas.drawRect(Rect.fromLTWH(cx - 13, cy - 11, 26, 4), _fillPaint);
+        CanvasDrawHelpers.drawFloatingStatusPill(
+          canvas,
+          cx,
+          cy - 30 + bob,
+          '💎',
+        );
+      case LandmarkKind.wildflowerShrine:
+        _fillPaint.color = const Color(0xFF8D6E63);
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(center: Offset(cx, cy - 11), width: 14, height: 24),
+            const Radius.circular(4),
+          ),
+          _fillPaint,
+        );
+        _fillPaint.color = const Color(0xFFF48FB1);
+        canvas.drawCircle(Offset(cx, cy - 24), 9, _fillPaint);
+        CanvasDrawHelpers.drawFloatingStatusPill(
+          canvas,
+          cx,
+          cy - 42 + bob,
+          '🌸',
+        );
+      case LandmarkKind.oasisFountain:
+        _fillPaint.color = const Color(0xFFB0BEC5);
+        canvas.drawOval(
+          Rect.fromCenter(center: Offset(cx, cy - 3), width: 42, height: 22),
+          _fillPaint,
+        );
+        _fillPaint.color = const Color(0xFF29B6F6);
+        canvas.drawOval(
+          Rect.fromCenter(center: Offset(cx, cy - 5), width: 32, height: 15),
+          _fillPaint,
+        );
+        _fillPaint.color = const Color(0xFFECEFF1);
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(center: Offset(cx, cy - 15), width: 10, height: 16),
+            const Radius.circular(4),
+          ),
+          _fillPaint,
+        );
+        CanvasDrawHelpers.drawFloatingStatusPill(
+          canvas,
+          cx,
+          cy - 36 + bob,
+          tile.landmarkClaimed ? '💧' : '✨💧',
+        );
+      case LandmarkKind.none:
+        break;
+    }
+  }
+
+  void _drawArtisanPress(
+    Canvas canvas,
+    double cx,
+    double cy,
+    TileState tile,
+    double time, {
+    bool isSunPassActive = true,
+  }) {
     _fillPaint.color = const Color(0x36000000);
     canvas.drawOval(
       Rect.fromCenter(center: Offset(cx, cy + 4), width: 52, height: 24),
@@ -624,6 +862,33 @@ class LandmarksAndStructuresPainter {
           _fillPaint,
         );
       }
+      CanvasDrawHelpers.drawProgressArc(
+        canvas,
+        Offset(cx, cy - 42),
+        9.0,
+        tile.producerProgress,
+        const Color(0xFFFF7043),
+        trackColor: const Color(0x66FFF8E1),
+        strokeWidth: 3.0,
+      );
+    } else if (tile.producerCrates == 0 && isSunPassActive) {
+      final pill = RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(cx, cy - 44), width: 42, height: 19),
+        const Radius.circular(9),
+      );
+      _fillPaint.color = const Color(0xEEFFFDF6);
+      canvas.drawRRect(pill, _fillPaint);
+      _strokePaint
+        ..color = const Color(0xFFBCAAA4)
+        ..strokeWidth = 1.4
+        ..strokeCap = StrokeCap.butt;
+      canvas.drawRRect(pill, _strokePaint);
+      CanvasDrawHelpers.drawCenteredText(
+        canvas,
+        tile.kettleRecipe.formulaEmoji,
+        Offset(cx, cy - 44),
+        _recipeTextStyle,
+      );
     }
 
     if (tile.producerCrates > 0) {
@@ -631,7 +896,7 @@ class LandmarksAndStructuresPainter {
         canvas,
         cx,
         cy - 46,
-        '🫙 ${tile.producerCrates}',
+        '${SolvilleCatalog.productEmoji(tile.kettleRecipe.outputProduct)} ${tile.producerCrates}',
       );
     }
   }

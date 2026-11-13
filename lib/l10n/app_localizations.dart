@@ -212,19 +212,19 @@ abstract class AppLocalizations {
   /// No description provided for @pricingBargain.
   ///
   /// In en, this message translates to:
-  /// **'Bargain (-10%, Fast Sales)'**
+  /// **'🏷️ -10% Fast'**
   String get pricingBargain;
 
   /// No description provided for @pricingFair.
   ///
   /// In en, this message translates to:
-  /// **'Fair Price (Balanced)'**
+  /// **'⚖️ Fair'**
   String get pricingFair;
 
   /// No description provided for @pricingPremium.
   ///
   /// In en, this message translates to:
-  /// **'Boutique (+15%, Slower)'**
+  /// **'✨ +15% Rich'**
   String get pricingPremium;
 
   /// No description provided for @toolSmart.
@@ -340,6 +340,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Artisan Preserves'**
   String get productPreserves;
+
+  /// No description provided for @productBerryJam.
+  ///
+  /// In en, this message translates to:
+  /// **'Berry Jam'**
+  String get productBerryJam;
+
+  /// No description provided for @productVillageSalsa.
+  ///
+  /// In en, this message translates to:
+  /// **'Village Salsa'**
+  String get productVillageSalsa;
+
+  /// No description provided for @productAutumnLatte.
+  ///
+  /// In en, this message translates to:
+  /// **'Autumn Latte'**
+  String get productAutumnLatte;
 
   /// No description provided for @productShortTomato.
   ///
@@ -902,13 +920,13 @@ abstract class AppLocalizations {
   /// No description provided for @hudMarketCompact.
   ///
   /// In en, this message translates to:
-  /// **'Market {boomEmojis}'**
+  /// **'{boomEmojis}'**
   String hudMarketCompact(String boomEmojis);
 
   /// No description provided for @hudMarketFull.
   ///
   /// In en, this message translates to:
-  /// **'Market 🔥 {boomEmojis} ({count}/8)'**
+  /// **'🔥 {boomEmojis} {count}/8'**
   String hudMarketFull(String boomEmojis, int count);
 
   /// No description provided for @hudShop.
@@ -1070,7 +1088,7 @@ abstract class AppLocalizations {
   /// No description provided for @dockHarvestRipe.
   ///
   /// In en, this message translates to:
-  /// **'Harvest Ripe ({count})'**
+  /// **'{count}'**
   String dockHarvestRipe(int count);
 
   /// No description provided for @dockHarvestRipeTooltip.
@@ -1082,7 +1100,7 @@ abstract class AppLocalizations {
   /// No description provided for @dockWaterDry.
   ///
   /// In en, this message translates to:
-  /// **'Water Dry ({count})'**
+  /// **'{count}'**
   String dockWaterDry(int count);
 
   /// No description provided for @dockWaterDryTooltip.
@@ -2397,6 +2415,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cancel'**
   String get parentalGateCancel;
+
+  /// No description provided for @toastExpressOrderComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'⚡ {villager}: +{bonus}☀️!'**
+  String toastExpressOrderComplete(String villager, int bonus);
+
+  /// No description provided for @toastLandmarkDiscovered.
+  ///
+  /// In en, this message translates to:
+  /// **'🏝️ Treasure! +{reward}☀️'**
+  String toastLandmarkDiscovered(int reward);
+
+  /// No description provided for @toastGoldenHarvest.
+  ///
+  /// In en, this message translates to:
+  /// **'✨ Golden! 2× Sols'**
+  String get toastGoldenHarvest;
+
+  /// No description provided for @toastVillageRushStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'🎪 Village Rush! 1.65×'**
+  String get toastVillageRushStarted;
+
+  /// No description provided for @shopGlovesSpotlight.
+  ///
+  /// In en, this message translates to:
+  /// **'✨ CARRY 2×'**
+  String get shopGlovesSpotlight;
+
+  /// No description provided for @hudRushBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'🎪 RUSH'**
+  String get hudRushBadge;
+
+  /// No description provided for @marketExpressHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'⚡ {villager} Wants'**
+  String marketExpressHeading(String villager);
+
+  /// No description provided for @marketExpressTimer.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds}s'**
+  String marketExpressTimer(int seconds);
+
+  /// No description provided for @sunPassPerkCrops.
+  ///
+  /// In en, this message translates to:
+  /// **'3 Gourmet Crops'**
+  String get sunPassPerkCrops;
+
+  /// No description provided for @sunPassPerkArtisan.
+  ///
+  /// In en, this message translates to:
+  /// **'Orchard & Ranch'**
+  String get sunPassPerkArtisan;
+
+  /// No description provided for @sunPassPerkIsle.
+  ///
+  /// In en, this message translates to:
+  /// **'35×35 & Tier 2'**
+  String get sunPassPerkIsle;
+
+  /// No description provided for @sunPassPerkCozy.
+  ///
+  /// In en, this message translates to:
+  /// **'Builds Kept Forever'**
+  String get sunPassPerkCozy;
+
+  /// No description provided for @helpLoopStep1.
+  ///
+  /// In en, this message translates to:
+  /// **'Dig'**
+  String get helpLoopStep1;
+
+  /// No description provided for @helpLoopStep2.
+  ///
+  /// In en, this message translates to:
+  /// **'Sow'**
+  String get helpLoopStep2;
+
+  /// No description provided for @helpLoopStep3.
+  ///
+  /// In en, this message translates to:
+  /// **'Water'**
+  String get helpLoopStep3;
+
+  /// No description provided for @helpLoopStep4.
+  ///
+  /// In en, this message translates to:
+  /// **'Sell'**
+  String get helpLoopStep4;
+
+  /// No description provided for @helpTouchControls.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap 1–3×  •  Pinch Zoom  •  Drag'**
+  String get helpTouchControls;
+
+  /// No description provided for @helpPcControls.
+  ///
+  /// In en, this message translates to:
+  /// **'Click 1–3×  •  Shift+Drag  •  1–7  •  H  •  Space'**
+  String get helpPcControls;
+
+  /// No description provided for @helpTipKettle.
+  ///
+  /// In en, this message translates to:
+  /// **'Idle Kettle tap = Recipe  •  Lavender + Bees = ⚡ Honey'**
+  String get helpTipKettle;
+
+  /// No description provided for @helpTipMarket.
+  ///
+  /// In en, this message translates to:
+  /// **'🔥 Boom +45%  •  🏚️ Hold Barn  •  🎪 Rush 1.65×'**
+  String get helpTipMarket;
 }
 
 class _AppLocalizationsDelegate

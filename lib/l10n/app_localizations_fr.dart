@@ -60,13 +60,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get trendSurplus => '▽ Surplus -15%';
 
   @override
-  String get pricingBargain => 'Bonne Affaire (-10%, Rapide)';
+  String get pricingBargain => '🏷️ -10% Rapide';
 
   @override
-  String get pricingFair => 'Prix Juste (Équilibré)';
+  String get pricingFair => '⚖️ Juste';
 
   @override
-  String get pricingPremium => 'Boutique (+15%, Plus Lent)';
+  String get pricingPremium => '✨ +15% Luxe';
 
   @override
   String get toolSmart => 'Auto';
@@ -124,6 +124,15 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get productPreserves => 'Confitures Artisanales';
+
+  @override
+  String get productBerryJam => 'Confiture de Baies';
+
+  @override
+  String get productVillageSalsa => 'Salsa du Village';
+
+  @override
+  String get productAutumnLatte => 'Latte d\'Automne';
 
   @override
   String get productShortTomato => 'Tomate';
@@ -448,12 +457,12 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String hudMarketCompact(String boomEmojis) {
-    return 'Marché $boomEmojis';
+    return '$boomEmojis';
   }
 
   @override
   String hudMarketFull(String boomEmojis, int count) {
-    return 'Marché 🔥 $boomEmojis ($count/8)';
+    return '🔥 $boomEmojis $count/8';
   }
 
   @override
@@ -550,7 +559,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String dockHarvestRipe(int count) {
-    return 'Tout Récolter ($count)';
+    return '$count';
   }
 
   @override
@@ -559,7 +568,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String dockWaterDry(int count) {
-    return 'Arroser Sec ($count)';
+    return '$count';
   }
 
   @override
@@ -1457,4 +1466,74 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get parentalGateCancel => 'Annuler';
+
+  @override
+  String toastExpressOrderComplete(String villager, int bonus) {
+    return '⚡ $villager : +$bonus☀️ !';
+  }
+
+  @override
+  String toastLandmarkDiscovered(int reward) {
+    return '🏝️ Trésor ! +$reward☀️';
+  }
+
+  @override
+  String get toastGoldenHarvest => '✨ Dorée ! 2× Sols';
+
+  @override
+  String get toastVillageRushStarted => '🎪 Affluence ! 1,65×';
+
+  @override
+  String get shopGlovesSpotlight => '✨ PORTER 2×';
+
+  @override
+  String get hudRushBadge => '🎪 FOULE';
+
+  @override
+  String marketExpressHeading(String villager) {
+    return '⚡ Commande de $villager';
+  }
+
+  @override
+  String marketExpressTimer(int seconds) {
+    return '${seconds}s';
+  }
+
+  @override
+  String get sunPassPerkCrops => '3 Cultures Gourmet';
+
+  @override
+  String get sunPassPerkArtisan => 'Verger & Ranch';
+
+  @override
+  String get sunPassPerkIsle => '35×35 & Niv. 2';
+
+  @override
+  String get sunPassPerkCozy => 'Rien n\'est Supprimé';
+
+  @override
+  String get helpLoopStep1 => 'Bêcher';
+
+  @override
+  String get helpLoopStep2 => 'Semer';
+
+  @override
+  String get helpLoopStep3 => 'Arroser';
+
+  @override
+  String get helpLoopStep4 => 'Vendre';
+
+  @override
+  String get helpTouchControls => 'Toucher 1–3×  •  Pincer Zoom  •  Glisser';
+
+  @override
+  String get helpPcControls =>
+      'Clic 1–3×  •  Maj+Glisser  •  1–7  •  H  •  Espace';
+
+  @override
+  String get helpTipKettle =>
+      'Chaudron = Recette  •  Lavande + Abeilles = ⚡ Miel';
+
+  @override
+  String get helpTipMarket => '🔥 Boom +45%  •  🏚️ Grange  •  🎪 Foule 1,65×';
 }

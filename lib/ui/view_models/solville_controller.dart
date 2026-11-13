@@ -140,19 +140,6 @@ class SolvilleController extends ChangeNotifier {
       for (final trophyId in _state.unlockedTrophies) {
         _achievements.unlockTrophyById(trophyId);
       }
-      _showToast(
-        'Welcome back to Solville! (Day ${_state.day} • ${_state.gridSize}×${_state.gridSize} Isle)',
-        toast: SolvilleToast(
-          SolvilleToastKind.welcomeBack,
-          day: _state.day,
-          gridSize: _state.gridSize,
-        ),
-      );
-    } else {
-      _showToast(
-        'Welcome to Solville! Tap plots 1–3x to combo-queue Dig → Sow → Water!',
-        toast: const SolvilleToast(SolvilleToastKind.welcomeNew),
-      );
     }
     notifyListeners();
   }
@@ -274,9 +261,65 @@ class SolvilleController extends ChangeNotifier {
       return;
     }
 
+    if (tile.structure.requiresSunPass &&
+        !isSunPassActive &&
+        !tile.isReadyToHarvest &&
+        _state.activeTool != ToolMode.remove) {
+      final buildDef = SolvilleCatalog.buildItems.values
+          .where((b) => b.name.isNotEmpty)
+          .firstWhere(
+            (b) => switch (tile.structure) {
+              StructureType.sprinklerSolar =>
+                b.type == BuildItemType.sprinklerSolar,
+              StructureType.lemonTree => b.type == BuildItemType.lemonTree,
+              StructureType.artisanPress =>
+                b.type == BuildItemType.artisanPress,
+              StructureType.beehive => b.type == BuildItemType.beehive,
+              StructureType.cowPaddock => b.type == BuildItemType.cowPaddock,
+              StructureType.flowerArch => b.type == BuildItemType.flowerArch,
+              _ => false,
+            },
+            orElse: () =>
+                SolvilleCatalog.buildItems[BuildItemType.artisanPress]!,
+          );
+      _promptSunPassFor(
+        buildDef.name,
+        toast: SolvilleToast(
+          SolvilleToastKind.sunPassRequiredBuild,
+          buildItem: buildDef.type,
+        ),
+      );
+      return;
+    }
+
     final prevQueueLen = _state.actionQueue.length;
     final result = _engine.enqueueTileTap(_state, pos);
+    if (result.state.actionQueue.length == prevQueueLen &&
+        tile.structure == StructureType.artisanPress &&
+        isSunPassActive &&
+        !tile.producerActive &&
+        tile.producerCrates == 0) {
+      toggleKettleRecipe(pos);
+      return;
+    }
     _applyStep(result, haptic: result.state.actionQueue.length > prevQueueLen);
+  }
+
+  /// Opens the Market & Barn modal (e.g. from the stall's on-canvas signpost).
+  void openMarketModal() {
+    notifyUserGestureForAudio();
+    onRequestOpenMarketModal?.call();
+    notifyListeners();
+  }
+
+  /// Cycles the active craft recipe on an idle Artisan Kettle at [pos].
+  void toggleKettleRecipe(GridPos pos) {
+    _applyStep(_engine.toggleKettleRecipe(_state, pos), haptic: true);
+  }
+
+  /// Awards +3☀️ when tapping a fluttering butterfly in the meadow.
+  void boopButterfly(GridPos nearPos) {
+    _applyStep(_engine.boopButterfly(_state, nearPos), haptic: true);
   }
 
   /// Shift+Drag row painting on PC/Steam or Sweep-mode drag on touch devices.
@@ -342,16 +385,6 @@ class SolvilleController extends ChangeNotifier {
     final prevLen = _state.actionQueue.length;
     final result = _engine.enqueueUntillAt(_state, pos);
     final added = result.state.actionQueue.length > prevLen;
-    if (added) {
-      _showToast(
-        '🌿 Queued restoring plot (${pos.x}, ${pos.y}) back to grass!',
-        toast: SolvilleToast(
-          SolvilleToastKind.queuedUntill,
-          x: pos.x,
-          y: pos.y,
-        ),
-      );
-    }
     _applyStep(result, haptic: added);
   }
 
@@ -367,7 +400,10 @@ class SolvilleController extends ChangeNotifier {
       _applyState(_engine.selectTool(_state, tool), haptic: true);
 
   void selectSeed(ProductId seed) {
-    if (SolvilleCatalog.isCropSunPassOnly(seed) && !isSunPassActive) {
+    final hasTrial = (_state.trialSeeds[seed] ?? 0) > 0;
+    if (SolvilleCatalog.isCropSunPassOnly(seed) &&
+        !isSunPassActive &&
+        !hasTrial) {
       _promptSunPassFor(
         '${SolvilleCatalog.productName(seed)} seeds',
         toast: SolvilleToast(
@@ -476,7 +512,8 @@ class SolvilleController extends ChangeNotifier {
   void _ensureValidEquippedSelection() {
     if (isSunPassActive) return;
     var next = _state;
-    if (SolvilleCatalog.isCropSunPassOnly(next.selectedSeed)) {
+    if (SolvilleCatalog.isCropSunPassOnly(next.selectedSeed) &&
+        (_state.trialSeeds[next.selectedSeed] ?? 0) <= 0) {
       next = next.copyWith(selectedSeed: ProductId.tomato);
     }
     if (SolvilleCatalog.isBuildSunPassOnly(next.selectedBuildItem)) {
@@ -768,17 +805,42 @@ class SolvilleController extends ChangeNotifier {
     notifyListeners();
   }
 
+  static const Set<SolvilleToastKind> _routineVisualOnlyToasts =
+      <SolvilleToastKind>{
+        SolvilleToastKind.waterRefilled,
+        SolvilleToastKind.storedInBarn,
+        SolvilleToastKind.soldCrate,
+        SolvilleToastKind.queuedHarvests,
+        SolvilleToastKind.queuedWatering,
+        SolvilleToastKind.noHarvestsReady,
+        SolvilleToastKind.allCropsHydrated,
+        SolvilleToastKind.placedBuild,
+        SolvilleToastKind.fedAnimal,
+        SolvilleToastKind.simmeringPreserves,
+        SolvilleToastKind.queuedUntill,
+        SolvilleToastKind.harvestCratesFirst,
+      };
+
   void _dispatchEvents(List<SimEvent> events) {
     for (final event in events) {
       onVisualSimEvent?.call(event);
-      unawaited(_sound.playForEvent(event.type));
+      if (event.type == SimEventType.harvest && event.amount >= 2) {
+        unawaited(_sound.playHarvestCombo(event.amount));
+      } else {
+        unawaited(_sound.playForEvent(event.type));
+      }
 
       if (event.type == SimEventType.trophyUnlocked && event.trophyId != null) {
         _achievements.unlockTrophyById(event.trophyId!);
         unawaited(_saveRepo.saveGame(_state));
       }
 
-      if (event.message != null && event.message!.isNotEmpty) {
+      final kind = event.toast?.kind;
+      final suppressToast =
+          kind != null && _routineVisualOnlyToasts.contains(kind);
+      if (!suppressToast &&
+          event.message != null &&
+          event.message!.isNotEmpty) {
         _showToast(event.message!, toast: event.toast);
       }
     }

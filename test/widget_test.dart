@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:solville/data/repositories/save_game_repository.dart';
 import 'package:solville/data/services/cozy_sound_service.dart';
 import 'package:solville/domain/models/catalog.dart';
+import 'package:solville/domain/simulation/farm_simulation_engine.dart';
 import 'package:solville/game/solville_game.dart';
 import 'package:solville/main.dart';
 import 'package:solville/ui/view_models/solville_controller.dart';
@@ -33,12 +35,13 @@ void main() {
       await tester.pumpWidget(SolvilleApp(controller: controller));
       await tester.pump(const Duration(milliseconds: 50));
 
-      // Verify core HUD elements, Untill tool, and Sunlit Lullaby chip
+      // Verify core HUD elements, no text inspector banner, Untill tool, and Sunlit Lullaby chip
       expect(find.text('90'), findsOneWidget);
       expect(find.text('Shop'), findsOneWidget);
       expect(find.text('Lullaby'), findsOneWidget);
       expect(find.text('Smart'), findsOneWidget);
       expect(find.text('Untill (Clear)'), findsOneWidget);
+      expect(find.textContaining('Simmering'), findsNothing);
 
       // Select Build tool (6) and verify Expand Isle action chip is visible
       await tester.tap(find.text('Build'));
@@ -82,6 +85,61 @@ void main() {
       expect(find.textContaining('Trophy Cabinet'), findsOneWidget);
 
       // Cleanly unmount GameWidget ticker before test teardown
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      controller.dispose();
+    },
+  );
+
+  testWidgets(
+    'Spotlights 90-Sol Gloves in HUD Shop pill and ShopModal after first harvest',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1280, 720);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final seededState = FarmSimulationEngine().createNewGame().copyWith(
+        totalCratesHarvested: 1,
+        coins: 110,
+      );
+      await SaveGameRepository().saveGame(seededState);
+
+      final controller = SolvilleController(
+        soundService: CozySoundService(silentPlatformOutput: true),
+      );
+      await controller.initialize();
+      expect(controller.state.shouldSpotlightGloves, isTrue);
+
+      await tester.pumpWidget(SolvilleApp(controller: controller));
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // HUD Shop pill displays the Gloves spotlight badge
+      expect(find.text('🧤'), findsNWidgets(1));
+
+      await tester.tap(find.text('Shop'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(find.text('✨ CARRY 2×'), findsOneWidget);
+      expect(find.text('📦 1 → 2'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+
+      // Open Help Modal and verify visual 4-step loop cards
+      await tester.tap(find.byIcon(Icons.help_outline_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(
+        find.descendant(of: find.byType(Dialog), matching: find.text('Dig')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: find.byType(Dialog), matching: find.text('Sell')),
+        findsOneWidget,
+      );
+
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
       controller.dispose();

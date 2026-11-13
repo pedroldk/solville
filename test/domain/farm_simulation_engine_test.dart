@@ -7,6 +7,7 @@ import 'package:solville/data/services/cozy_sound_service.dart';
 import 'package:solville/domain/models/catalog.dart';
 import 'package:solville/domain/models/game_state.dart';
 import 'package:solville/domain/models/grid_pos.dart';
+import 'package:solville/domain/models/market_state.dart';
 import 'package:solville/domain/models/tile_state.dart';
 import 'package:solville/domain/simulation/farm_simulation_engine.dart';
 
@@ -229,6 +230,258 @@ void main() {
         expect(restored.gridSize, equals(20));
         expect(restored.maxCarryCrates, equals(2));
         expect(restored.coins, equals(state.coins));
+      },
+    );
+
+    test(
+      'starts with ripe tomato, steps zero-text onboarding (0->1->2->3), and spotlights 90-Sol Gloves',
+      () {
+        expect(SolvilleCatalog.maxCratesForTier(0), equals(1));
+        expect(state.maxCarryCrates, equals(1));
+        expect(state.onboardingStep, equals(0));
+        expect(state.isOnboardingActive, isTrue);
+        expect(state.tileAt(const GridPos(4, 3)).crop?.isRipe, isTrue);
+        expect(state.shouldSpotlightGloves, isFalse);
+
+        // Step 0 -> 1: Harvest ripe starter tomato
+        state = engine.enqueueTileTap(state, const GridPos(4, 3)).state;
+        for (var i = 0; i < 60; i++) {
+          state = engine.tick(state, 0.1).state;
+        }
+        expect(state.onboardingStep, equals(1));
+        expect(state.totalCratesHarvested, equals(1));
+        expect(state.shouldSpotlightGloves, isTrue);
+
+        // Step 1 -> 2: Deposit crate at Market Stall
+        state = engine
+            .enqueueTileTap(state, FarmSimulationEngine.marketStallPos)
+            .state;
+        for (var i = 0; i < 60; i++) {
+          state = engine.tick(state, 0.1).state;
+        }
+        expect(state.onboardingStep, equals(2));
+
+        // Step 2 -> 3: Dig & plant a new plot
+        const newPlot = GridPos(7, 4);
+        state = engine.enqueueTileTap(state, newPlot).state;
+        state = engine.enqueueTileTap(state, newPlot).state;
+        for (var i = 0; i < 80; i++) {
+          state = engine.tick(state, 0.1).state;
+        }
+        expect(state.onboardingStep, equals(3));
+        expect(state.isOnboardingActive, isFalse);
+
+        // Purchasing Gloves clears spotlight and raises carry capacity to 2
+        state = engine.purchaseUpgrade(state, UpgradeTrack.crateStacker).state;
+        expect(state.maxCarryCrates, equals(2));
+        expect(state.shouldSpotlightGloves, isFalse);
+      },
+    );
+
+    test(
+      'rewards Golden harvest 2x Sols and increments rapid combo streak',
+      () {
+        final updatedTiles = List<TileState>.from(state.tiles);
+        const plot1 = GridPos(4, 3);
+        const plot2 = GridPos(5, 3);
+        updatedTiles[plot1.y * state.gridSize + plot1.x] = state
+            .tileAt(plot1)
+            .copyWith(
+              crop: const PlantedCrop(
+                cropId: ProductId.tomato,
+                growth: 1.0,
+                harvestsLeft: 3,
+                isGolden: true,
+              ),
+            );
+        updatedTiles[plot2.y * state.gridSize + plot2.x] = state
+            .tileAt(plot2)
+            .copyWith(
+              crop: const PlantedCrop(
+                cropId: ProductId.tomato,
+                growth: 1.0,
+                harvestsLeft: 3,
+              ),
+            );
+        state = engine.purchaseUpgrade(
+          state.copyWith(
+            tiles: updatedTiles,
+            coins: 200,
+            unlockedTrophies: const <String>{'first_sprout', 'stack_master'},
+          ),
+          UpgradeTrack.crateStacker,
+        ).state;
+
+        final coinsBefore = state.coins;
+        final events = <SimEvent>[];
+        var peakCombo = 0;
+        state = engine.enqueueTileTap(state, plot1).state;
+        state = engine.enqueueTileTap(state, plot2).state;
+        for (var i = 0; i < 80 && state.actionQueue.isNotEmpty; i++) {
+          final step = engine.tick(state, 0.1);
+          state = step.state;
+          events.addAll(step.events);
+          peakCombo = math.max(peakCombo, state.comboStreak);
+        }
+
+        expect(
+          events.any((e) => e.type == SimEventType.goldenHarvest),
+          isTrue,
+        );
+        expect(peakCombo, equals(2));
+        expect(state.comboStreak, equals(2));
+        final expectedGoldenBonus =
+            SolvilleCatalog.productBaseValues[ProductId.tomato]!;
+        expect(state.coins, equals(coinsBefore + expectedGoldenBonus + 2));
+
+        // Combo streak resets cleanly when timer runs out
+        for (var i = 0; i < 40; i++) {
+          state = engine.tick(state, 0.1).state;
+        }
+        expect(state.comboStreak, equals(0));
+      },
+    );
+
+    test(
+      'discovers Weed Treasure, plants free Trial Seeds, and boops butterflies',
+      () {
+        // Dig starter weeds until a Weed Treasure triggers (+5 coins, free compost, or trial seed)
+        state = state.copyWith(totalCratesHarvested: 1);
+        final weedEvents = <SimEvent>[];
+        for (final weedPos in const <GridPos>[
+          GridPos(5, 4),
+          GridPos(6, 4),
+          GridPos(7, 3),
+          GridPos(4, 5),
+          GridPos(7, 6),
+          GridPos(8, 5),
+        ]) {
+          state = engine.enqueueTileTap(state, weedPos).state;
+        }
+        for (var i = 0; i < 200 && state.actionQueue.isNotEmpty; i++) {
+          final step = engine.tick(state, 0.1);
+          state = step.state;
+          weedEvents.addAll(step.events);
+        }
+        expect(
+          weedEvents.any((e) => e.type == SimEventType.weedTreasure),
+          isTrue,
+        );
+
+        // Test free Trial Seed planting without Seed License or Sun Pass
+        state = state.copyWith(
+          selectedSeed: ProductId.pumpkin,
+          trialSeeds: const <ProductId, int>{ProductId.pumpkin: 1},
+          farmer: state.farmer.copyWith(x: 7, y: 4),
+          activeTool: ToolMode.dig,
+        );
+        const target = GridPos(7, 4);
+        final coinsBefore = state.coins;
+        state = engine.enqueueTileTap(state, target).state;
+        state = state.copyWith(activeTool: ToolMode.seed);
+        state = engine.enqueueTileTap(state, target).state;
+        for (var i = 0; i < 50 && state.actionQueue.isNotEmpty; i++) {
+          state = engine.tick(state, 0.1).state;
+        }
+        expect(state.tileAt(target).crop?.cropId, equals(ProductId.pumpkin));
+        expect(state.coins, equals(coinsBefore));
+        expect(state.trialSeeds.containsKey(ProductId.pumpkin), isFalse);
+
+        // Test Butterfly boop gives +3 coins & event
+        final boopRes = engine.boopButterfly(state, const GridPos(3, 3));
+        expect(boopRes.state.coins, equals(coinsBefore + 3));
+        expect(
+          boopRes.events.any((e) => e.type == SimEventType.butterflyBoop),
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'fulfills Express Flash Orders and cycles Artisan Kettle specialty recipes',
+      () {
+        const pressPos = GridPos(6, 5);
+        final tiles = List<TileState>.from(state.tiles);
+        tiles[pressPos.y * state.gridSize + pressPos.x] = const TileState(
+          ground: GroundType.stonePath,
+          structure: StructureType.artisanPress,
+        );
+        state = state.copyWith(
+          tiles: tiles,
+          barnStock: const <ProductId, int>{
+            ProductId.strawberry: 1,
+            ProductId.honey: 1,
+          },
+          market: state.market.copyWith(
+            stallCrates: const <ProductId>[ProductId.strawberry],
+            saleCooldown: 0.1,
+            expressOrder: const ExpressOrder(
+              villagerName: 'Baker Mateo',
+              villagerVariant: 0,
+              product: ProductId.strawberry,
+              requiredCount: 1,
+              deliveredCount: 0,
+              remainingSeconds: 30,
+              totalSeconds: 45,
+              bonusCoins: 40,
+              bonusTrialSeed: ProductId.corn,
+            ),
+          ),
+        );
+
+        // Toggle idle Kettle recipe to Berry Jam (Strawberry + Honey)
+        state = engine.toggleKettleRecipe(state, pressPos).state;
+        expect(
+          state.tileAt(pressPos).kettleRecipe,
+          equals(KettleRecipeId.berryJam),
+        );
+
+        final coinsBefore = state.coins;
+        final events = <SimEvent>[];
+        for (var i = 0; i < 120; i++) {
+          final step = engine.tick(state, 0.25);
+          state = step.state;
+          events.addAll(step.events);
+        }
+
+        // Express Order fulfilled with bonus coins & corn trial seed
+        expect(
+          events.any((e) => e.type == SimEventType.expressOrderFulfilled),
+          isTrue,
+        );
+        expect(state.market.expressOrder, isNull);
+        expect(state.trialSeeds[ProductId.corn], equals(1));
+        expect(state.coins, greaterThanOrEqualTo(coinsBefore + 40));
+
+        // Kettle finished simmering Berry Jam crate
+        expect(state.tileAt(pressPos).producerCrates, equals(1));
+        expect(state.barnStock.containsKey(ProductId.strawberry), isFalse);
+        expect(state.barnStock.containsKey(ProductId.honey), isFalse);
+      },
+    );
+
+    test(
+      'generates Expansion Landmarks and claims Treasure Cache rewards',
+      () {
+        state = state.copyWith(coins: 2000);
+        state = engine.purchaseUpgrade(state, UpgradeTrack.farmExpansion).state;
+        expect(state.gridSize, equals(14));
+
+        // Cache landmark placed at (newSize - 2, 2) = (12, 2)
+        const cachePos = GridPos(12, 2);
+        expect(
+          state.tileAt(cachePos).landmark,
+          equals(LandmarkKind.treasureCache),
+        );
+
+        final coinsBefore = state.coins;
+        state = engine.enqueueTileTap(state, cachePos).state;
+        for (var i = 0; i < 160; i++) {
+          state = engine.tick(state, 0.1).state;
+        }
+
+        expect(state.tileAt(cachePos).landmark, equals(LandmarkKind.none));
+        expect(state.coins, equals(coinsBefore + 35));
       },
     );
   });

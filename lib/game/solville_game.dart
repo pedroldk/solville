@@ -11,8 +11,10 @@ import 'package:flutter/widgets.dart' show KeyEventResult;
 import '../domain/iso/iso_projection.dart';
 import '../domain/models/game_state.dart';
 import '../domain/models/grid_pos.dart';
+import '../domain/simulation/farm_simulation_engine.dart';
 import '../ui/view_models/solville_controller.dart';
 import 'components/isometric_diorama_world.dart';
+import 'painters/characters_and_fx_painter.dart';
 
 /// Flame 2.5D Isometric Game hosting the Solville diorama world, responsive
 /// PC/Steam + Android camera controls, Shift+Drag row painting, and atmosphere.
@@ -317,7 +319,63 @@ class SolvilleGame extends FlameGame with KeyboardEvents {
   }
 
   void handlePrimaryTap(Offset localPosition) {
-    final pos = screenOffsetToTile(localPosition);
+    _scratchScreenVec.setValues(localPosition.dx, localPosition.dy);
+    final worldVec = camera.globalToLocal(
+      _scratchScreenVec,
+      output: _scratchWorldVec,
+    );
+    final wx = worldVec.x;
+    final wy = worldVec.y;
+
+    // 1. Check floating [🌿] quick-untill badge on the inspected tile
+    final inspected = controller.inspectedTile;
+    if (inspected != null && controller.state.inBounds(inspected)) {
+      final tile = controller.state.tileAt(inspected);
+      if (tile.canQuickUntill || tile.structure.isRemovable) {
+        final tc = iso.tileCenterToWorld(inspected);
+        final dx = wx - (tc.x + 26.0);
+        final dy = wy - (tc.y - 34.0);
+        if (dx * dx + dy * dy <= 19.0 * 19.0) {
+          controller.untillTile(inspected);
+          controller.clearInspectedTile();
+          return;
+        }
+      }
+    }
+
+    // 2. Check floating [📈] Market Signpost badge above the Market Stall
+    final stallCenter = iso.tileCenterToWorld(
+      FarmSimulationEngine.marketStallPos,
+    );
+    final sdx = wx - (stallCenter.x - 26.0);
+    final sdy = wy - (stallCenter.y - 52.0);
+    if (sdx * sdx + sdy * sdy <= 18.0 * 18.0) {
+      controller.openMarketModal();
+      return;
+    }
+
+    // 3. Check fluttering daytime butterflies for +3☀️ boop bonus
+    final state = controller.state;
+    if (state.weather != WeatherType.gentleRain && state.dayProgress <= 0.60) {
+      for (var b = 0; b < 3; b++) {
+        final bPos = CharactersAndFxPainter.butterflyWorldPos(
+          iso,
+          b,
+          _diorama.animTime,
+        );
+        final bdx = wx - bPos.dx;
+        final bdy = wy - bPos.dy;
+        if (bdx * bdx + bdy * bdy <= 20.0 * 20.0) {
+          final tilePos = iso.worldToTile(bPos.dx, bPos.dy);
+          controller.boopButterfly(
+            state.inBounds(tilePos) ? tilePos : state.farmer.currentTile,
+          );
+          return;
+        }
+      }
+    }
+
+    final pos = iso.worldToTile(wx, wy);
     if (controller.state.inBounds(pos)) {
       controller.handleTileTap(pos);
     }

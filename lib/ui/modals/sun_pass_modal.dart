@@ -70,7 +70,7 @@ class SunPassModal extends StatelessWidget {
 
                 const SizedBox(height: 12),
 
-                // What's Included showcase
+                // What's Included visual perk grid
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -79,7 +79,7 @@ class SunPassModal extends StatelessWidget {
                     border: Border.all(color: const Color(0x44795548)),
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
                       Text(
                         l10n.sunPassIncludedHeading,
@@ -89,14 +89,76 @@ class SunPassModal extends StatelessWidget {
                           fontSize: 13.5,
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        l10n.sunPassIncludedBody,
-                        style: const TextStyle(
-                          color: SolvilleTheme.timberDark,
-                          fontSize: 12.5,
-                          height: 1.38,
-                        ),
+                      const SizedBox(height: 8),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final twoCol = constraints.maxWidth >= 320;
+                          final tileW = twoCol
+                              ? (constraints.maxWidth - 8) / 2
+                              : constraints.maxWidth;
+                          final perks = <(String, String, Color)>[
+                            (
+                              '🌽 🪻 🎃',
+                              l10n.sunPassPerkCrops,
+                              const Color(0xFFFFF8E1),
+                            ),
+                            (
+                              '🍋 🍯 🐝 🐄',
+                              l10n.sunPassPerkArtisan,
+                              const Color(0xFFE8F5E9),
+                            ),
+                            (
+                              '🏝️ 35×35',
+                              l10n.sunPassPerkIsle,
+                              const Color(0xFFE1F5FE),
+                            ),
+                            (
+                              '💚 ♾️',
+                              l10n.sunPassPerkCozy,
+                              const Color(0xFFFCE4EC),
+                            ),
+                          ];
+                          return Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: <Widget>[
+                              for (final (icons, label, bg) in perks)
+                                Container(
+                                  width: tileW,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: bg,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: const Color(0x33795548),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Text(
+                                        icons,
+                                        style: const TextStyle(fontSize: 15),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        label,
+                                        style: const TextStyle(
+                                          color: SolvilleTheme.timberDark,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),

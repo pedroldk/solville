@@ -103,7 +103,11 @@ class _TopStatusBarState extends State<TopStatusBar> {
                           boomEmojis,
                           state.market.stallCrates.length,
                         )),
-            backgroundColor: const Color(0xFFFFF8E1),
+            highlighted: state.market.isRushActive,
+            badgeEmoji: state.market.expressOrder != null ? '⚡' : null,
+            backgroundColor: state.market.isRushActive
+                ? const Color(0xFFFFE082)
+                : const Color(0xFFFFF8E1),
             padding: pillPadding,
             borderRadius: pillRadius,
             fontSize: pillFontSize,
@@ -113,7 +117,11 @@ class _TopStatusBarState extends State<TopStatusBar> {
           SolvillePillButton(
             emoji: '🛒',
             label: l10n.hudShop,
-            backgroundColor: const Color(0xFFE8F5E9),
+            highlighted: state.shouldSpotlightGloves,
+            badgeEmoji: state.shouldSpotlightGloves ? '🧤' : null,
+            backgroundColor: state.shouldSpotlightGloves
+                ? const Color(0xFFFFE082)
+                : const Color(0xFFE8F5E9),
             padding: pillPadding,
             borderRadius: pillRadius,
             fontSize: pillFontSize,

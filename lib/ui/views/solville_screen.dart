@@ -4,12 +4,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../domain/models/catalog.dart';
 import '../../game/solville_game.dart';
 import '../../l10n/app_localizations.dart';
 import '../../l10n/solville_l10n_extensions.dart';
 import '../hud/bottom_tool_dock.dart';
 import '../hud/game_viewport_surface.dart';
-import '../hud/tile_inspector_pill.dart';
 import '../hud/top_status_bar.dart';
 import '../modals/help_modal.dart';
 import '../modals/homestead_modal.dart';
@@ -163,6 +163,12 @@ class _SolvilleScreenState extends State<SolvilleScreen>
                     final toast = toastData != null
                         ? l10n.resolveToast(toastData)
                         : widget.controller.toastMessage;
+                    final state = widget.controller.state;
+                    final express = state.market.expressOrder;
+                    final showEventBadges =
+                        express != null ||
+                        state.market.isRushActive ||
+                        state.comboStreak >= 2;
                     return Column(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: <Widget>[
@@ -181,9 +187,95 @@ class _SolvilleScreenState extends State<SolvilleScreen>
                                   onOpenHelp: _openHelp,
                                   onOpenSunPass: _openSunPass,
                                 ),
-                                TileInspectorPill(
-                                  controller: widget.controller,
-                                ),
+                                if (showEventBadges)
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                      top: 4,
+                                      left: 12,
+                                      right: 12,
+                                    ),
+                                    child: Wrap(
+                                      spacing: 6,
+                                      runSpacing: 4,
+                                      alignment: WrapAlignment.center,
+                                      children: <Widget>[
+                                        if (express != null)
+                                          InkWell(
+                                            borderRadius: BorderRadius.circular(
+                                              14,
+                                            ),
+                                            onTap: _openMarket,
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 10,
+                                                    vertical: 4,
+                                                  ),
+                                              decoration:
+                                                  SolvilleTheme.panelDecoration(
+                                                    color: const Color(
+                                                      0xF2FFF3E0,
+                                                    ),
+                                                    radius: 14,
+                                                  ),
+                                              child: Text(
+                                                '⚡ ${SolvilleCatalog.productEmoji(express.product)} ${express.deliveredCount}/${express.requiredCount} +${express.bonusCoins}☀️ • ${express.remainingSeconds.ceil()}s',
+                                                style: const TextStyle(
+                                                  color:
+                                                      SolvilleTheme.timberDark,
+                                                  fontWeight: FontWeight.w800,
+                                                  fontSize: 11.5,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        if (state.market.isRushActive)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 4,
+                                            ),
+                                            decoration:
+                                                SolvilleTheme.panelDecoration(
+                                                  color: const Color(
+                                                    0xF2FFE082,
+                                                  ),
+                                                  radius: 14,
+                                                ),
+                                            child: Text(
+                                              '${l10n.hudRushBadge} ${state.market.rushSecondsRemaining.ceil()}s',
+                                              style: const TextStyle(
+                                                color: SolvilleTheme.timberDark,
+                                                fontWeight: FontWeight.w900,
+                                                fontSize: 11.5,
+                                              ),
+                                            ),
+                                          ),
+                                        if (state.comboStreak >= 2)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 9,
+                                              vertical: 4,
+                                            ),
+                                            decoration:
+                                                SolvilleTheme.panelDecoration(
+                                                  color: const Color(
+                                                    0xF2E8F5E9,
+                                                  ),
+                                                  radius: 14,
+                                                ),
+                                            child: Text(
+                                              '✨ ${state.comboStreak}×',
+                                              style: const TextStyle(
+                                                color: Color(0xFF2E7D32),
+                                                fontWeight: FontWeight.w900,
+                                                fontSize: 11.5,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
                                 if (toast != null)
                                   Padding(
                                     padding: const EdgeInsets.only(

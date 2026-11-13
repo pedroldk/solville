@@ -77,6 +77,7 @@ class FarmSimulationEngine {
       boomCratesSold: 0,
       compostedPlotsCount: 0,
       requestsCompleted: 0,
+      onboardingStep: 0,
     );
   }
 
@@ -103,7 +104,14 @@ class FarmSimulationEngine {
     final events = <SimEvent>[];
     var current = state;
 
-    // 1. Daylight progression (rolls over peacefully into a fresh morning)
+    // 1. Daylight & combo streak decay
+    if (current.comboTimer > 0.0) {
+      final remCombo = current.comboTimer - safeDt;
+      current = remCombo <= 0.0
+          ? current.copyWith(comboStreak: 0, comboTimer: 0.0)
+          : current.copyWith(comboTimer: remCombo);
+    }
+
     final nextDayProgress = current.dayProgress + (safeDt / dayLengthSeconds);
     if (nextDayProgress >= 1.0) {
       final advanced = advanceToNextMorning(current);
@@ -121,12 +129,13 @@ class FarmSimulationEngine {
       isSunPassActive: isSunPassActive,
     );
 
-    // 3. Townsfolk purchases at the Market Stall
+    // 3. Townsfolk purchases, Village Rush & timed Express Orders
     current = MarketSimulator.tickMarketStallSales(
       current,
       safeDt,
       events,
       marketStallPos: marketStallPos,
+      rng: _rng,
     );
 
     // 4. Farmer movement & Action Queue execution
@@ -380,8 +389,52 @@ class FarmSimulationEngine {
       state.copyWith(activeTool: tool);
 
   GameState selectSeed(GameState state, ProductId seed) {
-    if (!state.unlockedSeeds.contains(seed)) return state;
+    if (!state.hasSeedAccess(seed)) return state;
     return state.copyWith(selectedSeed: seed, activeTool: ToolMode.seed);
+  }
+
+  /// Cycles the active craft recipe on an idle Artisan Kettle at [pos].
+  SimulationStepResult toggleKettleRecipe(GameState state, GridPos pos) {
+    if (!state.inBounds(pos)) return SimulationStepResult(state: state);
+    final tile = state.tileAt(pos);
+    if (tile.structure != StructureType.artisanPress ||
+        tile.producerActive ||
+        tile.producerCrates > 0) {
+      return SimulationStepResult(state: state);
+    }
+    final nextRecipe = tile.kettleRecipe.next;
+    final updatedTiles = List<TileState>.from(state.tiles);
+    updatedTiles[pos.y * state.gridSize + pos.x] = tile.copyWith(
+      kettleRecipe: nextRecipe,
+    );
+    return SimulationStepResult(
+      state: state.copyWith(tiles: updatedTiles),
+      events: <SimEvent>[
+        SimEvent(
+          type: SimEventType.kettleRecipeChanged,
+          tile: pos,
+          message: nextRecipe.formulaEmoji,
+        ),
+      ],
+    );
+  }
+
+  /// Rewards +3☀️ and sparkles when the player taps an ambient butterfly.
+  SimulationStepResult boopButterfly(GameState state, GridPos nearPos) {
+    return SimulationStepResult(
+      state: state.copyWith(
+        coins: state.coins + 3,
+        lifetimeCoinsEarned: state.lifetimeCoinsEarned + 3,
+      ),
+      events: <SimEvent>[
+        SimEvent(
+          type: SimEventType.butterflyBoop,
+          tile: nearPos,
+          amount: 3,
+          message: '+3☀️',
+        ),
+      ],
+    );
   }
 
   GameState selectBuildItem(GameState state, BuildItemType item) =>
@@ -613,6 +666,12 @@ class FarmSimulationEngine {
     if (tile.structure == StructureType.well) {
       return (kind: ActionKind.refillWater, seedId: null, buildItem: null);
     }
+    if (tile.landmark != LandmarkKind.none && !tile.landmarkClaimed) {
+      return (kind: ActionKind.claimLandmark, seedId: null, buildItem: null);
+    }
+    if (tile.landmark == LandmarkKind.oasisFountain && tile.landmarkClaimed) {
+      return (kind: ActionKind.refillWater, seedId: null, buildItem: null);
+    }
     if (tile.structure == StructureType.marketStall) {
       return (kind: ActionKind.sellAtStall, seedId: null, buildItem: null);
     }
@@ -714,7 +773,7 @@ class FarmSimulationEngine {
         return (kind: ActionKind.harvest, seedId: null, buildItem: null);
       }
       if (!tile.producerActive &&
-          state.farmer.carriedCrates.any((c) => c.canMakePreserves) &&
+          _canLoadKettle(state, tile) &&
           !hasQueuedKindAtPos(ActionKind.loadArtisan)) {
         return (kind: ActionKind.loadArtisan, seedId: null, buildItem: null);
       }
@@ -792,13 +851,27 @@ class FarmSimulationEngine {
       (updated ??= List<TileState>.from(sourceTiles))[idx] = nextTile;
     }
 
-    // First pass: trigger sprinklers
+    // First pass: trigger sprinklers & claimed oasis fountains
     Uint8List? sprinklerMask;
+    Uint8List? oasisMask;
     for (var y = 0; y < size; y++) {
       final rowOffset = y * size;
       for (var x = 0; x < size; x++) {
         final idx = rowOffset + x;
         final tile = sourceTiles[idx];
+        if (tile.landmark == LandmarkKind.oasisFountain &&
+            tile.landmarkClaimed) {
+          final mask = oasisMask ??= Uint8List(totalCells);
+          for (var dy = -1; dy <= 1; dy++) {
+            final ny = y + dy;
+            if (ny < 0 || ny >= size) continue;
+            for (var dx = -1; dx <= 1; dx++) {
+              final nx = x + dx;
+              if (nx < 0 || nx >= size) continue;
+              mask[ny * size + nx] = 1;
+            }
+          }
+        }
         final radius = tile.structure.sprinklerRadius;
         if (radius > 0 &&
             (isSunPassActive || !tile.structure.requiresSunPass)) {
@@ -845,6 +918,8 @@ class FarmSimulationEngine {
           var moisture = tile.moisture;
           if (isRaining || (sprinklerMask != null && sprinklerMask[idx] == 1)) {
             moisture = 1.0;
+          } else if (oasisMask != null && oasisMask[idx] == 1) {
+            moisture = (moisture + 0.08 * dt).clamp(0.0, 1.0);
           } else if (moisture > 0.0) {
             final cropDef = tile.crop != null
                 ? SolvilleCatalog.crops[tile.crop!.cropId]
@@ -865,9 +940,22 @@ class FarmSimulationEngine {
               final hydrationMult = moisture > 0.35 ? 1.0 : 0.65;
               final delta =
                   (dt / def.growthSeconds) * compostMult * hydrationMult;
+              final nextGrowth = (crop.growth + delta).clamp(0.0, 1.0);
+              var becomeGolden = crop.isGolden;
+              if (!becomeGolden &&
+                  nextGrowth >= 1.0 &&
+                  state.totalCratesHarvested >= 1) {
+                final goldenChance =
+                    (tile.fertilized ? 0.14 : 0.08) +
+                    (state.market.sunnySurgeActive ? 0.06 : 0.0);
+                if (_rng.nextDouble() < goldenChance) {
+                  becomeGolden = true;
+                }
+              }
               crop = crop.copyWith(
-                growth: (crop.growth + delta).clamp(0.0, 1.0),
+                growth: nextGrowth,
                 thirstySeconds: 0.0,
+                isGolden: becomeGolden,
               );
             } else {
               final trickle = (dt / def.growthSeconds) * 0.12;
@@ -911,21 +999,14 @@ class FarmSimulationEngine {
 
           if (!active && crates < 2) {
             final barnSource = updatedBarn ?? state.barnStock;
-            for (final entry in barnSource.entries) {
-              if (entry.key.canMakePreserves && entry.value > 0) {
-                final map = updatedBarn ??= Map<ProductId, int>.from(
-                  state.barnStock,
-                );
-                final remaining = entry.value - 1;
-                if (remaining <= 0) {
-                  map.remove(entry.key);
-                } else {
-                  map[entry.key] = remaining;
-                }
-                active = true;
-                prog = 0.0;
-                break;
-              }
+            final pulled = _tryPullKettleIngredientsFromBarn(
+              tile.kettleRecipe,
+              barnSource,
+            );
+            if (pulled != null) {
+              updatedBarn = pulled;
+              active = true;
+              prog = 0.0;
             }
           }
 
@@ -1228,7 +1309,8 @@ class FarmSimulationEngine {
         return nextState;
 
       case ActionKind.dig:
-        if (tile.structure == StructureType.none) {
+        if (tile.structure == StructureType.none &&
+            tile.landmark == LandmarkKind.none) {
           final wasWeeds = tile.ground == GroundType.weeds;
           updatedTiles[tileIndex] = tile.copyWith(
             ground: GroundType.soil,
@@ -1238,19 +1320,29 @@ class FarmSimulationEngine {
           nextState = nextState.copyWith(
             tiles: updatedTiles,
             coins: nextState.coins + (wasWeeds ? 1 : 0),
+            onboardingStep: nextState.onboardingStep == 2
+                ? 3
+                : nextState.onboardingStep,
           );
           events.add(SimEvent(type: SimEventType.dig, tile: pos));
+          if (wasWeeds) {
+            nextState = _rollWeedTreasure(nextState, pos, tileIndex, events);
+          }
         }
         return nextState;
 
       case ActionKind.plant:
         final seed = action.seedId ?? nextState.selectedSeed;
         final def = SolvilleCatalog.crops[seed];
+        final isUnlocked = nextState.unlockedSeeds.contains(seed);
+        final trialCount = nextState.trialSeeds[seed] ?? 0;
         if (def != null &&
-            nextState.unlockedSeeds.contains(seed) &&
+            (isUnlocked || trialCount > 0) &&
             tile.structure == StructureType.none &&
+            tile.landmark == LandmarkKind.none &&
             tile.crop == null) {
-          if (nextState.coins < def.seedCost) {
+          final seedCost = isUnlocked ? def.seedCost : 0;
+          if (nextState.coins < seedCost) {
             events.add(
               SimEvent(
                 type: SimEventType.statusHint,
@@ -1265,6 +1357,19 @@ class FarmSimulationEngine {
             );
             return nextState;
           }
+          var updatedTrials = nextState.trialSeeds;
+          var nextSelectedSeed = nextState.selectedSeed;
+          if (!isUnlocked && trialCount > 0) {
+            updatedTrials = Map<ProductId, int>.from(updatedTrials);
+            if (trialCount <= 1) {
+              updatedTrials.remove(seed);
+              if (nextSelectedSeed == seed) {
+                nextSelectedSeed = ProductId.tomato;
+              }
+            } else {
+              updatedTrials[seed] = trialCount - 1;
+            }
+          }
           updatedTiles[tileIndex] = tile.copyWith(
             ground: GroundType.soil,
             moisture: math.max(tile.moisture, 0.35),
@@ -1276,7 +1381,12 @@ class FarmSimulationEngine {
           );
           nextState = nextState.copyWith(
             tiles: updatedTiles,
-            coins: nextState.coins - def.seedCost,
+            coins: nextState.coins - seedCost,
+            trialSeeds: updatedTrials,
+            selectedSeed: nextSelectedSeed,
+            onboardingStep: nextState.onboardingStep == 2
+                ? 3
+                : nextState.onboardingStep,
           );
           events.add(SimEvent(type: SimEventType.plant, tile: pos));
         }
@@ -1340,13 +1450,19 @@ class FarmSimulationEngine {
 
       case ActionKind.harvest:
         ProductId? harvestedProduct;
+        var harvestedGolden = false;
         if (tile.crop != null && tile.crop!.isRipe) {
           final crop = tile.crop!;
           harvestedProduct = crop.cropId;
+          harvestedGolden = crop.isGolden;
           final remainingHarvests = crop.harvestsLeft - 1;
           updatedTiles[tileIndex] = tile.copyWith(
             crop: remainingHarvests > 0
-                ? crop.copyWith(growth: 0.35, harvestsLeft: remainingHarvests)
+                ? crop.copyWith(
+                    growth: 0.35,
+                    harvestsLeft: remainingHarvests,
+                    isGolden: false,
+                  )
                 : null,
           );
         } else if (tile.animal != null && tile.animal!.readyCrates > 0) {
@@ -1363,19 +1479,50 @@ class FarmSimulationEngine {
           );
         } else if (tile.structure == StructureType.artisanPress &&
             tile.producerCrates > 0) {
-          harvestedProduct = ProductId.preserves;
+          harvestedProduct = tile.kettleRecipe.outputProduct;
           updatedTiles[tileIndex] = tile.copyWith(
             producerCrates: tile.producerCrates - 1,
           );
         }
 
         if (harvestedProduct != null) {
+          final nextCombo = nextState.comboTimer > 0.0
+              ? (nextState.comboStreak + 1).clamp(1, 20)
+              : 1;
+          final comboBonus = nextCombo >= 2 ? nextCombo : 0;
+          final goldenBonus = harvestedGolden
+              ? (SolvilleCatalog.productBaseValues[harvestedProduct] ?? 20)
+              : 0;
+          final extraCoins = comboBonus + goldenBonus;
           nextState = nextState.copyWith(
             tiles: updatedTiles,
             totalCratesHarvested: nextState.totalCratesHarvested + 1,
+            coins: nextState.coins + extraCoins,
+            lifetimeCoinsEarned: nextState.lifetimeCoinsEarned + extraCoins,
+            comboStreak: nextCombo,
+            comboTimer: 3.6,
+            onboardingStep: nextState.onboardingStep == 0
+                ? 1
+                : nextState.onboardingStep,
           );
           nextState = _giveOrDropCrate(nextState, pos, harvestedProduct);
-          events.add(SimEvent(type: SimEventType.harvest, tile: pos));
+          events.add(
+            SimEvent(
+              type: harvestedGolden
+                  ? SimEventType.goldenHarvest
+                  : SimEventType.harvest,
+              tile: pos,
+              amount: nextCombo,
+              message: harvestedGolden ? '✨ 2× +$goldenBonus☀️' : null,
+              toast: harvestedGolden
+                  ? SolvilleToast(
+                      SolvilleToastKind.goldenHarvest,
+                      product: harvestedProduct,
+                      coins: goldenBonus,
+                    )
+                  : null,
+            ),
+          );
         }
         return nextState;
 
@@ -1383,17 +1530,19 @@ class FarmSimulationEngine {
         if (tile.structure == StructureType.artisanPress &&
             !tile.producerActive &&
             tile.producerCrates < 2) {
-          final carried = List<ProductId>.from(nextState.farmer.carriedCrates);
-          final idx = carried.indexWhere((c) => c.canMakePreserves);
-          if (idx >= 0) {
-            carried.removeAt(idx);
+          final loaded = _tryConsumeKettleFromHandAndBarn(
+            nextState,
+            tile.kettleRecipe,
+          );
+          if (loaded != null) {
             updatedTiles[tileIndex] = tile.copyWith(
               producerActive: true,
               producerProgress: 0.0,
             );
             nextState = nextState.copyWith(
               tiles: updatedTiles,
-              farmer: nextState.farmer.copyWith(carriedCrates: carried),
+              farmer: nextState.farmer.copyWith(carriedCrates: loaded.carried),
+              barnStock: loaded.barn,
             );
             events.add(
               SimEvent(
@@ -1450,8 +1599,10 @@ class FarmSimulationEngine {
           return nextState;
         }
         final stall = List<ProductId>.from(nextState.market.stallCrates);
+        var movedToStall = 0;
         while (carried.isNotEmpty && stall.length < MarketState.maxStallSlots) {
           stall.add(carried.removeAt(0));
+          movedToStall++;
         }
         final updatedBarn = Map<ProductId, int>.from(nextState.barnStock);
         while (carried.isNotEmpty) {
@@ -1462,6 +1613,9 @@ class FarmSimulationEngine {
           farmer: nextState.farmer.copyWith(carriedCrates: carried),
           barnStock: updatedBarn,
           market: nextState.market.copyWith(stallCrates: stall),
+          onboardingStep: movedToStall > 0 && nextState.onboardingStep == 1
+              ? 2
+              : nextState.onboardingStep,
         );
 
       case ActionKind.storeInBarn:
@@ -1665,9 +1819,237 @@ class FarmSimulationEngine {
         }
         return nextState;
 
+      case ActionKind.claimLandmark:
+        return _claimLandmarkAt(nextState, pos, tileIndex, events);
+
       case ActionKind.smart:
         return nextState;
     }
+  }
+
+  bool _canLoadKettle(GameState state, TileState tile) {
+    final carried = state.farmer.carriedCrates;
+    if (carried.isEmpty) return false;
+    final req = tile.kettleRecipe.requiredIngredients;
+    if (req.isEmpty) {
+      return carried.any((c) => c.canMakePreserves);
+    }
+    if (!carried.any((c) => req.contains(c))) return false;
+    for (final ingredient in req) {
+      final count =
+          carried.where((c) => c == ingredient).length +
+          (state.barnStock[ingredient] ?? 0);
+      if (count < 1) return false;
+    }
+    return true;
+  }
+
+  Map<ProductId, int>? _tryPullKettleIngredientsFromBarn(
+    KettleRecipeId recipe,
+    Map<ProductId, int> barnSource,
+  ) {
+    final req = recipe.requiredIngredients;
+    if (req.isEmpty) {
+      for (final entry in barnSource.entries) {
+        if (entry.key.canMakePreserves && entry.value > 0) {
+          final map = Map<ProductId, int>.from(barnSource);
+          final remaining = entry.value - 1;
+          if (remaining <= 0) {
+            map.remove(entry.key);
+          } else {
+            map[entry.key] = remaining;
+          }
+          return map;
+        }
+      }
+      return null;
+    }
+    for (final ingredient in req) {
+      if ((barnSource[ingredient] ?? 0) < 1) return null;
+    }
+    final map = Map<ProductId, int>.from(barnSource);
+    for (final ingredient in req) {
+      final remaining = (map[ingredient] ?? 1) - 1;
+      if (remaining <= 0) {
+        map.remove(ingredient);
+      } else {
+        map[ingredient] = remaining;
+      }
+    }
+    return map;
+  }
+
+  ({List<ProductId> carried, Map<ProductId, int> barn})?
+  _tryConsumeKettleFromHandAndBarn(GameState state, KettleRecipeId recipe) {
+    final carried = List<ProductId>.from(state.farmer.carriedCrates);
+    final barn = Map<ProductId, int>.from(state.barnStock);
+    final req = recipe.requiredIngredients;
+    if (req.isEmpty) {
+      final idx = carried.indexWhere((c) => c.canMakePreserves);
+      if (idx < 0) return null;
+      carried.removeAt(idx);
+      return (carried: carried, barn: barn);
+    }
+    for (final ingredient in req) {
+      final handIdx = carried.indexOf(ingredient);
+      if (handIdx >= 0) {
+        carried.removeAt(handIdx);
+      } else if ((barn[ingredient] ?? 0) > 0) {
+        final nextCount = barn[ingredient]! - 1;
+        if (nextCount <= 0) {
+          barn.remove(ingredient);
+        } else {
+          barn[ingredient] = nextCount;
+        }
+      } else {
+        return null;
+      }
+    }
+    return (carried: carried, barn: barn);
+  }
+
+  GameState _rollWeedTreasure(
+    GameState state,
+    GridPos pos,
+    int tileIndex,
+    List<SimEvent> events,
+  ) {
+    final roll = _rng.nextDouble();
+    if (roll < 0.18) {
+      // Hidden coin pouch (+5☀️ extra)
+      events.add(
+        SimEvent(
+          type: SimEventType.weedTreasure,
+          tile: pos,
+          amount: 5,
+          message: '+5☀️',
+        ),
+      );
+      return state.copyWith(
+        coins: state.coins + 5,
+        lifetimeCoinsEarned: state.lifetimeCoinsEarned + 5,
+      );
+    }
+    if (roll < 0.27) {
+      // Natural free compost enrichment
+      final tiles = List<TileState>.from(state.tiles);
+      tiles[tileIndex] = tiles[tileIndex].copyWith(fertilized: true);
+      events.add(
+        SimEvent(
+          type: SimEventType.weedTreasure,
+          tile: pos,
+          message: '✨🌱',
+        ),
+      );
+      return state.copyWith(
+        tiles: tiles,
+        compostedPlotsCount: state.compostedPlotsCount + 1,
+      );
+    }
+    if (roll < 0.36 && state.totalCratesHarvested >= 1) {
+      final seed = _pickLockedGourmetTrialSeed(state);
+      if (seed != null) {
+        final trials = Map<ProductId, int>.from(state.trialSeeds);
+        trials[seed] = (trials[seed] ?? 0) + 1;
+        events.add(
+          SimEvent(
+            type: SimEventType.weedTreasure,
+            tile: pos,
+            message: '+1 ${SolvilleCatalog.productEmoji(seed)}',
+          ),
+        );
+        return state.copyWith(trialSeeds: trials);
+      }
+    }
+    return state;
+  }
+
+  ProductId? _pickLockedGourmetTrialSeed(GameState state) {
+    const gourmet = <ProductId>[
+      ProductId.corn,
+      ProductId.lavender,
+      ProductId.pumpkin,
+    ];
+    final locked = gourmet
+        .where((s) => !state.unlockedSeeds.contains(s))
+        .toList();
+    if (locked.isEmpty) return null;
+    return locked[_rng.nextInt(locked.length)];
+  }
+
+  GameState _claimLandmarkAt(
+    GameState state,
+    GridPos pos,
+    int tileIndex,
+    List<SimEvent> events,
+  ) {
+    final tile = state.tileAt(pos);
+    if (tile.landmark == LandmarkKind.none || tile.landmarkClaimed) {
+      return state;
+    }
+    final updatedTiles = List<TileState>.from(state.tiles);
+    var coinReward = 25;
+    var updatedTrials = state.trialSeeds;
+    var updatedWater = state.farmer.waterCharges;
+    var addedCompost = 0;
+
+    switch (tile.landmark) {
+      case LandmarkKind.treasureCache:
+        coinReward = 35;
+        updatedTiles[tileIndex] = tile.copyWith(
+          landmark: LandmarkKind.none,
+          landmarkClaimed: false,
+        );
+        final bonusSeed = _pickLockedGourmetTrialSeed(state);
+        if (bonusSeed != null) {
+          updatedTrials = Map<ProductId, int>.from(updatedTrials);
+          updatedTrials[bonusSeed] = (updatedTrials[bonusSeed] ?? 0) + 1;
+        }
+      case LandmarkKind.wildflowerShrine:
+        coinReward = 25;
+        updatedTiles[tileIndex] = tile.copyWith(
+          landmark: LandmarkKind.none,
+          landmarkClaimed: false,
+          ground: GroundType.stonePath,
+        );
+        for (final adj in pos.allNeighbors) {
+          if (!state.inBounds(adj)) continue;
+          final idx = adj.y * state.gridSize + adj.x;
+          final nTile = updatedTiles[idx];
+          if (nTile.ground == GroundType.soil && !nTile.fertilized) {
+            updatedTiles[idx] = nTile.copyWith(fertilized: true);
+            addedCompost++;
+          }
+        }
+      case LandmarkKind.oasisFountain:
+        coinReward = 20;
+        updatedWater = state.maxWaterCharges;
+        updatedTiles[tileIndex] = tile.copyWith(landmarkClaimed: true);
+      case LandmarkKind.none:
+        return state;
+    }
+
+    events.add(
+      SimEvent(
+        type: SimEventType.landmarkDiscovered,
+        tile: pos,
+        amount: coinReward,
+        message: '🗺️ +$coinReward☀️',
+        toast: SolvilleToast(
+          SolvilleToastKind.landmarkDiscovered,
+          coins: coinReward,
+        ),
+      ),
+    );
+
+    return state.copyWith(
+      tiles: updatedTiles,
+      coins: state.coins + coinReward,
+      lifetimeCoinsEarned: state.lifetimeCoinsEarned + coinReward,
+      trialSeeds: updatedTrials,
+      farmer: state.farmer.copyWith(waterCharges: updatedWater),
+      compostedPlotsCount: state.compostedPlotsCount + addedCompost,
+    );
   }
 
   GameState _giveOrDropCrate(

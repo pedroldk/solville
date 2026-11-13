@@ -24,6 +24,14 @@ class MarketAndBarnModal extends StatelessWidget {
         final market = state.market;
         final charmPct = (state.charmBonus * 100).round();
         final req = market.dailyRequest;
+        final express = market.expressOrder;
+        final visibleProducts = ProductId.values.where((id) {
+          if (!id.isSpecialtyCraft) return true;
+          return (state.barnStock[id] ?? 0) > 0 ||
+              market.trendFor(id) == MarketTrend.boom ||
+              express?.product == id ||
+              req?.product == id;
+        }).toList();
 
         return SolvilleDialogShell(
           emoji: '🏪',
@@ -39,11 +47,129 @@ class MarketAndBarnModal extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
             children: <Widget>[
+              if (express != null)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(11),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF3E0),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: const Color(0xFFE65100),
+                      width: 1.8,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          const Text('⚡', style: TextStyle(fontSize: 22)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              l10n.marketExpressHeading(
+                                l10n.villagerName(express.villagerName),
+                              ),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                color: SolvilleTheme.timberDark,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFE082),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '⏳ ${l10n.marketExpressTimer(express.remainingSeconds.ceil())}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 12,
+                                color: SolvilleTheme.timberDark,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: LinearProgressIndicator(
+                                minHeight: 8,
+                                value: express.requiredCount > 0
+                                    ? (express.deliveredCount /
+                                              express.requiredCount)
+                                          .clamp(0.0, 1.0)
+                                    : 1.0,
+                                backgroundColor: const Color(0x33795548),
+                                valueColor: const AlwaysStoppedAnimation<Color>(
+                                  Color(0xFFE65100),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            '${SolvilleCatalog.productEmoji(express.product)} ${express.deliveredCount}/${express.requiredCount}  →  +${express.bonusCoins}☀️${express.bonusTrialSeed != null ? ' +🎁🌱' : ''}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              color: SolvilleTheme.timberDark,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+              if (market.isRushActive)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFE082),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: SolvilleTheme.timberBorder),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      Text(
+                        '${l10n.hudRushBadge} • ⚡ 1.65×',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          color: SolvilleTheme.timberDark,
+                        ),
+                      ),
+                      Text(
+                        '⏳ ${l10n.marketExpressTimer(market.rushSecondsRemaining.ceil())}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          color: SolvilleTheme.timberDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               // Daily Village Request Card
               if (req != null)
                 Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(11),
                   decoration: BoxDecoration(
                     color: req.isCompleted
                         ? const Color(0xFFE8F5E9)
@@ -51,18 +177,18 @@ class MarketAndBarnModal extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: SolvilleTheme.timberBorder),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      Text(
-                        req.isCompleted ? '✅' : '💌',
-                        style: const TextStyle(fontSize: 26),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
+                      Row(
+                        children: <Widget>[
+                          Text(
+                            req.isCompleted ? '✅' : '💌',
+                            style: const TextStyle(fontSize: 22),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
                               l10n.marketOrderHeading(
                                 l10n.villagerName(req.villagerName),
                               ),
@@ -71,19 +197,36 @@ class MarketAndBarnModal extends StatelessWidget {
                                 color: SolvilleTheme.timberDark,
                               ),
                             ),
-                            Text(
-                              req.isCompleted
-                                  ? l10n.marketOrderCompleted(req.bonusReward)
-                                  : l10n.marketOrderProgress(
-                                      req.requiredCount,
-                                      SolvilleCatalog.productEmoji(req.product),
-                                      l10n.productName(req.product),
-                                      req.deliveredCount,
-                                      req.bonusReward,
-                                    ),
-                              style: const TextStyle(fontSize: 13),
+                          ),
+                          Text(
+                            req.isCompleted
+                                ? '+${req.bonusReward}☀️ ✓'
+                                : '${SolvilleCatalog.productEmoji(req.product)} ${req.deliveredCount}/${req.requiredCount}  →  +${req.bonusReward}☀️',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              color: SolvilleTheme.timberDark,
+                              fontSize: 13,
                             ),
-                          ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          minHeight: 7,
+                          value: req.requiredCount > 0
+                              ? (req.deliveredCount / req.requiredCount).clamp(
+                                  0.0,
+                                  1.0,
+                                )
+                              : 1.0,
+                          backgroundColor: const Color(0x22795548),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            req.isCompleted
+                                ? const Color(0xFF43A047)
+                                : SolvilleTheme.sunGold,
+                          ),
                         ),
                       ),
                     ],
@@ -223,23 +366,45 @@ class MarketAndBarnModal extends StatelessWidget {
                     ),
                 ],
               ),
-              if (market.stallCrates.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: <Widget>[
-                      for (final p in market.stallCrates)
-                        Chip(
-                          backgroundColor: SolvilleTheme.warmCream,
-                          label: Text(
-                            '${SolvilleCatalog.productEmoji(p)} ${market.unitPriceFor(p, charmBonus: state.charmBonus)}☀️',
+              Padding(
+                padding: const EdgeInsets.only(top: 6, bottom: 10),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: <Widget>[
+                    for (var i = 0; i < MarketState.maxStallSlots; i++)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 9,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: i < market.stallCrates.length
+                              ? SolvilleTheme.warmCream
+                              : const Color(0x16795548),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: i < market.stallCrates.length
+                                ? SolvilleTheme.timberBorder
+                                : const Color(0x33795548),
                           ),
                         ),
-                    ],
-                  ),
+                        child: Text(
+                          i < market.stallCrates.length
+                              ? '${SolvilleCatalog.productEmoji(market.stallCrates[i])} ${market.unitPriceFor(market.stallCrates[i], charmBonus: state.charmBonus)}☀️'
+                              : '📦',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                            color: i < market.stallCrates.length
+                                ? SolvilleTheme.timberDark
+                                : Colors.black26,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
+              ),
 
               const Divider(),
               Text(
@@ -251,14 +416,34 @@ class MarketAndBarnModal extends StatelessWidget {
               ),
               const SizedBox(height: 8),
 
-              for (final id in ProductId.values)
-                _buildPriceRow(
-                  l10n: l10n,
-                  id: id,
-                  trend: market.trendFor(id),
-                  price: market.unitPriceFor(id, charmBonus: state.charmBonus),
-                  barnCount: state.barnStock[id] ?? 0,
-                ),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final twoCol = constraints.maxWidth >= 440;
+                  final tileWidth = twoCol
+                      ? (constraints.maxWidth - 8) / 2
+                      : constraints.maxWidth;
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: <Widget>[
+                      for (final id in visibleProducts)
+                        SizedBox(
+                          width: tileWidth,
+                          child: _buildPriceRow(
+                            l10n: l10n,
+                            id: id,
+                            trend: market.trendFor(id),
+                            price: market.unitPriceFor(
+                              id,
+                              charmBonus: state.charmBonus,
+                            ),
+                            barnCount: state.barnStock[id] ?? 0,
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
             ],
           ),
         );
@@ -280,81 +465,94 @@ class MarketAndBarnModal extends StatelessWidget {
       MarketTrend.surplus => const Color(0xFFE1F5FE),
     };
 
-    final trendChip = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: badgeColor,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        l10n.marketTrendLabel(trend),
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
-      ),
-    );
-
     return Card(
-      margin: const EdgeInsets.only(bottom: 7),
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isNarrow = constraints.maxWidth < 380 && barnCount > 0;
-            return Row(
-              children: <Widget>[
-                Text(
-                  SolvilleCatalog.productEmoji(id),
-                  style: const TextStyle(fontSize: 22),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
+          children: <Widget>[
+            Text(
+              SolvilleCatalog.productEmoji(id),
+              style: const TextStyle(fontSize: 22),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    l10n.productName(id),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: SolvilleTheme.timberDark,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Wrap(
+                    spacing: 5,
+                    runSpacing: 3,
                     children: <Widget>[
-                      Text(
-                        l10n.productName(id),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          color: SolvilleTheme.timberDark,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: badgeColor,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          l10n.marketTrendLabel(trend),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                       if (barnCount > 0)
-                        Text(
-                          l10n.marketInBarnCount(barnCount),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF2E7D32),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F5E9),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '📦$barnCount',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF2E7D32),
+                            ),
                           ),
                         ),
-                      if (isNarrow) ...<Widget>[
-                        const SizedBox(height: 4),
-                        trendChip,
-                      ],
                     ],
                   ),
-                ),
-                if (!isNarrow) ...<Widget>[
-                  trendChip,
-                  const SizedBox(width: 10),
                 ],
-                Text(
-                  '$price☀️',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 15,
-                    color: SolvilleTheme.timberDark,
-                  ),
-                ),
-                if (barnCount > 0) ...<Widget>[
-                  const SizedBox(width: 8),
-                  FilledButton.tonal(
-                    onPressed: () => controller.stockStallFromBarn(id),
-                    child: Text(l10n.marketSellOne),
-                  ),
-                ],
-              ],
-            );
-          },
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '$price☀️',
+              style: const TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 14,
+                color: SolvilleTheme.timberDark,
+              ),
+            ),
+            if (barnCount > 0) ...<Widget>[
+              const SizedBox(width: 6),
+              FilledButton.tonal(
+                onPressed: () => controller.stockStallFromBarn(id),
+                child: Text(l10n.marketSellOne),
+              ),
+            ],
+          ],
         ),
       ),
     );

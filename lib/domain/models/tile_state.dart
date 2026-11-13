@@ -86,6 +86,7 @@ class PlantedCrop {
     required this.growth,
     required this.harvestsLeft,
     this.thirstySeconds = 0.0,
+    this.isGolden = false,
   });
 
   final ProductId cropId;
@@ -99,6 +100,9 @@ class PlantedCrop {
   /// without punishingly destroying crops.
   final double thirstySeconds;
 
+  /// Rare radiant crop mutation that pays 2× Sols on harvest!
+  final bool isGolden;
+
   bool get isRipe => growth >= 1.0;
   bool get isDrooping => !isRipe && thirstySeconds > 4.0;
 
@@ -107,12 +111,14 @@ class PlantedCrop {
     double? growth,
     int? harvestsLeft,
     double? thirstySeconds,
+    bool? isGolden,
   }) {
     return PlantedCrop(
       cropId: cropId ?? this.cropId,
       growth: growth ?? this.growth,
       harvestsLeft: harvestsLeft ?? this.harvestsLeft,
       thirstySeconds: thirstySeconds ?? this.thirstySeconds,
+      isGolden: isGolden ?? this.isGolden,
     );
   }
 
@@ -121,6 +127,7 @@ class PlantedCrop {
     'growth': growth,
     'harvestsLeft': harvestsLeft,
     'thirstySeconds': thirstySeconds,
+    if (isGolden) 'isGolden': true,
   };
 
   factory PlantedCrop.fromJson(Map<String, dynamic> json) {
@@ -137,6 +144,7 @@ class PlantedCrop {
       growth: safeGrowth,
       harvestsLeft: ((json['harvestsLeft'] as num?)?.toInt() ?? 1).clamp(1, 99),
       thirstySeconds: safeThirsty,
+      isGolden: json['isGolden'] == true,
     );
   }
 }
@@ -209,6 +217,9 @@ class TileState {
     this.producerProgress = 0.0,
     this.producerCrates = 0,
     this.producerActive = false,
+    this.kettleRecipe = KettleRecipeId.autoMix,
+    this.landmark = LandmarkKind.none,
+    this.landmarkClaimed = false,
   });
 
   final GroundType ground;
@@ -225,7 +236,14 @@ class TileState {
   final int producerCrates;
   final bool producerActive;
 
-  bool get isWalkable => structure.isWalkable;
+  /// Active recipe selected on an Artisan Kettle (`StructureType.artisanPress`).
+  final KettleRecipeId kettleRecipe;
+
+  /// Discoverable expansion ring landmark (`LandmarkKind.none` on starter tiles).
+  final LandmarkKind landmark;
+  final bool landmarkClaimed;
+
+  bool get isWalkable => structure.isWalkable && landmark.isWalkable;
 
   double get walkCost => switch (ground) {
     GroundType.stonePath || GroundType.cobbleLane => 0.70,
@@ -251,6 +269,7 @@ class TileState {
   bool get canUntillOrRemove =>
       structure.isRemovable ||
       (structure == StructureType.none &&
+          landmark == LandmarkKind.none &&
           (ground == GroundType.soil ||
               ground == GroundType.stonePath ||
               ground == GroundType.weeds ||
@@ -259,6 +278,7 @@ class TileState {
   /// Whether this tile is an open soil or stone-path plot eligible for one-tap untilling.
   bool get canQuickUntill =>
       structure == StructureType.none &&
+      landmark == LandmarkKind.none &&
       (ground == GroundType.soil || ground == GroundType.stonePath);
 
   TileState copyWith({
@@ -273,6 +293,9 @@ class TileState {
     double? producerProgress,
     int? producerCrates,
     bool? producerActive,
+    KettleRecipeId? kettleRecipe,
+    LandmarkKind? landmark,
+    bool? landmarkClaimed,
   }) {
     return TileState(
       ground: ground ?? this.ground,
@@ -290,6 +313,9 @@ class TileState {
       producerProgress: producerProgress ?? this.producerProgress,
       producerCrates: producerCrates ?? this.producerCrates,
       producerActive: producerActive ?? this.producerActive,
+      kettleRecipe: kettleRecipe ?? this.kettleRecipe,
+      landmark: landmark ?? this.landmark,
+      landmarkClaimed: landmarkClaimed ?? this.landmarkClaimed,
     );
   }
 
@@ -305,6 +331,10 @@ class TileState {
     if (producerProgress > 0.0) 'producerProgress': producerProgress,
     if (producerCrates > 0) 'producerCrates': producerCrates,
     if (producerActive) 'producerActive': producerActive,
+    if (kettleRecipe != KettleRecipeId.autoMix)
+      'kettleRecipe': kettleRecipe.name,
+    if (landmark != LandmarkKind.none) 'landmark': landmark.name,
+    if (landmarkClaimed) 'landmarkClaimed': landmarkClaimed,
   };
 
   factory TileState.fromJson(Map<String, dynamic> json) {
@@ -381,6 +411,17 @@ class TileState {
         99,
       ),
       producerActive: json['producerActive'] == true,
+      kettleRecipe: enumByNameOr(
+        KettleRecipeId.values,
+        json['kettleRecipe'],
+        KettleRecipeId.autoMix,
+      ),
+      landmark: enumByNameOr(
+        LandmarkKind.values,
+        json['landmark'],
+        LandmarkKind.none,
+      ),
+      landmarkClaimed: json['landmarkClaimed'] == true,
     );
   }
 }
