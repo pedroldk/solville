@@ -206,6 +206,20 @@ class SolvilleGame extends FlameGame with KeyboardEvents {
 
     controller.onVisualSimEvent = _diorama.handleSimEvent;
     controller.onRequestCenterCamera = centerCameraOnFarmer;
+    controller.onRequestFocusTile = focusCameraOnTile;
+  }
+
+  void focusCameraOnTile(GridPos pos) {
+    final w = iso.tileCenterToWorld(pos);
+    final clamped = _clampCameraCoords(w.x, w.y - 12);
+    _cameraTargetX = clamped.x;
+    _cameraTargetY = clamped.y;
+    final currentPos = camera.viewfinder.position;
+    _setCameraPosition(
+      currentPos.x + (clamped.x - currentPos.x) * 0.35,
+      currentPos.y + (clamped.y - currentPos.y) * 0.35,
+      clamp: false,
+    );
   }
 
   void centerCameraOnFarm() {

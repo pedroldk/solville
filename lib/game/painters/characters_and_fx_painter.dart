@@ -54,6 +54,7 @@ class StrollingVillager {
   final Color hairColor;
   double pauseTimer = 0.0;
   double heartTimer = 0.0;
+  String? purchaseBubbleText;
 }
 
 /// Renders sky clouds, A* stepping dots, Sol (with stacked crates & work tool
@@ -74,7 +75,16 @@ class CharactersAndFxPainter {
     ..strokeCap = StrokeCap.round;
 
   static const TextStyle _workEmojiStyle = TextStyle(fontSize: 15);
-  static const TextStyle _villagerCravingStyle = TextStyle(fontSize: 11);
+  static const TextStyle _villagerCravingStyle = TextStyle(
+    color: Color(0xFF3E2723),
+    fontSize: 11,
+    fontWeight: FontWeight.w800,
+  );
+  static const TextStyle _spotlightTextStyle = TextStyle(
+    color: Color(0xFF3E2723),
+    fontSize: 11,
+    fontWeight: FontWeight.w900,
+  );
 
   final Map<int, List<TextStyle?>> _floatingTextStyleCache =
       <int, List<TextStyle?>>{};
@@ -363,28 +373,34 @@ class CharactersAndFxPainter {
     }
 
     if (villager.heartTimer > 0.0) {
-      CanvasDrawHelpers.drawCenteredText(
-        canvas,
-        '💛',
-        Offset(cx, cy - 39 - bob),
-        _villagerCravingStyle,
-      );
-    } else if (boomHighlight != null &&
-        (villager.pauseTimer > 0 ||
-            (animTime.floor() + villager.gx.round()) % 5 == 0)) {
-      final bubbleCenter = Offset(cx, cy - 41 - bob);
-      final bubble = RRect.fromRectAndRadius(
-        Rect.fromCenter(center: bubbleCenter, width: 26, height: 18),
-        const Radius.circular(9),
-      );
-      _fillPaint.color = const Color(0xEEFFFFFF);
-      canvas.drawRRect(bubble, _fillPaint);
-      CanvasDrawHelpers.drawCenteredText(
-        canvas,
-        SolvilleCatalog.productEmoji(boomHighlight),
-        bubbleCenter,
-        _villagerCravingStyle,
-      );
+      final label = villager.purchaseBubbleText ?? '💛';
+      if (villager.purchaseBubbleText != null) {
+        final bubbleCenter = Offset(cx, cy - 41 - bob);
+        final w = (label.length * 6.5 + 14.0).clamp(44.0, 96.0);
+        final bubble = RRect.fromRectAndRadius(
+          Rect.fromCenter(center: bubbleCenter, width: w, height: 19),
+          const Radius.circular(9.5),
+        );
+        _fillPaint.color = const Color(0xF2FFF8E1);
+        canvas.drawRRect(bubble, _fillPaint);
+        _strokePaint
+          ..color = const Color(0xFFFFB300)
+          ..strokeWidth = 1.5;
+        canvas.drawRRect(bubble, _strokePaint);
+        CanvasDrawHelpers.drawCenteredText(
+          canvas,
+          label,
+          bubbleCenter,
+          _villagerCravingStyle,
+        );
+      } else {
+        CanvasDrawHelpers.drawCenteredText(
+          canvas,
+          label,
+          Offset(cx, cy - 39 - bob),
+          _villagerCravingStyle,
+        );
+      }
     }
   }
 
@@ -542,8 +558,9 @@ class CharactersAndFxPainter {
     );
 
     final badgeCenter = Offset(center.x, center.y - 46 - bounce);
+    final pillWidth = (hintEmoji.length * 6.8 + 20.0).clamp(58.0, 140.0);
     final pill = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: badgeCenter, width: 54, height: 26),
+      Rect.fromCenter(center: badgeCenter, width: pillWidth, height: 26),
       const Radius.circular(13),
     );
     _fillPaint.color = const Color(0xFAFFFDE7);
@@ -556,7 +573,7 @@ class CharactersAndFxPainter {
       canvas,
       hintEmoji,
       badgeCenter,
-      _villagerCravingStyle,
+      _spotlightTextStyle,
     );
   }
 
@@ -726,6 +743,7 @@ class CharactersAndFxPainter {
       case SimEventType.expressOrderFulfilled:
       case SimEventType.landmarkDiscovered:
       case SimEventType.villageRushStarted:
+      case SimEventType.questCompleted:
         pool.add(
           FloatingVfx(
             x: world.x,

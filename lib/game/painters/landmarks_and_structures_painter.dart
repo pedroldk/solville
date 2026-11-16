@@ -52,6 +52,9 @@ class LandmarksAndStructuresPainter {
     required double animTime,
     bool isSunPassActive = true,
     bool showDetailedMeters = false,
+    String homesteadLabel = '🏡 Homestead',
+    String refillLabel = '🪣 Refill',
+    String barnLabel = '🏠 Barn',
   }) {
     final center = iso.tileCenterToWorld(pos);
     final cx = center.x;
@@ -69,24 +72,70 @@ class LandmarksAndStructuresPainter {
     switch (tile.structure) {
       case StructureType.farmhouse:
         _drawFarmhouse(canvas, cx, cy, dayProgress, animTime);
+        if (showDetailedMeters) {
+          CanvasDrawHelpers.drawFloatingStatusPill(
+            canvas,
+            cx,
+            cy - 72,
+            homesteadLabel,
+          );
+        }
       case StructureType.well:
         _drawStoneWell(canvas, cx, cy, animTime);
+        if (showDetailedMeters) {
+          CanvasDrawHelpers.drawFloatingStatusPill(
+            canvas,
+            cx,
+            cy - 58,
+            refillLabel,
+          );
+        }
       case StructureType.barn:
-        _drawBarn(canvas, cx, cy, totalBarnCrates);
+        _drawBarn(
+          canvas,
+          cx,
+          cy,
+          totalBarnCrates,
+          showDetailedMeters: showDetailedMeters,
+        );
+        if (showDetailedMeters && totalBarnCrates == 0) {
+          CanvasDrawHelpers.drawFloatingStatusPill(
+            canvas,
+            cx,
+            cy - 66,
+            barnLabel,
+          );
+        }
       case StructureType.marketStall:
         _drawMarketStall(canvas, cx, cy, market.stallCrates, animTime);
-        CanvasDrawHelpers.drawActionCircleBadge(
-          canvas,
-          Offset(cx - 26, cy - 52),
-          '📈',
-          radius: 11.5,
-        );
-        if (market.expressOrder != null) {
-          _drawExpressOrderBubble(
+        if (showDetailedMeters) {
+          CanvasDrawHelpers.drawActionCircleBadge(
             canvas,
-            cx + 22,
-            cy - 54,
-            market.expressOrder!,
+            Offset(cx - 26, cy - 52),
+            '📈',
+            radius: 11.5,
+          );
+          if (market.expressOrder != null) {
+            _drawExpressOrderBubble(
+              canvas,
+              cx + 22,
+              cy - 54,
+              market.expressOrder!,
+            );
+          }
+        } else if (market.expressOrder != null) {
+          final pulse = 0.5 + 0.5 * math.sin(animTime * 4.5);
+          _fillPaint.color = const Color(0x44FFD54F);
+          canvas.drawCircle(
+            Offset(cx + 22, cy - 48),
+            7.5 + pulse * 1.5,
+            _fillPaint,
+          );
+          _fillPaint.color = const Color(0xFFFFCA28);
+          canvas.drawCircle(
+            Offset(cx + 22, cy - 48),
+            3.8 + pulse * 0.5,
+            _fillPaint,
           );
         }
       case StructureType.sprinklerRotary:
@@ -94,7 +143,15 @@ class LandmarksAndStructuresPainter {
       case StructureType.sprinklerSolar:
         _drawSolarSprinkler(canvas, cx, cy, animTime);
       case StructureType.lemonTree:
-        _drawLemonTree(canvas, cx, cy, pos, tile, animTime);
+        _drawLemonTree(
+          canvas,
+          cx,
+          cy,
+          pos,
+          tile,
+          animTime,
+          showDetailedMeters: showDetailedMeters,
+        );
       case StructureType.artisanPress:
         _drawArtisanPress(
           canvas,
@@ -103,13 +160,35 @@ class LandmarksAndStructuresPainter {
           tile,
           animTime,
           isSunPassActive: isSunPassActive,
+          showDetailedMeters: showDetailedMeters,
         );
       case StructureType.henhouse:
-        _drawHenhouse(canvas, cx, cy, tile.animal, animTime);
+        _drawHenhouse(
+          canvas,
+          cx,
+          cy,
+          tile.animal,
+          animTime,
+          showDetailedMeters: showDetailedMeters,
+        );
       case StructureType.beehive:
-        _drawBeehive(canvas, cx, cy, tile.animal, animTime);
+        _drawBeehive(
+          canvas,
+          cx,
+          cy,
+          tile.animal,
+          animTime,
+          showDetailedMeters: showDetailedMeters,
+        );
       case StructureType.cowPaddock:
-        _drawCowPaddock(canvas, cx, cy, tile.animal, animTime);
+        _drawCowPaddock(
+          canvas,
+          cx,
+          cy,
+          tile.animal,
+          animTime,
+          showDetailedMeters: showDetailedMeters,
+        );
       case StructureType.lantern:
         _drawSolarLantern(canvas, cx, cy, dayProgress, animTime);
       case StructureType.flowerArch:
@@ -133,7 +212,14 @@ class LandmarksAndStructuresPainter {
     }
 
     if (tile.landmark != LandmarkKind.none) {
-      _drawExpansionLandmark(canvas, cx, cy, tile, animTime);
+      _drawExpansionLandmark(
+        canvas,
+        cx,
+        cy,
+        tile,
+        animTime,
+        showDetailedMeters: showDetailedMeters,
+      );
     }
 
     if (tile.crop != null) {
@@ -150,9 +236,10 @@ class LandmarksAndStructuresPainter {
     }
 
     if (tile.droppedCrate != null) {
+      final crateBob = math.sin(animTime * 4.5 + pos.x) * 2.0;
       CanvasDrawHelpers.drawWoodenCrate(
         canvas,
-        Offset(cx + 10, cy + 4),
+        Offset(cx + 10, cy + 4 + crateBob * 0.3),
         tile.droppedCrate!,
         scale: 0.95,
       );
@@ -241,7 +328,7 @@ class LandmarksAndStructuresPainter {
   }
 
   String _actionEmojiFor(ActionKind kind) => switch (kind) {
-    ActionKind.dig => '🪏',
+    ActionKind.dig => '⛏️',
     ActionKind.plant => '🌱',
     ActionKind.water => '💧',
     ActionKind.refillWater => '💧',
@@ -511,7 +598,13 @@ class LandmarksAndStructuresPainter {
     canvas.drawPath(_pathA, _fillPaint);
   }
 
-  void _drawBarn(Canvas canvas, double cx, double cy, int totalBarnCrates) {
+  void _drawBarn(
+    Canvas canvas,
+    double cx,
+    double cy,
+    int totalBarnCrates, {
+    bool showDetailedMeters = false,
+  }) {
     _fillPaint.color = const Color(0x33000000);
     canvas.drawOval(
       Rect.fromCenter(center: Offset(cx, cy + 5), width: 74, height: 34),
@@ -566,12 +659,23 @@ class LandmarksAndStructuresPainter {
     canvas.drawPath(_pathA, _fillPaint);
 
     if (totalBarnCrates > 0) {
-      CanvasDrawHelpers.drawFloatingStatusPill(
-        canvas,
-        cx,
-        cy - 66,
-        '📦 $totalBarnCrates',
-      );
+      final stackCount = math.min(2, totalBarnCrates);
+      for (var i = 0; i < stackCount; i++) {
+        CanvasDrawHelpers.drawWoodenCrate(
+          canvas,
+          Offset(cx - 18 + i * 12.0, cy + 8),
+          ProductId.tomato,
+          scale: 0.58,
+        );
+      }
+      if (showDetailedMeters) {
+        CanvasDrawHelpers.drawFloatingStatusPill(
+          canvas,
+          cx,
+          cy - 66,
+          '📦 $totalBarnCrates',
+        );
+      }
     }
   }
 
@@ -654,8 +758,9 @@ class LandmarksAndStructuresPainter {
     double cy,
     GridPos pos,
     TileState tile,
-    double time,
-  ) {
+    double time, {
+    bool showDetailedMeters = false,
+  }) {
     final sway = math.sin(time * 2.1 + pos.x) * 2.4;
     _fillPaint.color = const Color(0x33000000);
     canvas.drawOval(
@@ -697,12 +802,20 @@ class LandmarksAndStructuresPainter {
     }
 
     if (tile.producerCrates > 0) {
-      CanvasDrawHelpers.drawFloatingStatusPill(
-        canvas,
-        cx,
-        cy - 58,
-        '🍋 ${tile.producerCrates}',
-      );
+      if (showDetailedMeters) {
+        CanvasDrawHelpers.drawFloatingStatusPill(
+          canvas,
+          cx,
+          cy - 58,
+          '🍋 ${tile.producerCrates}',
+        );
+      } else {
+        final bob = math.sin(time * 4.2 + pos.x).abs() * 2.5;
+        _fillPaint.color = const Color(0x44FFD54F);
+        canvas.drawCircle(Offset(cx, cy - 48 - bob), 8.5, _fillPaint);
+        _fillPaint.color = const Color(0xEEFFEE58);
+        canvas.drawCircle(Offset(cx, cy - 48 - bob), 3.8, _fillPaint);
+      }
     }
   }
 
@@ -745,8 +858,9 @@ class LandmarksAndStructuresPainter {
     double cx,
     double cy,
     TileState tile,
-    double time,
-  ) {
+    double time, {
+    bool showDetailedMeters = false,
+  }) {
     final bob = math.sin(time * 3.5) * 2.5;
     switch (tile.landmark) {
       case LandmarkKind.treasureCache:
@@ -758,12 +872,17 @@ class LandmarksAndStructuresPainter {
         canvas.drawRRect(chest, _fillPaint);
         _fillPaint.color = const Color(0xFFFFCA28);
         canvas.drawRect(Rect.fromLTWH(cx - 13, cy - 11, 26, 4), _fillPaint);
-        CanvasDrawHelpers.drawFloatingStatusPill(
-          canvas,
-          cx,
-          cy - 30 + bob,
-          '💎',
-        );
+        if (showDetailedMeters) {
+          CanvasDrawHelpers.drawFloatingStatusPill(
+            canvas,
+            cx,
+            cy - 30 + bob,
+            '💎',
+          );
+        } else if (!tile.landmarkClaimed) {
+          _fillPaint.color = const Color(0xEEFFEE58);
+          canvas.drawCircle(Offset(cx, cy - 26 + bob), 3.2, _fillPaint);
+        }
       case LandmarkKind.wildflowerShrine:
         _fillPaint.color = const Color(0xFF8D6E63);
         canvas.drawRRect(
@@ -775,12 +894,17 @@ class LandmarksAndStructuresPainter {
         );
         _fillPaint.color = const Color(0xFFF48FB1);
         canvas.drawCircle(Offset(cx, cy - 24), 9, _fillPaint);
-        CanvasDrawHelpers.drawFloatingStatusPill(
-          canvas,
-          cx,
-          cy - 42 + bob,
-          '🌸',
-        );
+        if (showDetailedMeters) {
+          CanvasDrawHelpers.drawFloatingStatusPill(
+            canvas,
+            cx,
+            cy - 42 + bob,
+            '🌸',
+          );
+        } else if (!tile.landmarkClaimed) {
+          _fillPaint.color = const Color(0xEEFFEE58);
+          canvas.drawCircle(Offset(cx, cy - 38 + bob), 3.2, _fillPaint);
+        }
       case LandmarkKind.oasisFountain:
         _fillPaint.color = const Color(0xFFB0BEC5);
         canvas.drawOval(
@@ -800,12 +924,17 @@ class LandmarksAndStructuresPainter {
           ),
           _fillPaint,
         );
-        CanvasDrawHelpers.drawFloatingStatusPill(
-          canvas,
-          cx,
-          cy - 36 + bob,
-          tile.landmarkClaimed ? '💧' : '✨💧',
-        );
+        if (showDetailedMeters) {
+          CanvasDrawHelpers.drawFloatingStatusPill(
+            canvas,
+            cx,
+            cy - 36 + bob,
+            tile.landmarkClaimed ? '💧' : '✨💧',
+          );
+        } else if (!tile.landmarkClaimed) {
+          _fillPaint.color = const Color(0xEEFFEE58);
+          canvas.drawCircle(Offset(cx, cy - 32 + bob), 3.2, _fillPaint);
+        }
       case LandmarkKind.none:
         break;
     }
@@ -818,6 +947,7 @@ class LandmarksAndStructuresPainter {
     TileState tile,
     double time, {
     bool isSunPassActive = true,
+    bool showDetailedMeters = false,
   }) {
     _fillPaint.color = const Color(0x36000000);
     canvas.drawOval(
@@ -871,7 +1001,9 @@ class LandmarksAndStructuresPainter {
         trackColor: const Color(0x66FFF8E1),
         strokeWidth: 3.0,
       );
-    } else if (tile.producerCrates == 0 && isSunPassActive) {
+    } else if (showDetailedMeters &&
+        tile.producerCrates == 0 &&
+        isSunPassActive) {
       final pill = RRect.fromRectAndRadius(
         Rect.fromCenter(center: Offset(cx, cy - 44), width: 42, height: 19),
         const Radius.circular(9),
@@ -892,12 +1024,26 @@ class LandmarksAndStructuresPainter {
     }
 
     if (tile.producerCrates > 0) {
-      CanvasDrawHelpers.drawFloatingStatusPill(
+      CanvasDrawHelpers.drawWoodenCrate(
         canvas,
-        cx,
-        cy - 46,
-        '${SolvilleCatalog.productEmoji(tile.kettleRecipe.outputProduct)} ${tile.producerCrates}',
+        Offset(cx + 18, cy + 2),
+        tile.kettleRecipe.outputProduct,
+        scale: 0.62,
       );
+      if (showDetailedMeters) {
+        CanvasDrawHelpers.drawFloatingStatusPill(
+          canvas,
+          cx,
+          cy - 46,
+          '${SolvilleCatalog.productEmoji(tile.kettleRecipe.outputProduct)} ${tile.producerCrates}',
+        );
+      } else {
+        final bob = math.sin(time * 4.2).abs() * 2.5;
+        _fillPaint.color = const Color(0x44FFD54F);
+        canvas.drawCircle(Offset(cx, cy - 38 - bob), 8.0, _fillPaint);
+        _fillPaint.color = const Color(0xEEFFEE58);
+        canvas.drawCircle(Offset(cx, cy - 38 - bob), 3.6, _fillPaint);
+      }
     }
   }
 
@@ -958,8 +1104,9 @@ class LandmarksAndStructuresPainter {
     double cx,
     double cy,
     AnimalUnitState? state,
-    double time,
-  ) {
+    double time, {
+    bool showDetailedMeters = false,
+  }) {
     _fillPaint.color = const Color(0x30000000);
     canvas.drawOval(
       Rect.fromCenter(center: Offset(cx, cy + 4), width: 56, height: 26),
@@ -1000,7 +1147,15 @@ class LandmarksAndStructuresPainter {
     drawHen(12.0, 2.0, const Color(0xFFFFFFFF));
     drawHen(2.0, 8.0, const Color(0xFFFFCC80));
 
-    CanvasDrawHelpers.drawAnimalStatusBubble(canvas, cx, cy - 44, state, '🥚');
+    CanvasDrawHelpers.drawAnimalStatusBubble(
+      canvas,
+      cx,
+      cy - 44,
+      state,
+      '🥚',
+      showDetailedMeters: showDetailedMeters,
+      animTime: time,
+    );
   }
 
   void _drawBeehive(
@@ -1008,8 +1163,9 @@ class LandmarksAndStructuresPainter {
     double cx,
     double cy,
     AnimalUnitState? state,
-    double time,
-  ) {
+    double time, {
+    bool showDetailedMeters = false,
+  }) {
     _fillPaint.color = const Color(0x30000000);
     canvas.drawOval(
       Rect.fromCenter(center: Offset(cx, cy + 3), width: 42, height: 20),
@@ -1042,7 +1198,15 @@ class LandmarksAndStructuresPainter {
       canvas.drawCircle(Offset(bx, by), 2.5, _fillPaint);
     }
 
-    CanvasDrawHelpers.drawAnimalStatusBubble(canvas, cx, cy - 40, state, '🍯');
+    CanvasDrawHelpers.drawAnimalStatusBubble(
+      canvas,
+      cx,
+      cy - 40,
+      state,
+      '🍯',
+      showDetailedMeters: showDetailedMeters,
+      animTime: time,
+    );
   }
 
   void _drawCowPaddock(
@@ -1050,8 +1214,9 @@ class LandmarksAndStructuresPainter {
     double cx,
     double cy,
     AnimalUnitState? state,
-    double time,
-  ) {
+    double time, {
+    bool showDetailedMeters = false,
+  }) {
     _strokePaint
       ..color = const Color(0xFF8D6E63)
       ..strokeWidth = 2.4
@@ -1088,7 +1253,15 @@ class LandmarksAndStructuresPainter {
       _fillPaint,
     );
 
-    CanvasDrawHelpers.drawAnimalStatusBubble(canvas, cx, cy - 38, state, '🥛');
+    CanvasDrawHelpers.drawAnimalStatusBubble(
+      canvas,
+      cx,
+      cy - 38,
+      state,
+      '🥛',
+      showDetailedMeters: showDetailedMeters,
+      animTime: time,
+    );
   }
 
   void _drawSolarLantern(

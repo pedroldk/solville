@@ -720,7 +720,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get inspectorCompostTag => ' • ✨ +35% Compost';
+  String get inspectorCompostTag => ' • ✨Compost';
 
   @override
   String inspectorCropRipe(
@@ -1531,6 +1531,418 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get helpTipMarket =>
       '🔥 Boom +45%  •  🏚️ Hold Barn  •  🎪 Rush 1.65×';
+
+  @override
+  String questGoalHeader(int step, int total, String title) {
+    return 'Goal $step/$total: $title';
+  }
+
+  @override
+  String questClaimBtn(int coins) {
+    return '✨ Claim +$coins☀️';
+  }
+
+  @override
+  String toastQuestRewardClaimed(
+    int step,
+    int total,
+    int coins,
+    String seedBonus,
+  ) {
+    return '🌻 Goal $step/$total complete! +$coins☀️$seedBonus';
+  }
+
+  @override
+  String get quest1Title => 'First Harvest';
+
+  @override
+  String get quest1Hint => 'Tap the ripe Tomato at (4,3) to harvest a crate.';
+
+  @override
+  String get quest2Title => 'Open for Business';
+
+  @override
+  String get quest2Hint =>
+      'Tap the Market Stall (5,1) to display your crate for villagers.';
+
+  @override
+  String get quest3Title => '3-Tap Smart Combo';
+
+  @override
+  String get quest3Hint =>
+      'Tap an empty plot 3× in a row to Dig → Plant → Water.';
+
+  @override
+  String get quest4Title => 'Clear the Meadow';
+
+  @override
+  String get quest4Hint =>
+      'Dig up 3 wildflower weed patches to uncover hidden treasures.';
+
+  @override
+  String get quest5Title => 'Double Capacity';
+
+  @override
+  String get quest5Hint =>
+      'Buy Crate Stacker Gloves (90☀️) in the Shop to carry 2 crates.';
+
+  @override
+  String get quest6Title => 'Sweet Expansion';
+
+  @override
+  String get quest6Hint =>
+      'Unlock Sweet Strawberry seeds in the Shop and plant a bush.';
+
+  @override
+  String get quest7Title => 'Living Soil';
+
+  @override
+  String get quest7Hint =>
+      'Enrich 2 garden beds with Rich Compost (5) for +35% speed & 2× Golden crops.';
+
+  @override
+  String get quest8Title => 'Automated Hydration';
+
+  @override
+  String get quest8Hint =>
+      'Place a Rotary Sprinkler (6) to water a 3×3 garden zone.';
+
+  @override
+  String get quest9Title => 'Beloved Neighbor';
+
+  @override
+  String get quest9Hint =>
+      'Fulfill a Daily Village Request or Express Order at the Market Stall.';
+
+  @override
+  String get quest10Title => 'Growing Homestead';
+
+  @override
+  String get quest10Hint =>
+      'Build a Cozy Henhouse or expand your island with a Meadow Deed.';
+
+  @override
+  String get dockSweepLabel => 'Sweep';
+
+  @override
+  String get dockSweepTooltip => 'Sweep Paint Mode (drag across tiles)';
+
+  @override
+  String get inspectorRecipeBtn => '🔄 Recipe';
+
+  @override
+  String get inspectorClearBtn => '🌿 Clear';
+
+  @override
+  String get inspectorClearTooltip => 'Restore tile to grass';
+
+  @override
+  String get marketStallFlowHint =>
+      '🚶 Villagers strolling the top lane buy from your 8 Stall slots every few seconds. Extra crates stay safe in the Barn!';
+
+  @override
+  String get spotlightHarvest => '👇 Harvest 🍅';
+
+  @override
+  String get spotlightSell => '👇 Sell at Stall 🏪';
+
+  @override
+  String get spotlightPlant => '👇 Tap 3× Plant 🌱';
+
+  @override
+  String get landmarkHomesteadPill => '🏡 Homestead';
+
+  @override
+  String get landmarkRefillPill => '🪣 Refill';
+
+  @override
+  String get landmarkBarnPill => '🏠 Barn';
+
+  @override
+  String get inspectorFarmhouseTitle => 'Sunlit Farmhouse';
+
+  @override
+  String get inspectorWellTitle => 'Stone Well';
+
+  @override
+  String get inspectorBarnTitle => 'Storage Barn';
+
+  @override
+  String get inspectorStallTitle => 'Market Stall';
+
+  @override
+  String get inspectorTreasureTitle => 'Hidden Treasure Cache';
+
+  @override
+  String get inspectorShrineTitle => 'Wildflower Shrine';
+
+  @override
+  String get inspectorOasisTitle => 'Oasis Fountain';
+
+  @override
+  String get inspectorSoilTitle => 'Tilled Garden Bed';
+
+  @override
+  String get inspectorWeedsTitle => 'Wildflower Weeds';
+
+  @override
+  String get inspectorCobbleTitle => 'Village Cobble Lane';
+
+  @override
+  String get inspectorGrassTitle => 'Sunny Meadow Grass';
+
+  @override
+  String inspectorCrateTitle(String product) {
+    return '$product Crate';
+  }
+
+  @override
+  String get inspectorFarmhouseStatus => 'Soundscape, Language & Save';
+
+  @override
+  String inspectorWellStatus(int current, int max) {
+    return 'Water Can: $current/$max';
+  }
+
+  @override
+  String inspectorBarnStatus(int count) {
+    return '$count crate(s) stored safely';
+  }
+
+  @override
+  String inspectorStallStatus(int count, int max) {
+    return '$count/$max stocked • Villagers buy auto';
+  }
+
+  @override
+  String get inspectorSprinkler3Status => 'Auto-waters 3×3 garden beds';
+
+  @override
+  String get inspectorSprinkler5Status => 'Auto-waters 5×5 garden beds';
+
+  @override
+  String inspectorLemonReadyStatus(int count) {
+    return '$count crate(s) ready! • 🌸 +2%';
+  }
+
+  @override
+  String inspectorLemonGrowStatus(int pct, int secs) {
+    return '$pct% (~${secs}s) • 🌸 +2% Charm';
+  }
+
+  @override
+  String inspectorKettleReadyStatus(int count, String emoji) {
+    return '$count $emoji ready!';
+  }
+
+  @override
+  String inspectorKettleCookingStatus(String formula, int pct, int secs) {
+    return 'Cooking $formula ($pct%, ~${secs}s)';
+  }
+
+  @override
+  String inspectorKettleIdleStatus(String formula) {
+    return 'Recipe: $formula (auto-pulls from Barn)';
+  }
+
+  @override
+  String inspectorReadyCratesStatus(int count) {
+    return '$count crate(s) ready!';
+  }
+
+  @override
+  String inspectorAnimalHungryStatus(int cost) {
+    return 'Hungry — tap to feed ($cost☀️)';
+  }
+
+  @override
+  String inspectorBeeStatus(int pct, int bonus) {
+    return '$pct% • 🌸+$bonus% speed';
+  }
+
+  @override
+  String inspectorAnimalFeedStatus(int pct, int feed) {
+    return '$pct% • Feed $feed%';
+  }
+
+  @override
+  String get inspectorLanternStatus => 'Dusk glow • +3% Market Charm';
+
+  @override
+  String get inspectorArchStatus => 'Walkable • +6% Charm & +18% Bees';
+
+  @override
+  String get inspectorTreasureStatus => 'Unclaimed reward (+35☀️ + rare seed)';
+
+  @override
+  String get inspectorShrineStatus => 'Enriches 3×3 soil & awards +25☀️';
+
+  @override
+  String get inspectorOasisClaimedStatus => 'Refills Water Can & hydrates 3×3';
+
+  @override
+  String get inspectorOasisUnclaimedStatus =>
+      'Claim +20☀️ & infinite water source';
+
+  @override
+  String inspectorRipeStatus(int count) {
+    return 'Ripe! • $count harvest(s) left';
+  }
+
+  @override
+  String inspectorGoldenRipeStatus(int count) {
+    return '✨ Golden 2×! Ripe! • $count harvest(s) left';
+  }
+
+  @override
+  String inspectorCropGrowStatus(int pct, int secs, int moisture) {
+    return '$pct% (~${secs}s) • 💧$moisture%';
+  }
+
+  @override
+  String get inspectorCrateTag => ' • 📦 Crate';
+
+  @override
+  String get inspectorCrateGroundStatus => 'Ready to pick up for Stall or Barn';
+
+  @override
+  String inspectorSoilCompostStatus(int moisture) {
+    return '💧$moisture% • ✨Compost (+35%)';
+  }
+
+  @override
+  String inspectorSoilReadyStatus(int moisture) {
+    return '💧$moisture% • Ready for seeds';
+  }
+
+  @override
+  String get inspectorWeedsStatus => 'Dig for +1☀️ & treasure chance';
+
+  @override
+  String get inspectorPathStatus => '+40% walking speed';
+
+  @override
+  String get inspectorCobbleStatus => 'Townsfolk stroll here (+40% speed)';
+
+  @override
+  String get inspectorGrassStatus => 'Open ground for crops or builds';
+
+  @override
+  String get inspectorTapHomestead => 'Tap: Soundscape & Settings';
+
+  @override
+  String get inspectorTapOpenMarket => 'Tap: Open Market & Barn 📈';
+
+  @override
+  String get inspectorTapSunPass => 'Tap: Unlock via Sun Pass ☀️';
+
+  @override
+  String get inspectorTapRefill => 'Tap: Refill Water Can 🪣';
+
+  @override
+  String get inspectorTapClaimLandmark => 'Tap: Claim Discovery! 🗺️';
+
+  @override
+  String inspectorTapStockStall(int count) {
+    return 'Tap: Stock $count crate(s) on Stall 🪙';
+  }
+
+  @override
+  String get inspectorTapDeliverStall =>
+      'Tap: Deliver queued crate(s) to Stall 🪙';
+
+  @override
+  String inspectorTapStoreBarn(int count) {
+    return 'Tap: Store $count crate(s) in Barn';
+  }
+
+  @override
+  String get inspectorTapPickupBarn => 'Tap: Pick up crates from Barn 📦';
+
+  @override
+  String inspectorTapHarvest(String emoji) {
+    return 'Tap: Harvest $emoji Crate';
+  }
+
+  @override
+  String inspectorTapPickupCrate(String emoji) {
+    return 'Tap: Pick up $emoji Crate';
+  }
+
+  @override
+  String inspectorTapFeedAnimal(String name, int cost) {
+    return 'Tap: Feed $name ($cost☀️)';
+  }
+
+  @override
+  String get inspectorTapLoadKettle => 'Tap: Load Kettle Ingredients 🫙';
+
+  @override
+  String inspectorTapCombo3(String emoji) {
+    return 'Tap 3×: Dig → Sow $emoji → Water';
+  }
+
+  @override
+  String get inspectorTapClearWeeds => 'Tap: Clear Weeds (+1☀️ & treasure)';
+
+  @override
+  String get inspectorTapDig => 'Tap: Dig Soil Bed ⛏️';
+
+  @override
+  String inspectorTapSow(String emoji, String cost) {
+    return 'Tap: Sow $emoji ($cost)';
+  }
+
+  @override
+  String inspectorTapSowSmart(String emoji, String cost) {
+    return 'Tap: Sow $emoji ($cost) — tap again to Water';
+  }
+
+  @override
+  String get inspectorFreeGiftCost => 'Free Gift 🎁';
+
+  @override
+  String get inspectorTapWater => 'Tap: Water Plot 💧';
+
+  @override
+  String inspectorTapCompost(int cost) {
+    return 'Tap: Rich Compost ($cost☀️, +35% speed)';
+  }
+
+  @override
+  String inspectorTapBuild(String name, int cost) {
+    return 'Tap: Build $name ($cost☀️)';
+  }
+
+  @override
+  String get inspectorTapUntill => 'Tap: Clear / Untill to Grass 🌿';
+
+  @override
+  String get inspectorTapSwitchRecipe => 'Tap: Switch Recipe 🔄';
+
+  @override
+  String get inspectorGrowingWait => 'Growing — check back soon 🌱';
+
+  @override
+  String get inspectorLaneWait => 'Village lane (villagers stroll here)';
+
+  @override
+  String get inspectorClearToBuild => 'Clear tile first to build here';
+
+  @override
+  String get inspectorDigHint => 'Switch to Smart (1) or Seeds (3)';
+
+  @override
+  String get inspectorWaterHint => 'Only tilled soil needs watering';
+
+  @override
+  String get inspectorCompostHint => 'Select uncomposted tilled soil';
+
+  @override
+  String get inspectorAlreadyGrass => 'Already lush meadow grass';
+
+  @override
+  String get inspectorTapInteract => 'Tap to interact';
 }
 
 /// The translations for English, as used in the United Kingdom (`en_GB`).
@@ -1604,6 +2016,17 @@ class AppLocalizationsEnGb extends AppLocalizationsEn {
   @override
   String get toastLifetimePassActivated =>
       '👑 Thank you! Solville Lifetime Cosy Edition is yours forever!';
+
+  @override
+  String get quest9Title => 'Beloved Neighbour';
+
+  @override
+  String get quest9Hint =>
+      'Fulfil a Daily Village Request or Express Order at the Market Stall.';
+
+  @override
+  String get quest10Hint =>
+      'Build a Cosy Henhouse or expand your island with a Meadow Deed.';
 }
 
 /// The translations for English, as used in the United States (`en_US`).

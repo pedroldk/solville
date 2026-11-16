@@ -24,6 +24,10 @@ abstract final class CanvasDrawHelpers {
     ..strokeWidth = 2.0;
   static final Paint _hungryPillPaint = Paint()
     ..color = const Color(0xFFFFECB3);
+  static final Paint _zenHaloPaint = Paint()..color = const Color(0x44FFD54F);
+  static final Paint _zenDotPaint = Paint()..color = const Color(0xEEFFEE58);
+  static final Paint _zenTendingDotPaint = Paint()
+    ..color = const Color(0x99FFB300);
 
   static final Paint _crateShadowPaint = Paint()
     ..color = const Color(0x38000000);
@@ -72,8 +76,9 @@ abstract final class CanvasDrawHelpers {
     double y,
     String text,
   ) {
+    final width = math.max(40.0, text.length * 6.8 + 14.0);
     final r = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: Offset(x, y), width: 40, height: 20),
+      Rect.fromCenter(center: Offset(x, y), width: width, height: 20),
       const Radius.circular(10),
     );
     canvas.drawRRect(r, _pillFillPaint);
@@ -86,18 +91,32 @@ abstract final class CanvasDrawHelpers {
     double x,
     double y,
     AnimalUnitState? state,
-    String readyEmoji,
-  ) {
+    String readyEmoji, {
+    bool showDetailedMeters = false,
+    double animTime = 0.0,
+  }) {
     if (state == null) return;
+    if (showDetailedMeters) {
+      if (state.readyCrates > 0) {
+        drawFloatingStatusPill(canvas, x, y, '$readyEmoji${state.readyCrates}');
+      } else if (state.needsTending) {
+        final r = RRect.fromRectAndRadius(
+          Rect.fromCenter(center: Offset(x, y), width: 26, height: 19),
+          const Radius.circular(9),
+        );
+        canvas.drawRRect(r, _hungryPillPaint);
+        drawCenteredText(canvas, '🌾', Offset(x, y), _hungryEmojiTextStyle);
+      }
+      return;
+    }
+
     if (state.readyCrates > 0) {
-      drawFloatingStatusPill(canvas, x, y, '$readyEmoji${state.readyCrates}');
+      final bob = math.sin(animTime * 4.2 + x * 0.1).abs() * 2.5;
+      final dotCenter = Offset(x, y + 6 - bob);
+      canvas.drawCircle(dotCenter, 9.0, _zenHaloPaint);
+      canvas.drawCircle(dotCenter, 4.0, _zenDotPaint);
     } else if (state.needsTending) {
-      final r = RRect.fromRectAndRadius(
-        Rect.fromCenter(center: Offset(x, y), width: 26, height: 19),
-        const Radius.circular(9),
-      );
-      canvas.drawRRect(r, _hungryPillPaint);
-      drawCenteredText(canvas, '🌾', Offset(x, y), _hungryEmojiTextStyle);
+      canvas.drawCircle(Offset(x, y + 8), 2.8, _zenTendingDotPaint);
     }
   }
 

@@ -18,5 +18,8 @@
   "helpSec6Body": "• Tap / Left-Click: Queue action (or tap Farmhouse/Stall to open menus)\n• Shift + Drag (PC): Sweep across garden rows to batch-queue chores or untill\n• Right-Click (PC) or \"✕ Clear\": Cancel queued tasks\n• Drag / WASD / Arrow Keys: Pan isometric diorama\n• Pinch (Android) / Scroll Wheel (PC): Zoom camera\n• Keys 1–7: Tools (7 = Untill to Grass) • H: Harvest Ripe • M: Cosy Music • Space/C: Centre",
   "toastNeedCoinsSeedLicense": "Need more Sols for this seed licence!",
   "toastPromptSunPassLicense": "{name} licence",
-  "toastLifetimePassActivated": "👑 Thank you! Solville Lifetime Cosy Edition is yours forever!"
+  "toastLifetimePassActivated": "👑 Thank you! Solville Lifetime Cosy Edition is yours forever!",
+  "quest9Title": "Beloved Neighbour",
+  "quest9Hint": "Fulfil a Daily Village Request or Express Order at the Market Stall.",
+  "quest10Hint": "Build a Cosy Henhouse or expand your island with a Meadow Deed."
 }

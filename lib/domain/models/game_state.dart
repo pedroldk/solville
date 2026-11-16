@@ -197,6 +197,7 @@ enum SimEventType {
   villageRushStarted,
   newDay,
   statusHint,
+  questCompleted,
 }
 
 class SimEvent {
@@ -248,6 +249,8 @@ class GameState {
     this.comboStreak = 0,
     this.comboTimer = 0.0,
     this.trialSeeds = const <ProductId, int>{},
+    this.claimedQuestsCount = 0,
+    this.weedsClearedCount = 0,
   });
 
   final int gridSize;
@@ -293,7 +296,81 @@ class GameState {
   /// Single-use sample seed pouches discovered from weeds, landmarks, or villagers.
   final Map<ProductId, int> trialSeeds;
 
+  /// Number of Mayor Sunny's Homestead Journal quests claimed (`0..10`).
+  final int claimedQuestsCount;
+
+  /// Total wildflower weed patches cleared from the island.
+  final int weedsClearedCount;
+
   bool get isOnboardingActive => onboardingStep < 3;
+
+  HomesteadQuestDef? get activeQuest =>
+      claimedQuestsCount >= 0 &&
+          claimedQuestsCount < SolvilleCatalog.quests.length
+      ? SolvilleCatalog.quests[claimedQuestsCount]
+      : null;
+
+  ({int current, int required, bool isReadyToClaim}) get activeQuestProgress {
+    final q = activeQuest;
+    if (q == null) {
+      return (current: 0, required: 0, isReadyToClaim: false);
+    }
+    switch (q.id) {
+      case QuestId.firstHarvest:
+        final cur = totalCratesHarvested.clamp(0, 1);
+        return (current: cur, required: 1, isReadyToClaim: cur >= 1);
+      case QuestId.firstSale:
+        final done = onboardingStep >= 2 || market.stallCrates.isNotEmpty;
+        return (current: done ? 1 : 0, required: 1, isReadyToClaim: done);
+      case QuestId.smartComboPlant:
+        var cropCount = 0;
+        for (final t in tiles) {
+          if (t.crop != null) cropCount++;
+        }
+        final done = onboardingStep >= 3 || cropCount >= 3;
+        return (current: done ? 1 : 0, required: 1, isReadyToClaim: done);
+      case QuestId.clearWeeds:
+        final cur = weedsClearedCount.clamp(0, 3);
+        return (current: cur, required: 3, isReadyToClaim: weedsClearedCount >= 3);
+      case QuestId.buyGloves:
+        final done = upgradeTier(UpgradeTrack.crateStacker) >= 1;
+        return (current: done ? 1 : 0, required: 1, isReadyToClaim: done);
+      case QuestId.unlockStrawberry:
+        final done = unlockedSeeds.contains(ProductId.strawberry);
+        return (current: done ? 1 : 0, required: 1, isReadyToClaim: done);
+      case QuestId.enrichCompost:
+        final cur = compostedPlotsCount.clamp(0, 2);
+        return (
+          current: cur,
+          required: 2,
+          isReadyToClaim: compostedPlotsCount >= 2,
+        );
+      case QuestId.buildSprinkler:
+        final hasSprinkler = tiles.any(
+          (t) =>
+              t.structure == StructureType.sprinklerRotary ||
+              t.structure == StructureType.sprinklerSolar,
+        );
+        return (
+          current: hasSprinkler ? 1 : 0,
+          required: 1,
+          isReadyToClaim: hasSprinkler,
+        );
+      case QuestId.fulfillVillageOrder:
+        final done = requestsCompleted >= 1;
+        return (current: done ? 1 : 0, required: 1, isReadyToClaim: done);
+      case QuestId.buildCoopOrExpand:
+        final done =
+            upgradeTier(UpgradeTrack.farmExpansion) >= 1 ||
+            tiles.any(
+              (t) =>
+                  t.structure == StructureType.henhouse ||
+                  t.structure == StructureType.beehive ||
+                  t.structure == StructureType.cowPaddock,
+            );
+        return (current: done ? 1 : 0, required: 1, isReadyToClaim: done);
+    }
+  }
 
   bool hasSeedAccess(ProductId seed) =>
       unlockedSeeds.contains(seed) || (trialSeeds[seed] ?? 0) > 0;
@@ -418,6 +495,8 @@ class GameState {
     int? comboStreak,
     double? comboTimer,
     Map<ProductId, int>? trialSeeds,
+    int? claimedQuestsCount,
+    int? weedsClearedCount,
   }) {
     return GameState(
       gridSize: gridSize ?? this.gridSize,
@@ -446,6 +525,8 @@ class GameState {
       comboStreak: comboStreak ?? this.comboStreak,
       comboTimer: comboTimer ?? this.comboTimer,
       trialSeeds: trialSeeds ?? this.trialSeeds,
+      claimedQuestsCount: claimedQuestsCount ?? this.claimedQuestsCount,
+      weedsClearedCount: weedsClearedCount ?? this.weedsClearedCount,
     );
   }
 
@@ -479,6 +560,8 @@ class GameState {
     'compostedPlotsCount': compostedPlotsCount,
     'requestsCompleted': requestsCompleted,
     'onboardingStep': onboardingStep,
+    if (claimedQuestsCount > 0) 'claimedQuestsCount': claimedQuestsCount,
+    if (weedsClearedCount > 0) 'weedsClearedCount': weedsClearedCount,
     if (trialSeeds.isNotEmpty)
       'trialSeeds': <String, int>{
         for (final entry in trialSeeds.entries)
@@ -672,6 +755,11 @@ class GameState {
         3,
       ),
       trialSeeds: trialSeeds,
+      claimedQuestsCount: safeInt(
+        json['claimedQuestsCount'],
+        0,
+      ).clamp(0, SolvilleCatalog.quests.length),
+      weedsClearedCount: safeInt(json['weedsClearedCount'], 0),
     );
   }
 }

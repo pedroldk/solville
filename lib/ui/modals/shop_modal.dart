@@ -10,9 +10,10 @@ import '../widgets/solville_dialog_shell.dart';
 /// Town Shop modal offering Seed Licenses, Permanent Upgrades, and Placeable
 /// Sprinklers / Animals / Garden Decor.
 class ShopModal extends StatelessWidget {
-  const ShopModal({super.key, required this.controller});
+  const ShopModal({super.key, required this.controller, this.initialTab = 0});
 
   final SolvilleController controller;
+  final int initialTab;
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +23,7 @@ class ShopModal extends StatelessWidget {
         final l10n = AppLocalizations.of(context);
         final state = controller.state;
         return DefaultTabController(
+          initialIndex: initialTab.clamp(0, 2),
           length: 3,
           child: SolvilleDialogShell(
             emoji: '🛒',

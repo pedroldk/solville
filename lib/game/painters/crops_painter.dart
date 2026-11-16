@@ -231,15 +231,27 @@ class CropsPainter {
         Rect.fromCenter(center: Offset(cx, cy - 6), width: 38, height: 22),
         _goldenHaloPaint,
       );
-      CanvasDrawHelpers.drawFloatingStatusPill(canvas, cx, cy - 34, '✨2×');
+      if (showDetailedMeters) {
+        CanvasDrawHelpers.drawFloatingStatusPill(canvas, cx, cy - 34, '✨2×');
+      }
     } else if (crop.isRipe) {
       final pulse = (math.sin(animTime * 5.0 + pos.x) + 1.0) * 0.5;
+      _goldenHaloPaint.color = Color.fromRGBO(
+        255,
+        238,
+        88,
+        0.16 + 0.14 * pulse,
+      );
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset(cx, cy - 3), width: 32, height: 18),
+        _goldenHaloPaint,
+      );
       canvas.drawCircle(
         Offset(cx, cy - 28 - pulse * 4.0),
-        3.6 + pulse * 1.6,
+        3.8 + pulse * 1.8,
         _ripeSparklePaint,
       );
-    } else if (moisture < 0.18) {
+    } else if (showDetailedMeters && moisture < 0.18) {
       canvas.drawCircle(Offset(cx + 12, cy - 22), 6.5, _thirstBgPaint);
       canvas.drawCircle(Offset(cx + 12, cy - 22), 3.6, _thirstDropPaint);
     }

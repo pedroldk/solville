@@ -720,7 +720,7 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get inspectorCompostTag => ' • ✨ +35% Kompost';
+  String get inspectorCompostTag => ' • ✨Kompost';
 
   @override
   String inspectorCropRipe(
@@ -1531,4 +1531,418 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get helpTipMarket =>
       '🔥 Boom +45%  •  🏚️ Scheune  •  🎪 Trubel 1,65×';
+
+  @override
+  String questGoalHeader(int step, int total, String title) {
+    return 'Ziel $step/$total: $title';
+  }
+
+  @override
+  String questClaimBtn(int coins) {
+    return '✨ Abholen +$coins☀️';
+  }
+
+  @override
+  String toastQuestRewardClaimed(
+    int step,
+    int total,
+    int coins,
+    String seedBonus,
+  ) {
+    return '🌻 Ziel $step/$total erreicht! +$coins☀️$seedBonus';
+  }
+
+  @override
+  String get quest1Title => 'Erste Ernte';
+
+  @override
+  String get quest1Hint =>
+      'Tippe auf die reife Tomate bei (4,3), um eine Kiste zu ernten.';
+
+  @override
+  String get quest2Title => 'Geschäft Eröffnet';
+
+  @override
+  String get quest2Hint =>
+      'Tippe auf den Marktstand (5,1), um deine Kiste anzubieten.';
+
+  @override
+  String get quest3Title => '3-Tipp-Kombo';
+
+  @override
+  String get quest3Hint =>
+      'Tippe 3× auf ein leeres Feld für Graben → Säen → Gießen.';
+
+  @override
+  String get quest4Title => 'Wiese Roden';
+
+  @override
+  String get quest4Hint =>
+      'Grabe 3 Unkrautbüschel um, um verborgene Schätze zu finden.';
+
+  @override
+  String get quest5Title => 'Doppelte Tragkraft';
+
+  @override
+  String get quest5Hint =>
+      'Kaufe Tragehandschuhe (90☀️) im Laden, um 2 Kisten zu tragen.';
+
+  @override
+  String get quest6Title => 'Süße Erweiterung';
+
+  @override
+  String get quest6Hint =>
+      'Schalte Süße Erdbeeren im Laden frei und pflanze einen Busch.';
+
+  @override
+  String get quest7Title => 'Lebendige Erde';
+
+  @override
+  String get quest7Hint =>
+      'Dünge 2 Beete mit Kompost (5) für +35% Tempo & 2× Gold-Ernte.';
+
+  @override
+  String get quest8Title => 'Auto-Bewässerung';
+
+  @override
+  String get quest8Hint =>
+      'Platziere einen Dreh-Sprinkler (6), um 3×3 Felder zu gießen.';
+
+  @override
+  String get quest9Title => 'Beliebter Nachbar';
+
+  @override
+  String get quest9Hint =>
+      'Erfülle einen Dorfauftrag oder Eilauftrag am Marktstand.';
+
+  @override
+  String get quest10Title => 'Wachsender Hof';
+
+  @override
+  String get quest10Hint =>
+      'Baue einen Hühnerstall oder erweitere deine Insel mit einer Urkunde.';
+
+  @override
+  String get dockSweepLabel => 'Ziehen';
+
+  @override
+  String get dockSweepTooltip => 'Zieh-Modus (über Felder ziehen)';
+
+  @override
+  String get inspectorRecipeBtn => '🔄 Rezept';
+
+  @override
+  String get inspectorClearBtn => '🌿 Gras';
+
+  @override
+  String get inspectorClearTooltip => 'Feld wieder begrünen';
+
+  @override
+  String get marketStallFlowHint =>
+      '🚶 Dorfbewohner auf dem Weg kaufen alle paar Sekunden aus deinen 8 Standplätzen. Weitere Kisten lagern sicher in der Scheune!';
+
+  @override
+  String get spotlightHarvest => '👇 Ernten 🍅';
+
+  @override
+  String get spotlightSell => '👇 Verkaufen 🏪';
+
+  @override
+  String get spotlightPlant => '👇 3× Tippen 🌱';
+
+  @override
+  String get landmarkHomesteadPill => '🏡 Hof';
+
+  @override
+  String get landmarkRefillPill => '🪣 Füllen';
+
+  @override
+  String get landmarkBarnPill => '🏠 Scheune';
+
+  @override
+  String get inspectorFarmhouseTitle => 'Sonniges Bauernhaus';
+
+  @override
+  String get inspectorWellTitle => 'Steinbrunnen';
+
+  @override
+  String get inspectorBarnTitle => 'Lagerscheune';
+
+  @override
+  String get inspectorStallTitle => 'Marktstand';
+
+  @override
+  String get inspectorTreasureTitle => 'Verborgene Schatztruhe';
+
+  @override
+  String get inspectorShrineTitle => 'Wildblumen-Schrein';
+
+  @override
+  String get inspectorOasisTitle => 'Oasenbrunnen';
+
+  @override
+  String get inspectorSoilTitle => 'Gegrabenes Beet';
+
+  @override
+  String get inspectorWeedsTitle => 'Wildblumen-Unkraut';
+
+  @override
+  String get inspectorCobbleTitle => 'Dorf-Pflasterweg';
+
+  @override
+  String get inspectorGrassTitle => 'Sonnige Wiese';
+
+  @override
+  String inspectorCrateTitle(String product) {
+    return '$product-Kiste';
+  }
+
+  @override
+  String get inspectorFarmhouseStatus => 'Klangwelt, Sprache & Speichern';
+
+  @override
+  String inspectorWellStatus(int current, int max) {
+    return 'Gießkanne: $current/$max';
+  }
+
+  @override
+  String inspectorBarnStatus(int count) {
+    return '$count Kiste(n) gelagert';
+  }
+
+  @override
+  String inspectorStallStatus(int count, int max) {
+    return '$count/$max ausgestellt • Auto-Verkauf';
+  }
+
+  @override
+  String get inspectorSprinkler3Status => 'Bewässert automatisch 3×3 Beete';
+
+  @override
+  String get inspectorSprinkler5Status => 'Bewässert automatisch 5×5 Beete';
+
+  @override
+  String inspectorLemonReadyStatus(int count) {
+    return '$count Kiste(n) bereit! • 🌸 +2%';
+  }
+
+  @override
+  String inspectorLemonGrowStatus(int pct, int secs) {
+    return '$pct% (~${secs}s) • 🌸 +2% Charme';
+  }
+
+  @override
+  String inspectorKettleReadyStatus(int count, String emoji) {
+    return '$count $emoji bereit!';
+  }
+
+  @override
+  String inspectorKettleCookingStatus(String formula, int pct, int secs) {
+    return 'Kocht $formula ($pct%, ~${secs}s)';
+  }
+
+  @override
+  String inspectorKettleIdleStatus(String formula) {
+    return 'Rezept: $formula (nimmt aus Scheune)';
+  }
+
+  @override
+  String inspectorReadyCratesStatus(int count) {
+    return '$count Kiste(n) bereit!';
+  }
+
+  @override
+  String inspectorAnimalHungryStatus(int cost) {
+    return 'Hungrig — tippen zum Füttern ($cost☀️)';
+  }
+
+  @override
+  String inspectorBeeStatus(int pct, int bonus) {
+    return '$pct% • 🌸+$bonus% Tempo';
+  }
+
+  @override
+  String inspectorAnimalFeedStatus(int pct, int feed) {
+    return '$pct% • Futter $feed%';
+  }
+
+  @override
+  String get inspectorLanternStatus => 'Abendschein • +3% Markt-Charme';
+
+  @override
+  String get inspectorArchStatus => 'Begehbar • +6% Charme & +18% Bienen';
+
+  @override
+  String get inspectorTreasureStatus =>
+      'Belohnung wartet (+35☀️ + seltene Saat)';
+
+  @override
+  String get inspectorShrineStatus => 'Düngt 3×3 Boden & schenkt +25☀️';
+
+  @override
+  String get inspectorOasisClaimedStatus => 'Füllt Gießkanne & bewässert 3×3';
+
+  @override
+  String get inspectorOasisUnclaimedStatus => '+20☀️ & unendliche Wasserquelle';
+
+  @override
+  String inspectorRipeStatus(int count) {
+    return 'Reif! • Noch $count Ernte(n)';
+  }
+
+  @override
+  String inspectorGoldenRipeStatus(int count) {
+    return '✨ Golden 2×! Reif! • $count Ernte(n)';
+  }
+
+  @override
+  String inspectorCropGrowStatus(int pct, int secs, int moisture) {
+    return '$pct% (~${secs}s) • 💧$moisture%';
+  }
+
+  @override
+  String get inspectorCrateTag => ' • 📦 Kiste';
+
+  @override
+  String get inspectorCrateGroundStatus =>
+      'Bereit zum Mitnehmen für Stand/Scheune';
+
+  @override
+  String inspectorSoilCompostStatus(int moisture) {
+    return '💧$moisture% • ✨Kompost (+35%)';
+  }
+
+  @override
+  String inspectorSoilReadyStatus(int moisture) {
+    return '💧$moisture% • Bereit für Saat';
+  }
+
+  @override
+  String get inspectorWeedsStatus => 'Graben für +1☀️ & Schatzchance';
+
+  @override
+  String get inspectorPathStatus => '+40% Lauftempo';
+
+  @override
+  String get inspectorCobbleStatus => 'Dorfweg der Kunden (+40% Tempo)';
+
+  @override
+  String get inspectorGrassStatus => 'Freie Fläche für Beete oder Bauten';
+
+  @override
+  String get inspectorTapHomestead => 'Tippen: Klang & Einstellungen';
+
+  @override
+  String get inspectorTapOpenMarket => 'Tippen: Markt & Scheune öffnen 📈';
+
+  @override
+  String get inspectorTapSunPass => 'Tippen: Per Sonnenpass freischalten ☀️';
+
+  @override
+  String get inspectorTapRefill => 'Tippen: Gießkanne füllen 🪣';
+
+  @override
+  String get inspectorTapClaimLandmark => 'Tippen: Schatz abholen! 🗺️';
+
+  @override
+  String inspectorTapStockStall(int count) {
+    return 'Tippen: $count Kiste(n) auf Stand legen 🪙';
+  }
+
+  @override
+  String get inspectorTapDeliverStall =>
+      'Tippen: Kiste(n) zum Stand bringen 🪙';
+
+  @override
+  String inspectorTapStoreBarn(int count) {
+    return 'Tippen: $count Kiste(n) in Scheune lagern';
+  }
+
+  @override
+  String get inspectorTapPickupBarn => 'Tippen: Kisten aus Scheune holen 📦';
+
+  @override
+  String inspectorTapHarvest(String emoji) {
+    return 'Tippen: $emoji-Kiste ernten';
+  }
+
+  @override
+  String inspectorTapPickupCrate(String emoji) {
+    return 'Tippen: $emoji-Kiste aufheben';
+  }
+
+  @override
+  String inspectorTapFeedAnimal(String name, int cost) {
+    return 'Tippen: $name füttern ($cost☀️)';
+  }
+
+  @override
+  String get inspectorTapLoadKettle => 'Tippen: Kessel befüllen 🫙';
+
+  @override
+  String inspectorTapCombo3(String emoji) {
+    return '3× Tippen: Graben → $emoji säen → Gießen';
+  }
+
+  @override
+  String get inspectorTapClearWeeds => 'Tippen: Unkraut jäten (+1☀️ & Schatz)';
+
+  @override
+  String get inspectorTapDig => 'Tippen: Beet graben ⛏️';
+
+  @override
+  String inspectorTapSow(String emoji, String cost) {
+    return 'Tippen: $emoji säen ($cost)';
+  }
+
+  @override
+  String inspectorTapSowSmart(String emoji, String cost) {
+    return 'Tippen: $emoji säen ($cost) — nochmal z. Gießen';
+  }
+
+  @override
+  String get inspectorFreeGiftCost => 'Gratis 🎁';
+
+  @override
+  String get inspectorTapWater => 'Tippen: Beet gießen 💧';
+
+  @override
+  String inspectorTapCompost(int cost) {
+    return 'Tippen: Kompost ($cost☀️, +35% Tempo)';
+  }
+
+  @override
+  String inspectorTapBuild(String name, int cost) {
+    return 'Tippen: $name bauen ($cost☀️)';
+  }
+
+  @override
+  String get inspectorTapUntill => 'Tippen: Zu Gras zurückbauen 🌿';
+
+  @override
+  String get inspectorTapSwitchRecipe => 'Tippen: Rezept wechseln 🔄';
+
+  @override
+  String get inspectorGrowingWait => 'Wächst — schau gleich wieder vorbei 🌱';
+
+  @override
+  String get inspectorLaneWait => 'Dorfweg (hier schlendern Kunden)';
+
+  @override
+  String get inspectorClearToBuild => 'Feld erst freimachen zum Bauen';
+
+  @override
+  String get inspectorDigHint => 'Wechsle zu Smart (1) oder Saat (3)';
+
+  @override
+  String get inspectorWaterHint => 'Nur gegrabene Beete brauchen Wasser';
+
+  @override
+  String get inspectorCompostHint => 'Wähle ungedüngte Erde';
+
+  @override
+  String get inspectorAlreadyGrass => 'Bereits grüne Wiese';
+
+  @override
+  String get inspectorTapInteract => 'Tippen zum Interagieren';
 }

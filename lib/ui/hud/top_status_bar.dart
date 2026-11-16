@@ -19,6 +19,8 @@ class TopStatusBar extends StatefulWidget {
     required this.onOpenAudio,
     required this.onOpenHelp,
     this.onOpenSunPass,
+    this.onToggleJournal,
+    this.isJournalExpanded = false,
   });
 
   final SolvilleController controller;
@@ -28,13 +30,15 @@ class TopStatusBar extends StatefulWidget {
   final VoidCallback onOpenAudio;
   final VoidCallback onOpenHelp;
   final VoidCallback? onOpenSunPass;
+  final VoidCallback? onToggleJournal;
+  final bool isJournalExpanded;
 
   @override
   State<TopStatusBar> createState() => _TopStatusBarState();
 }
 
 class _TopStatusBarState extends State<TopStatusBar> {
-  bool _mobileMenuExpanded = false;
+  bool _menuExpanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -49,8 +53,8 @@ class _TopStatusBarState extends State<TopStatusBar> {
       builder: (context, constraints) {
         final mediaSize = MediaQuery.sizeOf(context);
         final isMobile =
-            constraints.maxWidth < 600 || mediaSize.shortestSide < 600;
-        final compact = constraints.maxWidth < 820 || isMobile;
+            constraints.maxWidth < 860 || mediaSize.shortestSide < 600;
+        final compact = constraints.maxWidth < 920 || isMobile;
 
         final statChildren = <Widget>[
           _StatChip(
@@ -92,19 +96,20 @@ class _TopStatusBarState extends State<TopStatusBar> {
         final pillFontSize = isMobile ? 11.0 : 12.5;
         final pillEmojiSize = isMobile ? 12.5 : 14.0;
 
-        final actionChildren = <Widget>[
+        final hasDailyReq =
+            state.market.dailyRequest != null &&
+            !state.market.dailyRequest!.isCompleted;
+        final activeQuest = state.activeQuest;
+        final questProg = state.activeQuestProgress;
+
+        final primaryActions = <Widget>[
           SolvillePillButton(
             emoji: '📈',
-            label: isMobile
-                ? boomEmojis
-                : (compact
-                      ? l10n.hudMarketCompact(boomEmojis)
-                      : l10n.hudMarketFull(
-                          boomEmojis,
-                          state.market.stallCrates.length,
-                        )),
+            label: isMobile ? boomEmojis : l10n.hudMarketCompact(boomEmojis),
             highlighted: state.market.isRushActive,
-            badgeEmoji: state.market.expressOrder != null ? '⚡' : null,
+            badgeEmoji: state.market.expressOrder != null
+                ? '⚡'
+                : (hasDailyReq ? '💌' : null),
             backgroundColor: state.market.isRushActive
                 ? const Color(0xFFFFE082)
                 : const Color(0xFFFFF8E1),
@@ -127,6 +132,79 @@ class _TopStatusBarState extends State<TopStatusBar> {
             fontSize: pillFontSize,
             emojiSize: pillEmojiSize,
             onTap: widget.onOpenShop,
+          ),
+          if (activeQuest != null && widget.onToggleJournal != null)
+            questProg.isReadyToClaim
+                ? SolvillePillButton(
+                    emoji: '✨',
+                    label: l10n
+                        .questClaimBtn(activeQuest.rewardCoins)
+                        .replaceFirst('✨ ', ''),
+                    highlighted: true,
+                    backgroundColor: const Color(0xFFFFE082),
+                    padding: pillPadding,
+                    borderRadius: pillRadius,
+                    fontSize: pillFontSize,
+                    emojiSize: pillEmojiSize,
+                    onTap: () => controller.claimOrFocusActiveQuest(
+                      onOpenShop: (_) => widget.onOpenShop(),
+                      onOpenMarket: widget.onOpenMarket,
+                    ),
+                  )
+                : SolvillePillButton(
+                    emoji: activeQuest.emoji,
+                    label:
+                        '${activeQuest.stepNumber}/${SolvilleCatalog.quests.length}',
+                    highlighted: widget.isJournalExpanded,
+                    backgroundColor: widget.isJournalExpanded
+                        ? const Color(0xFFFFECB3)
+                        : const Color(0xFFFFF8E1),
+                    padding: pillPadding,
+                    borderRadius: pillRadius,
+                    fontSize: pillFontSize,
+                    emojiSize: pillEmojiSize,
+                    onTap: widget.onToggleJournal!,
+                  ),
+          _CompactHudIconButton(
+            tooltip: _menuExpanded ? l10n.hudHideExtra : l10n.hudShowExtra,
+            icon: _menuExpanded
+                ? Icons.chevron_left_rounded
+                : Icons.more_horiz_rounded,
+            backgroundColor: _menuExpanded
+                ? const Color(0xFFFFECB3)
+                : SolvilleTheme.warmCream,
+            onTap: () => setState(() {
+              _menuExpanded = !_menuExpanded;
+            }),
+          ),
+        ];
+
+        final secondaryUtilities = <Widget>[
+          SolvillePillButton(
+            emoji: '🏆',
+            label:
+                '${state.unlockedTrophies.length}/${SolvilleCatalog.trophies.length}',
+            backgroundColor: const Color(0xFFFFECB3),
+            padding: pillPadding,
+            borderRadius: pillRadius,
+            fontSize: pillFontSize,
+            emojiSize: pillEmojiSize,
+            onTap: widget.onOpenTrophies,
+          ),
+          SolvillePillButton(
+            emoji: controller.bgmTrack.shortEmoji,
+            label: l10n.bgmTrackShortTitle(
+              controller.bgmTrack,
+              compact: compact,
+              isMobile: isMobile,
+            ),
+            tooltip: l10n.hudHomesteadTooltip,
+            backgroundColor: const Color(0xFFE1F5FE),
+            padding: pillPadding,
+            borderRadius: pillRadius,
+            fontSize: pillFontSize,
+            emojiSize: pillEmojiSize,
+            onTap: widget.onOpenAudio,
           ),
           if (!controller.entitlements.isFullEditionBuild &&
               widget.onOpenSunPass != null)
@@ -152,152 +230,123 @@ class _TopStatusBarState extends State<TopStatusBar> {
               emojiSize: pillEmojiSize,
               onTap: widget.onOpenSunPass!,
             ),
-          if (!isMobile || _mobileMenuExpanded) ...<Widget>[
-            SolvillePillButton(
-              emoji: '🏆',
-              label:
-                  '${state.unlockedTrophies.length}/${SolvilleCatalog.trophies.length}',
-              backgroundColor: const Color(0xFFFFECB3),
-              padding: pillPadding,
-              borderRadius: pillRadius,
-              fontSize: pillFontSize,
-              emojiSize: pillEmojiSize,
-              onTap: widget.onOpenTrophies,
-            ),
-            SolvillePillButton(
-              emoji: controller.bgmTrack.shortEmoji,
-              label: l10n.bgmTrackShortTitle(
-                controller.bgmTrack,
-                compact: compact,
-                isMobile: isMobile,
-              ),
-              tooltip: l10n.hudHomesteadTooltip,
-              backgroundColor: const Color(0xFFE1F5FE),
-              padding: pillPadding,
-              borderRadius: pillRadius,
-              fontSize: pillFontSize,
-              emojiSize: pillEmojiSize,
-              onTap: widget.onOpenAudio,
-            ),
-            if (isMobile) ...<Widget>[
-              _CompactHudIconButton(
-                tooltip: controller.sfxEnabled
-                    ? l10n.hudMuteSfx
-                    : l10n.hudEnableSfx,
-                icon: controller.sfxEnabled
-                    ? Icons.volume_up_rounded
-                    : Icons.volume_off_rounded,
-                onTap: controller.toggleSfx,
-              ),
-              _CompactHudIconButton(
-                tooltip: l10n.hudHelpTooltip,
-                icon: Icons.help_outline_rounded,
-                onTap: widget.onOpenHelp,
-              ),
-            ] else ...<Widget>[
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                tooltip: controller.sfxEnabled
-                    ? l10n.hudMuteSfx
-                    : l10n.hudEnableSfx,
-                onPressed: controller.toggleSfx,
-                icon: Icon(
-                  controller.sfxEnabled
-                      ? Icons.volume_up_rounded
-                      : Icons.volume_off_rounded,
-                  color: SolvilleTheme.timberDark,
-                  size: 20,
-                ),
-              ),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                tooltip: l10n.hudHelpTooltip,
-                onPressed: widget.onOpenHelp,
-                icon: const Icon(
-                  Icons.help_outline_rounded,
-                  color: SolvilleTheme.timberDark,
-                  size: 20,
-                ),
-              ),
-            ],
-          ],
-          if (isMobile)
-            _CompactHudIconButton(
-              tooltip: _mobileMenuExpanded
-                  ? l10n.hudHideExtra
-                  : l10n.hudShowExtra,
-              icon: _mobileMenuExpanded
-                  ? Icons.chevron_left_rounded
-                  : Icons.more_horiz_rounded,
-              backgroundColor: _mobileMenuExpanded
-                  ? const Color(0xFFFFECB3)
-                  : SolvilleTheme.warmCream,
-              onTap: () => setState(() {
-                _mobileMenuExpanded = !_mobileMenuExpanded;
-              }),
-            ),
+          _CompactHudIconButton(
+            tooltip: controller.sfxEnabled
+                ? l10n.hudMuteSfx
+                : l10n.hudEnableSfx,
+            icon: controller.sfxEnabled
+                ? Icons.volume_up_rounded
+                : Icons.volume_off_rounded,
+            onTap: controller.toggleSfx,
+          ),
+          _CompactHudIconButton(
+            tooltip: l10n.hudHelpTooltip,
+            icon: Icons.help_outline_rounded,
+            onTap: widget.onOpenHelp,
+          ),
         ];
 
         return Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: isMobile ? 6 : 10,
-            vertical: isMobile ? 4 : 8,
+          padding: EdgeInsets.fromLTRB(
+            isMobile ? 8 : 10,
+            isMobile ? 4 : 8,
+            isMobile ? 8 : 10,
+            isMobile ? 2 : 6,
           ),
-          child: Wrap(
-            spacing: isMobile ? 6 : 8,
-            runSpacing: isMobile ? 4 : 8,
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              // Left cluster: Sols, Water, Carried Crates, Day
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isMobile ? 7 : 12,
-                  vertical: isMobile ? 4 : 7,
-                ),
-                decoration: SolvilleTheme.panelDecoration(
-                  radius: isMobile ? 16 : 22,
-                ),
-                child: isMobile
-                    ? SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: _withHorizontalSpacing(statChildren, 5),
-                        ),
-                      )
-                    : Wrap(
-                        spacing: 12,
-                        runSpacing: 6,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: statChildren,
+              SizedBox(
+                width: double.infinity,
+                child: Wrap(
+                  spacing: isMobile ? 6 : 8,
+                  runSpacing: isMobile ? 4 : 8,
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: <Widget>[
+                    // Top-Left cluster: Sols, Water, Carried Crates, Day
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isMobile ? 7 : 12,
+                        vertical: isMobile ? 4 : 7,
                       ),
-              ),
+                      decoration: SolvilleTheme.panelDecoration(
+                        radius: isMobile ? 16 : 22,
+                      ),
+                      child: isMobile
+                          ? SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: _withHorizontalSpacing(
+                                  statChildren,
+                                  5,
+                                ),
+                              ),
+                            )
+                          : Wrap(
+                              spacing: 12,
+                              runSpacing: 6,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: statChildren,
+                            ),
+                    ),
 
-              // Right cluster: Market Ticker, Shop, Pass, and collapsible utilities
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isMobile ? 6 : 8,
-                  vertical: isMobile ? 4 : 6,
+                    // Top-Right cluster: Market, Shop, Pass, and overflow menu
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isMobile ? 6 : 8,
+                        vertical: isMobile ? 4 : 6,
+                      ),
+                      decoration: SolvilleTheme.panelDecoration(
+                        radius: isMobile ? 16 : 22,
+                      ),
+                      child: isMobile
+                          ? SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: _withHorizontalSpacing(
+                                  primaryActions,
+                                  4,
+                                ),
+                              ),
+                            )
+                          : Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: primaryActions,
+                            ),
+                    ),
+                  ],
                 ),
-                decoration: SolvilleTheme.panelDecoration(
-                  radius: isMobile ? 16 : 22,
-                ),
-                child: isMobile
-                    ? SingleChildScrollView(
+              ),
+              if (_menuExpanded)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 4,
+                      ),
+                      decoration: SolvilleTheme.panelDecoration(radius: 14),
+                      child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
-                          children: _withHorizontalSpacing(actionChildren, 4),
+                          children: _withHorizontalSpacing(
+                            secondaryUtilities,
+                            5,
+                          ),
                         ),
-                      )
-                    : Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: actionChildren,
                       ),
-              ),
+                    ),
+                  ),
+                ),
             ],
           ),
         );

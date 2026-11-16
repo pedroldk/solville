@@ -18,7 +18,7 @@ class HelpAndControlsModal extends StatelessWidget {
     final keycaps =
         (isMobile ? l10n.helpTouchControls : l10n.helpPcControls).split('  •  ');
     final steps = <(String, String)>[
-      ('🪏', l10n.helpLoopStep1),
+      ('⛏️', l10n.helpLoopStep1),
       ('🌱', l10n.helpLoopStep2),
       ('💧', l10n.helpLoopStep3),
       ('🏪', l10n.helpLoopStep4),

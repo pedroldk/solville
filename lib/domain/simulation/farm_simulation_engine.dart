@@ -23,6 +23,38 @@ class SimulationStepResult {
   final List<SimEvent> events;
 }
 
+/// Concise, readable summary of a hovered or inspected tile plus what
+/// tapping it next will do.
+class TileInspectionInfo {
+  const TileInspectionInfo({
+    required this.pos,
+    required this.emoji,
+    required this.title,
+    required this.statusSummary,
+    required this.nextTapHint,
+    this.canQuickUntill = false,
+    this.canCycleKettleRecipe = false,
+    this.nextActionKind,
+    this.nextSeedId,
+    this.nextBuildItem,
+    this.beeBonusPct = 0,
+    this.willHaveCrates = false,
+  });
+
+  final GridPos pos;
+  final String emoji;
+  final String title;
+  final String statusSummary;
+  final String nextTapHint;
+  final bool canQuickUntill;
+  final bool canCycleKettleRecipe;
+  final ActionKind? nextActionKind;
+  final ProductId? nextSeedId;
+  final BuildItemType? nextBuildItem;
+  final int beeBonusPct;
+  final bool willHaveCrates;
+}
+
 /// Deterministic core simulation engine for Solville.
 class FarmSimulationEngine {
   FarmSimulationEngine({
@@ -635,19 +667,382 @@ class FarmSimulationEngine {
       market: nextMarket,
     );
 
+    final boomEmojis = nextMarket.boomProducts
+        .map(SolvilleCatalog.productEmoji)
+        .join(' ');
+    final req = nextMarket.dailyRequest;
+    final forecastParts = <String>[
+      if (boomEmojis.isNotEmpty) '🔥 $boomEmojis +45%',
+      if (req != null)
+        '💌 ${SolvilleCatalog.productEmoji(req.product)}×${req.requiredCount}',
+    ];
+    final forecastSummary = forecastParts.isNotEmpty
+        ? forecastParts.join(' • ')
+        : null;
+
     return SimulationStepResult(
       state: nextState,
       events: <SimEvent>[
         SimEvent(
           type: SimEventType.newDay,
-          message: 'Day $nextDay dawned in Solville! (${nextWeather.label})',
+          message: forecastSummary != null
+              ? 'Day $nextDay dawned in Solville! (${nextWeather.label}) • $forecastSummary'
+              : 'Day $nextDay dawned in Solville! (${nextWeather.label})',
           toast: SolvilleToast(
             SolvilleToastKind.newDay,
             day: nextDay,
             weather: nextWeather,
+            forecastSummary: forecastSummary,
           ),
         ),
       ],
+    );
+  }
+
+  /// Claims Mayor Sunny's active Homestead Journal quest reward when complete.
+  SimulationStepResult claimActiveQuestReward(GameState state) {
+    final quest = state.activeQuest;
+    if (quest == null || !state.activeQuestProgress.isReadyToClaim) {
+      return SimulationStepResult(state: state);
+    }
+    var nextTrials = state.trialSeeds;
+    if (quest.rewardTrialSeed != null) {
+      nextTrials = Map<ProductId, int>.from(nextTrials);
+      nextTrials[quest.rewardTrialSeed!] =
+          (nextTrials[quest.rewardTrialSeed!] ?? 0) + 1;
+    }
+    var nextState = state.copyWith(
+      claimedQuestsCount: state.claimedQuestsCount + 1,
+      coins: state.coins + quest.rewardCoins,
+      lifetimeCoinsEarned: state.lifetimeCoinsEarned + quest.rewardCoins,
+      trialSeeds: nextTrials,
+    );
+    final seedBonusSuffix = quest.rewardTrialSeed != null
+        ? ' +1 ${SolvilleCatalog.productEmoji(quest.rewardTrialSeed!)}'
+        : '';
+    final events = <SimEvent>[
+      SimEvent(
+        type: SimEventType.questCompleted,
+        tile: state.farmer.currentTile,
+        amount: quest.rewardCoins,
+        message:
+            '${quest.emoji} Goal ${quest.stepNumber}/${SolvilleCatalog.quests.length} complete! +${quest.rewardCoins}☀️$seedBonusSuffix',
+        toast: SolvilleToast(
+          SolvilleToastKind.questRewardClaimed,
+          questIndex: quest.stepNumber,
+          coins: quest.rewardCoins,
+          product: quest.rewardTrialSeed,
+        ),
+      ),
+    ];
+    nextState = TrophyEvaluator.evaluateTrophies(nextState, events);
+    return SimulationStepResult(state: nextState, events: events);
+  }
+
+  /// Describes [pos] and predicts the exact effect of the next tap/click.
+  TileInspectionInfo describeTileAt(
+    GameState state,
+    GridPos pos, {
+    bool isSunPassActive = true,
+  }) {
+    final tile = state.tileAt(pos);
+    final willHaveCrates =
+        state.farmer.carriedCrates.isNotEmpty ||
+        state.actionQueue.any(
+          (a) =>
+              a.kind == ActionKind.harvest || a.kind == ActionKind.pickupCrate,
+        );
+    final resolved = _decideQueuedAction(state, pos);
+
+    final String nextTapHint;
+    if (tile.structure == StructureType.farmhouse) {
+      nextTapHint = 'Tap: Soundscape & Settings';
+    } else if (tile.structure == StructureType.marketStall && !willHaveCrates) {
+      nextTapHint = 'Tap: Open Market & Barn 📈';
+    } else if (tile.structure == StructureType.barn &&
+        !willHaveCrates &&
+        state.totalBarnCrates == 0) {
+      nextTapHint = 'Tap: Open Market & Barn 📦';
+    } else if (tile.structure.requiresSunPass &&
+        !isSunPassActive &&
+        !tile.isReadyToHarvest &&
+        state.activeTool != ToolMode.remove) {
+      nextTapHint = 'Tap: Unlock via Sun Pass ☀️';
+    } else if (resolved != null) {
+      nextTapHint = switch (resolved.kind) {
+        ActionKind.refillWater => 'Tap: Refill Water Can 🪣',
+        ActionKind.claimLandmark => 'Tap: Claim Discovery! 🗺️',
+        ActionKind.sellAtStall =>
+          state.farmer.carriedCrates.isNotEmpty
+              ? 'Tap: Stock ${state.farmer.carriedCrates.length} crate(s) on Stall 🪙'
+              : 'Tap: Deliver queued crate(s) to Stall 🪙',
+        ActionKind.storeInBarn =>
+          state.farmer.carriedCrates.isNotEmpty
+              ? 'Tap: Store ${state.farmer.carriedCrates.length} crate(s) in Barn'
+              : 'Tap: Pick up crates from Barn 📦',
+        ActionKind.harvest =>
+          tile.crop != null
+              ? 'Tap: Harvest ${SolvilleCatalog.productEmoji(tile.crop!.cropId)} Crate'
+              : (tile.animal != null
+                    ? 'Tap: Collect ${SolvilleCatalog.productEmoji(SolvilleCatalog.animals[tile.animal!.type]!.product)} Crate'
+                    : (tile.structure == StructureType.lemonTree
+                          ? 'Tap: Pick 🍋 Lemons'
+                          : 'Tap: Collect ${SolvilleCatalog.productEmoji(tile.kettleRecipe.outputProduct)}')),
+        ActionKind.pickupCrate =>
+          'Tap: Pick up ${SolvilleCatalog.productEmoji(tile.droppedCrate!)} Crate',
+        ActionKind.tendAnimal =>
+          'Tap: Feed ${SolvilleCatalog.animals[tile.animal!.type]!.name} (${SolvilleCatalog.animals[tile.animal!.type]!.tendCost}☀️)',
+        ActionKind.loadArtisan => 'Tap: Load Kettle Ingredients 🫙',
+        ActionKind.dig =>
+          state.activeTool == ToolMode.smart
+              ? 'Tap 3×: Dig → Sow ${SolvilleCatalog.productEmoji(state.selectedSeed)} → Water'
+              : (tile.ground == GroundType.weeds
+                    ? 'Tap: Clear Weeds (+1☀️ & treasure)'
+                    : 'Tap: Dig Soil Bed ⛏️'),
+        ActionKind.plant => () {
+          final seed = resolved.seedId ?? state.selectedSeed;
+          final def = SolvilleCatalog.crops[seed]!;
+          final isFree =
+              !state.unlockedSeeds.contains(seed) &&
+              (state.trialSeeds[seed] ?? 0) > 0;
+          final costText = isFree ? 'Free Gift 🎁' : '${def.seedCost}☀️';
+          final prefix =
+              'Tap: Sow ${SolvilleCatalog.productEmoji(seed)} ($costText)';
+          return state.activeTool == ToolMode.smart
+              ? '$prefix — tap again to Water'
+              : prefix;
+        }(),
+        ActionKind.water => 'Tap: Water Plot 💧',
+        ActionKind.compost =>
+          'Tap: Rich Compost (${SolvilleCatalog.compostCost}☀️, +35% speed)',
+        ActionKind.placeBuild => () {
+          final item = resolved.buildItem ?? state.selectedBuildItem;
+          final b = SolvilleCatalog.buildItems[item]!;
+          return 'Tap: Build ${b.name} (${b.cost}☀️)';
+        }(),
+        ActionKind.removeStructure => 'Tap: Clear / Untill to Grass 🌿',
+        ActionKind.smart => 'Tap to interact',
+      };
+    } else if (tile.structure == StructureType.artisanPress &&
+        isSunPassActive &&
+        !tile.producerActive &&
+        tile.producerCrates == 0) {
+      nextTapHint = 'Tap: Switch Recipe 🔄';
+    } else if (tile.crop != null && !tile.crop!.isRipe) {
+      nextTapHint = 'Growing — check back soon 🌱';
+    } else if (pos.y == 0 && tile.structure != StructureType.marketStall) {
+      nextTapHint = 'Village lane (villagers stroll here)';
+    } else if (state.activeTool == ToolMode.build) {
+      nextTapHint = 'Clear tile first to build here';
+    } else if (state.activeTool == ToolMode.dig) {
+      nextTapHint = 'Switch to Smart (1) or Seeds (3)';
+    } else if (state.activeTool == ToolMode.water) {
+      nextTapHint = 'Only tilled soil needs watering';
+    } else if (state.activeTool == ToolMode.compost) {
+      nextTapHint = 'Select uncomposted tilled soil';
+    } else if (state.activeTool == ToolMode.remove) {
+      nextTapHint = 'Already lush meadow grass';
+    } else {
+      nextTapHint = 'Tap to interact';
+    }
+
+    late final String emoji;
+    late final String title;
+    late String statusSummary;
+    var beeBonusPct = 0;
+
+    if (tile.structure != StructureType.none) {
+      switch (tile.structure) {
+        case StructureType.farmhouse:
+          emoji = '🏡';
+          title = 'Sunlit Farmhouse';
+          statusSummary = 'Soundscape, Language & Save';
+        case StructureType.well:
+          emoji = '🪣';
+          title = 'Stone Well';
+          statusSummary =
+              'Water Can: ${state.farmer.waterCharges}/${state.maxWaterCharges}';
+        case StructureType.barn:
+          emoji = '🏠';
+          title = 'Storage Barn';
+          statusSummary = '${state.totalBarnCrates} crate(s) stored safely';
+        case StructureType.marketStall:
+          emoji = '🏪';
+          title = 'Market Stall';
+          statusSummary =
+              '${state.market.stallCrates.length}/${MarketState.maxStallSlots} stocked • Villagers buy auto';
+        case StructureType.sprinklerRotary:
+          emoji = '💦';
+          title = 'Rotary Sprinkler';
+          statusSummary = 'Auto-waters 3×3 garden beds';
+        case StructureType.sprinklerSolar:
+          emoji = '⛲';
+          title = 'Solar Mist Tower';
+          statusSummary = 'Auto-waters 5×5 garden beds';
+        case StructureType.lemonTree:
+          emoji = '🍋';
+          title = 'Sunburst Lemon Tree';
+          if (tile.producerCrates > 0) {
+            statusSummary = '${tile.producerCrates} crate(s) ready! • 🌸 +2%';
+          } else {
+            final pct = (tile.producerProgress * 100).round();
+            final secs =
+                ((1.0 - tile.producerProgress).clamp(0.0, 1.0) *
+                        SolvilleCatalog.lemonTreeCycleSeconds)
+                    .ceil();
+            statusSummary = '$pct% (~${secs}s) • 🌸 +2% Charm';
+          }
+        case StructureType.artisanPress:
+          emoji = '🫙';
+          title = 'Artisan Kettle';
+          if (tile.producerCrates > 0) {
+            statusSummary =
+                '${tile.producerCrates} ${SolvilleCatalog.productEmoji(tile.kettleRecipe.outputProduct)} ready!';
+          } else if (tile.producerActive) {
+            final pct = (tile.producerProgress * 100).round();
+            final secs =
+                ((1.0 - tile.producerProgress).clamp(0.0, 1.0) *
+                        SolvilleCatalog.artisanPressCycleSeconds)
+                    .ceil();
+            statusSummary =
+                'Cooking ${tile.kettleRecipe.formulaEmoji} ($pct%, ~${secs}s)';
+          } else {
+            statusSummary =
+                'Recipe: ${tile.kettleRecipe.formulaEmoji} (auto-pulls from Barn)';
+          }
+        case StructureType.henhouse:
+        case StructureType.beehive:
+        case StructureType.cowPaddock:
+          final animal = tile.animal;
+          final def = animal != null ? SolvilleCatalog.animals[animal.type] : null;
+          emoji = def?.emoji ?? '🐾';
+          title = def?.name ?? 'Animal Enclosure';
+          if (animal == null || def == null) {
+            statusSummary = 'Producing farm goods';
+          } else if (animal.readyCrates > 0) {
+            statusSummary = '${animal.readyCrates} crate(s) ready!';
+          } else if (animal.needsTending) {
+            statusSummary = 'Hungry — tap to feed (${def.tendCost}☀️)';
+          } else if (animal.type == AnimalType.bee) {
+            beeBonusPct =
+                (_computeBeeFlowerBonus(state.tiles, state.gridSize, pos.x, pos.y) *
+                        100)
+                    .round();
+            statusSummary =
+                '${(animal.progress * 100).round()}% • 🌸+$beeBonusPct% speed';
+          } else {
+            statusSummary =
+                '${(animal.progress * 100).round()}% • Feed ${(animal.feedLevel * 100).round()}%';
+          }
+        case StructureType.lantern:
+          emoji = '🏮';
+          title = 'Solar Lantern';
+          statusSummary = 'Dusk glow • +3% Market Charm';
+        case StructureType.flowerArch:
+          emoji = '🌸';
+          title = 'Blossom Arch';
+          statusSummary = 'Walkable • +6% Charm & +18% Bees';
+        case StructureType.none:
+          emoji = '🌱';
+          title = 'Plot';
+          statusSummary = '';
+      }
+    } else if (tile.landmark != LandmarkKind.none) {
+      switch (tile.landmark) {
+        case LandmarkKind.treasureCache:
+          emoji = '💎';
+          title = 'Hidden Treasure Cache';
+          statusSummary = 'Unclaimed reward (+35☀️ + rare seed)';
+        case LandmarkKind.wildflowerShrine:
+          emoji = '🌸';
+          title = 'Wildflower Shrine';
+          statusSummary = 'Enriches 3×3 soil & awards +25☀️';
+        case LandmarkKind.oasisFountain:
+          emoji = '⛲';
+          title = 'Oasis Fountain';
+          statusSummary = tile.landmarkClaimed
+              ? 'Refills Water Can & hydrates 3×3'
+              : 'Claim +20☀️ & infinite water source';
+        case LandmarkKind.none:
+          emoji = '🌱';
+          title = 'Plot';
+          statusSummary = '';
+      }
+    } else if (tile.crop != null) {
+      final crop = tile.crop!;
+      final def = SolvilleCatalog.crops[crop.cropId]!;
+      emoji = def.emoji;
+      title = def.name;
+      final moisturePct = (tile.moisture * 100).round();
+      if (crop.isRipe) {
+        final goldenTag = crop.isGolden ? '✨ Golden 2×! ' : '';
+        final harvestsTag =
+            '${crop.harvestsLeft} harvest${crop.harvestsLeft == 1 ? '' : 's'} left';
+        statusSummary = '${goldenTag}Ripe! • $harvestsTag';
+      } else {
+        final pct = (crop.growth * 100).round();
+        final compostMult = tile.fertilized ? 1.35 : 1.0;
+        final hydMult = tile.moisture > 0.35
+            ? 1.0
+            : (tile.moisture > 0.02 ? 0.65 : 0.12);
+        final secPerProg = def.growthSeconds / (compostMult * hydMult);
+        final secsLeft =
+            ((1.0 - crop.growth).clamp(0.0, 1.0) * secPerProg).ceil();
+        final compostTag = tile.fertilized ? ' • ✨Compost' : '';
+        statusSummary = '$pct% (~${secsLeft}s) • 💧$moisturePct%$compostTag';
+      }
+      if (tile.droppedCrate != null) {
+        statusSummary = '$statusSummary • 📦 Crate';
+      }
+    } else if (tile.droppedCrate != null) {
+      emoji = '📦';
+      title = '${SolvilleCatalog.productName(tile.droppedCrate!)} Crate';
+      statusSummary = 'Ready to pick up for Stall or Barn';
+    } else {
+      switch (tile.ground) {
+        case GroundType.soil:
+          emoji = '🟫';
+          title = 'Tilled Garden Bed';
+          final moisturePct = (tile.moisture * 100).round();
+          statusSummary = tile.fertilized
+              ? '💧$moisturePct% • ✨Compost (+35%)'
+              : '💧$moisturePct% • Ready for seeds';
+        case GroundType.weeds:
+          emoji = '🌿';
+          title = 'Wildflower Weeds';
+          statusSummary = 'Dig for +1☀️ & treasure chance';
+        case GroundType.stonePath:
+          emoji = '🧱';
+          title = 'Sunstone Path';
+          statusSummary = '+40% walking speed';
+        case GroundType.cobbleLane:
+          emoji = '🏘️';
+          title = 'Village Cobble Lane';
+          statusSummary = 'Townsfolk stroll here (+40% speed)';
+        case GroundType.grass:
+          emoji = '🌱';
+          title = 'Sunny Meadow Grass';
+          statusSummary = 'Open ground for crops or builds';
+      }
+    }
+
+    return TileInspectionInfo(
+      pos: pos,
+      emoji: emoji,
+      title: title,
+      statusSummary: statusSummary,
+      nextTapHint: nextTapHint,
+      canQuickUntill: pos.y > 0 && tile.canUntillOrRemove,
+      canCycleKettleRecipe:
+          tile.structure == StructureType.artisanPress &&
+          isSunPassActive &&
+          !tile.producerActive &&
+          tile.producerCrates == 0,
+      nextActionKind: resolved?.kind,
+      nextSeedId: resolved?.seedId,
+      nextBuildItem: resolved?.buildItem,
+      beeBonusPct: beeBonusPct,
+      willHaveCrates: willHaveCrates,
     );
   }
 
@@ -1272,7 +1667,7 @@ class FarmSimulationEngine {
     final tile = state.tiles[tileIndex];
     final updatedTiles = List<TileState>.from(state.tiles);
     final actionEmoji = switch (action.kind) {
-      ActionKind.dig => '🪏',
+      ActionKind.dig => '⛏️',
       ActionKind.removeStructure => '🌿',
       ActionKind.plant => '🌱',
       ActionKind.water || ActionKind.refillWater => '💧',
@@ -1320,6 +1715,8 @@ class FarmSimulationEngine {
           nextState = nextState.copyWith(
             tiles: updatedTiles,
             coins: nextState.coins + (wasWeeds ? 1 : 0),
+            weedsClearedCount:
+                nextState.weedsClearedCount + (wasWeeds ? 1 : 0),
             onboardingStep: nextState.onboardingStep == 2
                 ? 3
                 : nextState.onboardingStep,

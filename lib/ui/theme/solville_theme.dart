@@ -13,13 +13,14 @@ abstract final class SolvilleTheme {
   static const Color terracotta = Color(0xFFD84315);
 
   static const Color _defaultPanelColor = Color(0xF2FFFDF6);
+  static const Color _softBorderColor = Color(0x66795548);
 
   static const List<BoxShadow> _panelShadow = <BoxShadow>[
-    BoxShadow(color: Color(0x29000000), blurRadius: 10, offset: Offset(0, 4)),
+    BoxShadow(color: Color(0x1F000000), blurRadius: 8, offset: Offset(0, 2)),
   ];
 
   static const Border _defaultPanelBorder = Border.fromBorderSide(
-    BorderSide(color: timberBorder, width: 2.2),
+    BorderSide(color: _softBorderColor, width: 1.4),
   );
 
   static const BoxDecoration _panelR16 = BoxDecoration(
@@ -80,7 +81,7 @@ abstract final class SolvilleTheme {
       borderRadius: BorderRadius.circular(radius),
       border: borderColor == timberBorder
           ? _defaultPanelBorder
-          : Border.all(color: borderColor, width: 2.2),
+          : Border.all(color: borderColor, width: 1.5),
       boxShadow: _panelShadow,
     );
   }

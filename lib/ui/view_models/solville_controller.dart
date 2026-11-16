@@ -71,6 +71,40 @@ class SolvilleController extends ChangeNotifier {
   GridPos? _inspectedTile;
   GridPos? get inspectedTile => _inspectedTile;
 
+  /// Live inspector readout for whichever tile is currently tapped/inspected.
+  TileInspectionInfo? get activeInspection {
+    final target = _inspectedTile;
+    if (target == null || !_state.inBounds(target)) return null;
+    return _engine.describeTileAt(
+      _state,
+      target,
+      isSunPassActive: isSunPassActive,
+    );
+  }
+
+  String spotlightHarvestLabel = '👇 Harvest 🍅';
+  String spotlightSellLabel = '👇 Sell at Stall 🏪';
+  String spotlightPlantLabel = '👇 Tap 3× Plant 🌱';
+  String landmarkHomesteadLabel = '🏡 Homestead';
+  String landmarkRefillLabel = '🪣 Refill';
+  String landmarkBarnLabel = '🏠 Barn';
+
+  void syncLocalizedWorldLabels({
+    required String spotlightHarvest,
+    required String spotlightSell,
+    required String spotlightPlant,
+    required String landmarkHomestead,
+    required String landmarkRefill,
+    required String landmarkBarn,
+  }) {
+    spotlightHarvestLabel = spotlightHarvest;
+    spotlightSellLabel = spotlightSell;
+    spotlightPlantLabel = spotlightPlant;
+    landmarkHomesteadLabel = landmarkHomestead;
+    landmarkRefillLabel = landmarkRefill;
+    landmarkBarnLabel = landmarkBarn;
+  }
+
   GridPos? _lastPaintDragTile;
 
   String? _toastMessage;
@@ -99,6 +133,9 @@ class SolvilleController extends ChangeNotifier {
 
   /// Callback hook to recenter camera on farmer.
   VoidCallback? onRequestCenterCamera;
+
+  /// Callback hook to smoothly pan camera onto a specific farm tile.
+  void Function(GridPos pos)? onRequestFocusTile;
 
   /// Optional UI hooks so clicking landmarks in the 2.5D world opens modals!
   VoidCallback? onRequestOpenMarketModal;
@@ -224,6 +261,12 @@ class SolvilleController extends ChangeNotifier {
   void setHoveredTile(GridPos? pos) {
     if (hoverNotifier.value == pos) return;
     hoverNotifier.value = pos;
+  }
+
+  void inspectTile(GridPos? pos) {
+    if (_inspectedTile == pos) return;
+    _inspectedTile = pos;
+    notifyListeners();
   }
 
   void handleTileTap(GridPos pos) {
@@ -390,14 +433,122 @@ class SolvilleController extends ChangeNotifier {
 
   void expandIsle() => purchaseUpgrade(UpgradeTrack.farmExpansion);
 
+  void claimActiveQuestReward() => _applyStep(
+    _engine.claimActiveQuestReward(_state),
+    haptic: true,
+    save: true,
+  );
+
+  void claimOrFocusActiveQuest({
+    required void Function(int initialTab) onOpenShop,
+    required VoidCallback onOpenMarket,
+  }) {
+    notifyUserGestureForAudio();
+    final quest = _state.activeQuest;
+    if (quest == null) return;
+    if (_state.activeQuestProgress.isReadyToClaim) {
+      claimActiveQuestReward();
+      return;
+    }
+
+    switch (quest.id) {
+      case QuestId.buyGloves:
+        onOpenShop(0);
+      case QuestId.unlockStrawberry:
+        onOpenShop(1);
+      case QuestId.buildCoopOrExpand:
+        onOpenShop(2);
+      case QuestId.firstSale:
+      case QuestId.fulfillVillageOrder:
+        if (_state.farmer.carriedCrates.isNotEmpty) {
+          _inspectedTile = FarmSimulationEngine.marketStallPos;
+          onRequestFocusTile?.call(FarmSimulationEngine.marketStallPos);
+          final result = _engine.enqueueTileTap(
+            _state,
+            FarmSimulationEngine.marketStallPos,
+          );
+          _applyStep(result, haptic: true);
+        } else {
+          onOpenMarket();
+        }
+      case QuestId.enrichCompost:
+        selectTool(ToolMode.compost);
+        final soilPos = _findFirstMatchingTile(
+          (t) => t.ground == GroundType.soil && !t.fertilized,
+        );
+        if (soilPos != null) {
+          _inspectedTile = soilPos;
+          onRequestFocusTile?.call(soilPos);
+        }
+        notifyListeners();
+      case QuestId.buildSprinkler:
+        selectBuildItem(BuildItemType.sprinklerRotary);
+        final openPos = _findFirstMatchingTile(
+          (t) =>
+              t.structure == StructureType.none &&
+              t.crop == null &&
+              t.ground == GroundType.grass,
+        );
+        if (openPos != null) {
+          _inspectedTile = openPos;
+          onRequestFocusTile?.call(openPos);
+        }
+        notifyListeners();
+      case QuestId.firstHarvest:
+        selectTool(ToolMode.smart);
+        final ripePos =
+            _findFirstMatchingTile((t) => t.crop != null && t.crop!.isRipe) ??
+            const GridPos(4, 3);
+        _inspectedTile = ripePos;
+        onRequestFocusTile?.call(ripePos);
+        notifyListeners();
+      case QuestId.smartComboPlant:
+        selectTool(ToolMode.smart);
+        final emptyPos =
+            _findFirstMatchingTile(
+              (t) =>
+                  t.structure == StructureType.none &&
+                  t.landmark == LandmarkKind.none &&
+                  t.crop == null &&
+                  (t.ground == GroundType.soil || t.ground == GroundType.grass),
+            ) ??
+            const GridPos(6, 3);
+        _inspectedTile = emptyPos;
+        onRequestFocusTile?.call(emptyPos);
+        notifyListeners();
+      case QuestId.clearWeeds:
+        selectTool(ToolMode.smart);
+        final weedPos = _findFirstMatchingTile(
+          (t) => t.ground == GroundType.weeds,
+        );
+        if (weedPos != null) {
+          _inspectedTile = weedPos;
+          onRequestFocusTile?.call(weedPos);
+        }
+        notifyListeners();
+    }
+  }
+
+  GridPos? _findFirstMatchingTile(bool Function(TileState tile) predicate) {
+    for (var y = 1; y < _state.gridSize; y++) {
+      for (var x = 0; x < _state.gridSize; x++) {
+        final pos = GridPos(x, y);
+        if (predicate(_state.tileAt(pos))) return pos;
+      }
+    }
+    return null;
+  }
+
   void queueAllReadyHarvests() =>
       _applyStep(_engine.queueAllReadyHarvests(_state), haptic: true);
 
   void queueAllThirstyPlots() =>
       _applyStep(_engine.queueAllThirstyPlots(_state), haptic: true);
 
-  void selectTool(ToolMode tool) =>
-      _applyState(_engine.selectTool(_state, tool), haptic: true);
+  void selectTool(ToolMode tool) {
+    _inspectedTile = null;
+    _applyState(_engine.selectTool(_state, tool), haptic: true);
+  }
 
   void selectSeed(ProductId seed) {
     final hasTrial = (_state.trialSeeds[seed] ?? 0) > 0;

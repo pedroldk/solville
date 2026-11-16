@@ -212,7 +212,9 @@ void main() {
         await tester.pumpWidget(SolvilleApp(controller: controller));
         await tester.pump(const Duration(milliseconds: 50));
 
-        // Sun Pass pill is visible in TopStatusBar
+        // Expand secondary '⋯' menu and open Sun Pass Modal
+        await tester.tap(find.byIcon(Icons.more_horiz_rounded));
+        await tester.pump();
         expect(find.text('Sun Pass'), findsOneWidget);
         await tester.tap(find.text('Sun Pass'));
         await tester.pump();
@@ -275,6 +277,8 @@ void main() {
         await tester.pumpWidget(SolvilleApp(controller: controller));
         await tester.pump(const Duration(milliseconds: 50));
 
+        await tester.tap(find.byIcon(Icons.more_horiz_rounded));
+        await tester.pump();
         await tester.tap(find.text('Sun Pass'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 250));

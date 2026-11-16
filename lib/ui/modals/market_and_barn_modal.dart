@@ -367,6 +367,17 @@ class MarketAndBarnModal extends StatelessWidget {
                 ],
               ),
               Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 2),
+                child: Text(
+                  l10n.marketStallFlowHint,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: SolvilleTheme.timberDark.withValues(alpha: 0.78),
+                  ),
+                ),
+              ),
+              Padding(
                 padding: const EdgeInsets.only(top: 6, bottom: 10),
                 child: Wrap(
                   spacing: 6,

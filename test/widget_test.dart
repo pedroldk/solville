@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:solville/data/repositories/save_game_repository.dart';
 import 'package:solville/data/services/cozy_sound_service.dart';
 import 'package:solville/domain/models/catalog.dart';
+import 'package:solville/domain/models/grid_pos.dart';
 import 'package:solville/domain/simulation/farm_simulation_engine.dart';
 import 'package:solville/game/solville_game.dart';
 import 'package:solville/main.dart';
@@ -35,18 +36,29 @@ void main() {
       await tester.pumpWidget(SolvilleApp(controller: controller));
       await tester.pump(const Duration(milliseconds: 50));
 
-      // Verify core HUD elements, no text inspector banner, Untill tool, and Sunlit Lullaby chip
+      // Verify Zen HUD initial state, collapsed secondary controls, and openable trays
       expect(find.text('90'), findsOneWidget);
       expect(find.text('Shop'), findsOneWidget);
-      expect(find.text('Lullaby'), findsOneWidget);
       expect(find.text('Smart'), findsOneWidget);
-      expect(find.text('Untill (Clear)'), findsOneWidget);
+      expect(find.text('Lullaby'), findsNothing);
+      expect(find.text('0/12'), findsNothing);
       expect(find.textContaining('Simmering'), findsNothing);
 
-      // Select Build tool (6) and verify Expand Isle action chip is visible
+      // Tap Dig (Manual Tools) to reveal the Untill (Clear) tool chip
+      await tester.tap(find.text('Dig'));
+      await tester.pump();
+      expect(find.text('🌿 Untill (Clear)'), findsOneWidget);
+
+      // Select Build tool and verify Expand Isle action chip is visible
       await tester.tap(find.text('Build'));
       await tester.pump();
       expect(find.textContaining('Expand Isle 11×11→14×14'), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.pump();
+
+      // Expand '⋯' menu to access Cozy Soundscape, Trophies, Sun Pass & Help
+      await tester.tap(find.byIcon(Icons.more_horiz_rounded));
+      await tester.pump();
 
       // Open Cozy Soundscape & Homestead Modal and switch to Cozy Rain
       await tester.tap(find.text('Lullaby'));
@@ -127,7 +139,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
 
-      // Open Help Modal and verify visual 4-step loop cards
+      // Expand secondary '⋯' menu and open Help Modal
+      await tester.tap(find.byIcon(Icons.more_horiz_rounded));
+      await tester.pump();
       await tester.tap(find.byIcon(Icons.help_outline_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
@@ -227,21 +241,123 @@ void main() {
       await tester.pumpWidget(SolvilleApp(controller: controller));
       await tester.pump(const Duration(milliseconds: 50));
 
-      // Verify compact mobile labels in Day Info and Market/Shop/Pass cards
+      // Verify Zen mobile labels in top clusters and collapsed Quest/Pass/Trophies
       expect(find.textContaining('D1 '), findsOneWidget);
       expect(find.text('🌅 Next'), findsOneWidget);
       expect(find.text('Shop'), findsOneWidget);
-      expect(find.text('Pass'), findsOneWidget);
-
-      // Secondary controls (Trophies 0/12) are collapsed behind the '⋯' button initially
-      expect(find.text('0/12'), findsNothing);
+      expect(find.text('1/10'), findsOneWidget);
       expect(find.byIcon(Icons.more_horiz_rounded), findsOneWidget);
+      expect(find.text('Pass'), findsNothing);
+      expect(find.text('0/12'), findsNothing);
+      expect(find.text('1/10: First Harvest'), findsNothing);
+
+      // Expand and collapse the Quest Journal pin from the top bar
+      await tester.tap(find.text('1/10'));
+      await tester.pump();
+      expect(find.text('1/10: First Harvest'), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.expand_less_rounded));
+      await tester.pump();
+      expect(find.text('1/10: First Harvest'), findsNothing);
+
+      // Omits +/- zoom buttons and hides Seeds strip until Seeds tool is tapped
+      expect(find.byIcon(Icons.add_rounded), findsNothing);
+      expect(find.byIcon(Icons.remove_rounded), findsNothing);
+      expect(find.textContaining('Tomato 6☀️'), findsNothing);
+
+      await tester.tap(find.text('Seeds'));
+      await tester.pump();
+      expect(find.textContaining('Tomato 6☀️'), findsOneWidget);
+
+      // Selecting a seed auto-closes the mobile tray
+      await tester.tap(find.textContaining('Carrot 4☀️'));
+      await tester.pump();
+      expect(controller.state.selectedSeed, equals(ProductId.carrot));
+      expect(find.textContaining('Tomato 6☀️'), findsNothing);
+
+      // Tapping Dig opens the manual tools tray with Water & Compost
+      await tester.tap(find.text('Dig'));
+      await tester.pump();
+      expect(find.text('🪣 Water'), findsOneWidget);
+      expect(find.textContaining('Compost'), findsOneWidget);
 
       // Expand secondary controls via '⋯' button
       await tester.tap(find.byIcon(Icons.more_horiz_rounded));
       await tester.pump();
       expect(find.text('0/12'), findsOneWidget);
+      expect(find.text('Pass'), findsOneWidget);
       expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      controller.dispose();
+    },
+  );
+
+  testWidgets(
+    'Displays Mayor Sunny Quest Banner, Daily Request chip, and Live Tile Inspector Pill',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1280, 720);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final controller = SolvilleController(
+        soundService: CozySoundService(silentPlatformOutput: true),
+      );
+      await controller.initialize();
+
+      await tester.pumpWidget(SolvilleApp(controller: controller));
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // 1. Zen initial state shows top-bar quest step '1/10' with full banner hidden until tapped
+      expect(find.text('1/10'), findsOneWidget);
+      expect(find.text('Goal 1/10: First Harvest'), findsNothing);
+      expect(find.text('Sweep'), findsOneWidget);
+
+      await tester.tap(find.text('1/10'));
+      await tester.pump();
+      expect(find.text('Goal 1/10: First Harvest'), findsOneWidget);
+
+      // 2. Daily Village Request chip opens Market modal
+      final reqFinder = find.textContaining(RegExp(r'^💌 '));
+      expect(reqFinder, findsOneWidget);
+      await tester.tap(reqFinder);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(find.text('Market Forecast & Barn (Day 1)'), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+
+      // 3. Passive hover does not pop up the HUD inspector; tapping/inspecting a tile shows it
+      controller.setHoveredTile(const GridPos(6, 3));
+      await tester.pump();
+      expect(find.text('Tilled Garden Bed'), findsNothing);
+
+      controller.inspectTile(const GridPos(6, 3));
+      await tester.pump();
+      expect(find.text('Tilled Garden Bed'), findsOneWidget);
+      expect(find.textContaining('Tap: Sow'), findsOneWidget);
+
+      controller.handleTileTap(const GridPos(6, 3));
+      controller.setHoveredTile(null);
+      await tester.pump();
+      expect(find.textContaining('Tap: Water Plot'), findsOneWidget);
+
+      // 4. Harvesting ripe tomato makes Quest 1 claimable directly from the banner
+      controller.handleTileTap(const GridPos(4, 3));
+      for (var i = 0; i < 40; i++) {
+        controller.advanceFrame(0.15);
+      }
+      await tester.pump();
+      expect(find.text('✨ Claim +15☀️'), findsOneWidget);
+
+      final coinsBeforeClaim = controller.state.coins;
+      await tester.tap(find.text('✨ Claim +15☀️'));
+      await tester.pump();
+      expect(controller.state.coins, equals(coinsBeforeClaim + 15));
+      expect(find.text('Goal 2/10: Open for Business'), findsOneWidget);
+      expect(find.text('2/10'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();

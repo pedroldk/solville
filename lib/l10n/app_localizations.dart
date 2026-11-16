@@ -1307,7 +1307,7 @@ abstract class AppLocalizations {
   /// No description provided for @inspectorCompostTag.
   ///
   /// In en, this message translates to:
-  /// **' • ✨ +35% Compost'**
+  /// **' • ✨Compost'**
   String get inspectorCompostTag;
 
   /// No description provided for @inspectorCropRipe.
@@ -2535,6 +2535,677 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'🔥 Boom +45%  •  🏚️ Hold Barn  •  🎪 Rush 1.65×'**
   String get helpTipMarket;
+
+  /// No description provided for @questGoalHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal {step}/{total}: {title}'**
+  String questGoalHeader(int step, int total, String title);
+
+  /// No description provided for @questClaimBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'✨ Claim +{coins}☀️'**
+  String questClaimBtn(int coins);
+
+  /// No description provided for @toastQuestRewardClaimed.
+  ///
+  /// In en, this message translates to:
+  /// **'🌻 Goal {step}/{total} complete! +{coins}☀️{seedBonus}'**
+  String toastQuestRewardClaimed(
+    int step,
+    int total,
+    int coins,
+    String seedBonus,
+  );
+
+  /// No description provided for @quest1Title.
+  ///
+  /// In en, this message translates to:
+  /// **'First Harvest'**
+  String get quest1Title;
+
+  /// No description provided for @quest1Hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the ripe Tomato at (4,3) to harvest a crate.'**
+  String get quest1Hint;
+
+  /// No description provided for @quest2Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Open for Business'**
+  String get quest2Title;
+
+  /// No description provided for @quest2Hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the Market Stall (5,1) to display your crate for villagers.'**
+  String get quest2Hint;
+
+  /// No description provided for @quest3Title.
+  ///
+  /// In en, this message translates to:
+  /// **'3-Tap Smart Combo'**
+  String get quest3Title;
+
+  /// No description provided for @quest3Hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap an empty plot 3× in a row to Dig → Plant → Water.'**
+  String get quest3Hint;
+
+  /// No description provided for @quest4Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear the Meadow'**
+  String get quest4Title;
+
+  /// No description provided for @quest4Hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Dig up 3 wildflower weed patches to uncover hidden treasures.'**
+  String get quest4Hint;
+
+  /// No description provided for @quest5Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Double Capacity'**
+  String get quest5Title;
+
+  /// No description provided for @quest5Hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy Crate Stacker Gloves (90☀️) in the Shop to carry 2 crates.'**
+  String get quest5Hint;
+
+  /// No description provided for @quest6Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Sweet Expansion'**
+  String get quest6Title;
+
+  /// No description provided for @quest6Hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock Sweet Strawberry seeds in the Shop and plant a bush.'**
+  String get quest6Hint;
+
+  /// No description provided for @quest7Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Living Soil'**
+  String get quest7Title;
+
+  /// No description provided for @quest7Hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enrich 2 garden beds with Rich Compost (5) for +35% speed & 2× Golden crops.'**
+  String get quest7Hint;
+
+  /// No description provided for @quest8Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Automated Hydration'**
+  String get quest8Title;
+
+  /// No description provided for @quest8Hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Place a Rotary Sprinkler (6) to water a 3×3 garden zone.'**
+  String get quest8Hint;
+
+  /// No description provided for @quest9Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Beloved Neighbor'**
+  String get quest9Title;
+
+  /// No description provided for @quest9Hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Fulfill a Daily Village Request or Express Order at the Market Stall.'**
+  String get quest9Hint;
+
+  /// No description provided for @quest10Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Growing Homestead'**
+  String get quest10Title;
+
+  /// No description provided for @quest10Hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Build a Cozy Henhouse or expand your island with a Meadow Deed.'**
+  String get quest10Hint;
+
+  /// No description provided for @dockSweepLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sweep'**
+  String get dockSweepLabel;
+
+  /// No description provided for @dockSweepTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Sweep Paint Mode (drag across tiles)'**
+  String get dockSweepTooltip;
+
+  /// No description provided for @inspectorRecipeBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'🔄 Recipe'**
+  String get inspectorRecipeBtn;
+
+  /// No description provided for @inspectorClearBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'🌿 Clear'**
+  String get inspectorClearBtn;
+
+  /// No description provided for @inspectorClearTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore tile to grass'**
+  String get inspectorClearTooltip;
+
+  /// No description provided for @marketStallFlowHint.
+  ///
+  /// In en, this message translates to:
+  /// **'🚶 Villagers strolling the top lane buy from your 8 Stall slots every few seconds. Extra crates stay safe in the Barn!'**
+  String get marketStallFlowHint;
+
+  /// No description provided for @spotlightHarvest.
+  ///
+  /// In en, this message translates to:
+  /// **'👇 Harvest 🍅'**
+  String get spotlightHarvest;
+
+  /// No description provided for @spotlightSell.
+  ///
+  /// In en, this message translates to:
+  /// **'👇 Sell at Stall 🏪'**
+  String get spotlightSell;
+
+  /// No description provided for @spotlightPlant.
+  ///
+  /// In en, this message translates to:
+  /// **'👇 Tap 3× Plant 🌱'**
+  String get spotlightPlant;
+
+  /// No description provided for @landmarkHomesteadPill.
+  ///
+  /// In en, this message translates to:
+  /// **'🏡 Homestead'**
+  String get landmarkHomesteadPill;
+
+  /// No description provided for @landmarkRefillPill.
+  ///
+  /// In en, this message translates to:
+  /// **'🪣 Refill'**
+  String get landmarkRefillPill;
+
+  /// No description provided for @landmarkBarnPill.
+  ///
+  /// In en, this message translates to:
+  /// **'🏠 Barn'**
+  String get landmarkBarnPill;
+
+  /// No description provided for @inspectorFarmhouseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunlit Farmhouse'**
+  String get inspectorFarmhouseTitle;
+
+  /// No description provided for @inspectorWellTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Stone Well'**
+  String get inspectorWellTitle;
+
+  /// No description provided for @inspectorBarnTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Storage Barn'**
+  String get inspectorBarnTitle;
+
+  /// No description provided for @inspectorStallTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Market Stall'**
+  String get inspectorStallTitle;
+
+  /// No description provided for @inspectorTreasureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden Treasure Cache'**
+  String get inspectorTreasureTitle;
+
+  /// No description provided for @inspectorShrineTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wildflower Shrine'**
+  String get inspectorShrineTitle;
+
+  /// No description provided for @inspectorOasisTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Oasis Fountain'**
+  String get inspectorOasisTitle;
+
+  /// No description provided for @inspectorSoilTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tilled Garden Bed'**
+  String get inspectorSoilTitle;
+
+  /// No description provided for @inspectorWeedsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wildflower Weeds'**
+  String get inspectorWeedsTitle;
+
+  /// No description provided for @inspectorCobbleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Village Cobble Lane'**
+  String get inspectorCobbleTitle;
+
+  /// No description provided for @inspectorGrassTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunny Meadow Grass'**
+  String get inspectorGrassTitle;
+
+  /// No description provided for @inspectorCrateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{product} Crate'**
+  String inspectorCrateTitle(String product);
+
+  /// No description provided for @inspectorFarmhouseStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Soundscape, Language & Save'**
+  String get inspectorFarmhouseStatus;
+
+  /// No description provided for @inspectorWellStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Water Can: {current}/{max}'**
+  String inspectorWellStatus(int current, int max);
+
+  /// No description provided for @inspectorBarnStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} crate(s) stored safely'**
+  String inspectorBarnStatus(int count);
+
+  /// No description provided for @inspectorStallStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}/{max} stocked • Villagers buy auto'**
+  String inspectorStallStatus(int count, int max);
+
+  /// No description provided for @inspectorSprinkler3Status.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-waters 3×3 garden beds'**
+  String get inspectorSprinkler3Status;
+
+  /// No description provided for @inspectorSprinkler5Status.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-waters 5×5 garden beds'**
+  String get inspectorSprinkler5Status;
+
+  /// No description provided for @inspectorLemonReadyStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} crate(s) ready! • 🌸 +2%'**
+  String inspectorLemonReadyStatus(int count);
+
+  /// No description provided for @inspectorLemonGrowStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'{pct}% (~{secs}s) • 🌸 +2% Charm'**
+  String inspectorLemonGrowStatus(int pct, int secs);
+
+  /// No description provided for @inspectorKettleReadyStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} {emoji} ready!'**
+  String inspectorKettleReadyStatus(int count, String emoji);
+
+  /// No description provided for @inspectorKettleCookingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Cooking {formula} ({pct}%, ~{secs}s)'**
+  String inspectorKettleCookingStatus(String formula, int pct, int secs);
+
+  /// No description provided for @inspectorKettleIdleStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Recipe: {formula} (auto-pulls from Barn)'**
+  String inspectorKettleIdleStatus(String formula);
+
+  /// No description provided for @inspectorReadyCratesStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} crate(s) ready!'**
+  String inspectorReadyCratesStatus(int count);
+
+  /// No description provided for @inspectorAnimalHungryStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Hungry — tap to feed ({cost}☀️)'**
+  String inspectorAnimalHungryStatus(int cost);
+
+  /// No description provided for @inspectorBeeStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'{pct}% • 🌸+{bonus}% speed'**
+  String inspectorBeeStatus(int pct, int bonus);
+
+  /// No description provided for @inspectorAnimalFeedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'{pct}% • Feed {feed}%'**
+  String inspectorAnimalFeedStatus(int pct, int feed);
+
+  /// No description provided for @inspectorLanternStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Dusk glow • +3% Market Charm'**
+  String get inspectorLanternStatus;
+
+  /// No description provided for @inspectorArchStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Walkable • +6% Charm & +18% Bees'**
+  String get inspectorArchStatus;
+
+  /// No description provided for @inspectorTreasureStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Unclaimed reward (+35☀️ + rare seed)'**
+  String get inspectorTreasureStatus;
+
+  /// No description provided for @inspectorShrineStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Enriches 3×3 soil & awards +25☀️'**
+  String get inspectorShrineStatus;
+
+  /// No description provided for @inspectorOasisClaimedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Refills Water Can & hydrates 3×3'**
+  String get inspectorOasisClaimedStatus;
+
+  /// No description provided for @inspectorOasisUnclaimedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim +20☀️ & infinite water source'**
+  String get inspectorOasisUnclaimedStatus;
+
+  /// No description provided for @inspectorRipeStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Ripe! • {count} harvest(s) left'**
+  String inspectorRipeStatus(int count);
+
+  /// No description provided for @inspectorGoldenRipeStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'✨ Golden 2×! Ripe! • {count} harvest(s) left'**
+  String inspectorGoldenRipeStatus(int count);
+
+  /// No description provided for @inspectorCropGrowStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'{pct}% (~{secs}s) • 💧{moisture}%'**
+  String inspectorCropGrowStatus(int pct, int secs, int moisture);
+
+  /// No description provided for @inspectorCrateTag.
+  ///
+  /// In en, this message translates to:
+  /// **' • 📦 Crate'**
+  String get inspectorCrateTag;
+
+  /// No description provided for @inspectorCrateGroundStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to pick up for Stall or Barn'**
+  String get inspectorCrateGroundStatus;
+
+  /// No description provided for @inspectorSoilCompostStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'💧{moisture}% • ✨Compost (+35%)'**
+  String inspectorSoilCompostStatus(int moisture);
+
+  /// No description provided for @inspectorSoilReadyStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'💧{moisture}% • Ready for seeds'**
+  String inspectorSoilReadyStatus(int moisture);
+
+  /// No description provided for @inspectorWeedsStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Dig for +1☀️ & treasure chance'**
+  String get inspectorWeedsStatus;
+
+  /// No description provided for @inspectorPathStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'+40% walking speed'**
+  String get inspectorPathStatus;
+
+  /// No description provided for @inspectorCobbleStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Townsfolk stroll here (+40% speed)'**
+  String get inspectorCobbleStatus;
+
+  /// No description provided for @inspectorGrassStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Open ground for crops or builds'**
+  String get inspectorGrassStatus;
+
+  /// No description provided for @inspectorTapHomestead.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Soundscape & Settings'**
+  String get inspectorTapHomestead;
+
+  /// No description provided for @inspectorTapOpenMarket.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Open Market & Barn 📈'**
+  String get inspectorTapOpenMarket;
+
+  /// No description provided for @inspectorTapSunPass.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Unlock via Sun Pass ☀️'**
+  String get inspectorTapSunPass;
+
+  /// No description provided for @inspectorTapRefill.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Refill Water Can 🪣'**
+  String get inspectorTapRefill;
+
+  /// No description provided for @inspectorTapClaimLandmark.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Claim Discovery! 🗺️'**
+  String get inspectorTapClaimLandmark;
+
+  /// No description provided for @inspectorTapStockStall.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Stock {count} crate(s) on Stall 🪙'**
+  String inspectorTapStockStall(int count);
+
+  /// No description provided for @inspectorTapDeliverStall.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Deliver queued crate(s) to Stall 🪙'**
+  String get inspectorTapDeliverStall;
+
+  /// No description provided for @inspectorTapStoreBarn.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Store {count} crate(s) in Barn'**
+  String inspectorTapStoreBarn(int count);
+
+  /// No description provided for @inspectorTapPickupBarn.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Pick up crates from Barn 📦'**
+  String get inspectorTapPickupBarn;
+
+  /// No description provided for @inspectorTapHarvest.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Harvest {emoji} Crate'**
+  String inspectorTapHarvest(String emoji);
+
+  /// No description provided for @inspectorTapPickupCrate.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Pick up {emoji} Crate'**
+  String inspectorTapPickupCrate(String emoji);
+
+  /// No description provided for @inspectorTapFeedAnimal.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Feed {name} ({cost}☀️)'**
+  String inspectorTapFeedAnimal(String name, int cost);
+
+  /// No description provided for @inspectorTapLoadKettle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Load Kettle Ingredients 🫙'**
+  String get inspectorTapLoadKettle;
+
+  /// No description provided for @inspectorTapCombo3.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap 3×: Dig → Sow {emoji} → Water'**
+  String inspectorTapCombo3(String emoji);
+
+  /// No description provided for @inspectorTapClearWeeds.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Clear Weeds (+1☀️ & treasure)'**
+  String get inspectorTapClearWeeds;
+
+  /// No description provided for @inspectorTapDig.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Dig Soil Bed ⛏️'**
+  String get inspectorTapDig;
+
+  /// No description provided for @inspectorTapSow.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Sow {emoji} ({cost})'**
+  String inspectorTapSow(String emoji, String cost);
+
+  /// No description provided for @inspectorTapSowSmart.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Sow {emoji} ({cost}) — tap again to Water'**
+  String inspectorTapSowSmart(String emoji, String cost);
+
+  /// No description provided for @inspectorFreeGiftCost.
+  ///
+  /// In en, this message translates to:
+  /// **'Free Gift 🎁'**
+  String get inspectorFreeGiftCost;
+
+  /// No description provided for @inspectorTapWater.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Water Plot 💧'**
+  String get inspectorTapWater;
+
+  /// No description provided for @inspectorTapCompost.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Rich Compost ({cost}☀️, +35% speed)'**
+  String inspectorTapCompost(int cost);
+
+  /// No description provided for @inspectorTapBuild.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Build {name} ({cost}☀️)'**
+  String inspectorTapBuild(String name, int cost);
+
+  /// No description provided for @inspectorTapUntill.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Clear / Untill to Grass 🌿'**
+  String get inspectorTapUntill;
+
+  /// No description provided for @inspectorTapSwitchRecipe.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap: Switch Recipe 🔄'**
+  String get inspectorTapSwitchRecipe;
+
+  /// No description provided for @inspectorGrowingWait.
+  ///
+  /// In en, this message translates to:
+  /// **'Growing — check back soon 🌱'**
+  String get inspectorGrowingWait;
+
+  /// No description provided for @inspectorLaneWait.
+  ///
+  /// In en, this message translates to:
+  /// **'Village lane (villagers stroll here)'**
+  String get inspectorLaneWait;
+
+  /// No description provided for @inspectorClearToBuild.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear tile first to build here'**
+  String get inspectorClearToBuild;
+
+  /// No description provided for @inspectorDigHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to Smart (1) or Seeds (3)'**
+  String get inspectorDigHint;
+
+  /// No description provided for @inspectorWaterHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Only tilled soil needs watering'**
+  String get inspectorWaterHint;
+
+  /// No description provided for @inspectorCompostHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select uncomposted tilled soil'**
+  String get inspectorCompostHint;
+
+  /// No description provided for @inspectorAlreadyGrass.
+  ///
+  /// In en, this message translates to:
+  /// **'Already lush meadow grass'**
+  String get inspectorAlreadyGrass;
+
+  /// No description provided for @inspectorTapInteract.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to interact'**
+  String get inspectorTapInteract;
 }
 
 class _AppLocalizationsDelegate

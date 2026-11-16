@@ -58,6 +58,7 @@ enum SolvilleToastKind {
   landmarkDiscovered,
   goldenHarvest,
   villageRushStarted,
+  questRewardClaimed,
 }
 
 /// Structured toast payload carrying parameters for localized formatting.
@@ -72,6 +73,7 @@ class SolvilleToast {
     this.x,
     this.y,
     this.tier,
+    this.questIndex,
     this.product,
     this.animal,
     this.buildItem,
@@ -81,6 +83,7 @@ class SolvilleToast {
     this.trophyId,
     this.villagerName,
     this.duration,
+    this.forecastSummary,
   });
 
   final SolvilleToastKind kind;
@@ -92,6 +95,7 @@ class SolvilleToast {
   final int? x;
   final int? y;
   final int? tier;
+  final int? questIndex;
   final ProductId? product;
   final AnimalType? animal;
   final BuildItemType? buildItem;
@@ -101,4 +105,5 @@ class SolvilleToast {
   final String? trophyId;
   final String? villagerName;
   final Duration? duration;
+  final String? forecastSummary;
 }

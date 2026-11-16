@@ -8,6 +8,7 @@ import '../../domain/iso/iso_projection.dart';
 import '../../domain/models/catalog.dart';
 import '../../domain/models/game_state.dart';
 import '../../domain/models/grid_pos.dart';
+import '../../domain/models/solville_toast.dart';
 import '../../domain/models/tile_state.dart';
 import '../../domain/simulation/farm_simulation_engine.dart';
 import '../../ui/view_models/solville_controller.dart';
@@ -111,8 +112,15 @@ class IsometricDioramaWorldComponent extends Component
         }
       }
       if (closest != null) {
-        closest.heartTimer = 1.6;
-        closest.pauseTimer = math.max(closest.pauseTimer, 1.0);
+        closest.heartTimer = 2.0;
+        closest.pauseTimer = math.max(closest.pauseTimer, 1.1);
+        if (event.toast?.kind == SolvilleToastKind.soldCrate &&
+            event.toast?.product != null) {
+          closest.purchaseBubbleText =
+              '💛 ${SolvilleCatalog.productEmoji(event.toast!.product!)} +${event.amount}☀️';
+        } else {
+          closest.purchaseBubbleText = null;
+        }
       }
     }
   }
@@ -133,6 +141,9 @@ class IsometricDioramaWorldComponent extends Component
       final v = _villagers[i];
       if (v.heartTimer > 0) {
         v.heartTimer = math.max(0.0, v.heartTimer - dt);
+        if (v.heartTimer == 0.0) {
+          v.purchaseBubbleText = null;
+        }
       }
       if (v.pauseTimer > 0) {
         v.pauseTimer -= dt;
@@ -325,6 +336,9 @@ class IsometricDioramaWorldComponent extends Component
               animTime: _animTime,
               isSunPassActive: sunPassActive,
               showDetailedMeters: showMeters,
+              homesteadLabel: controller.landmarkHomesteadLabel,
+              refillLabel: controller.landmarkRefillLabel,
+              barnLabel: controller.landmarkBarnLabel,
             );
           }
         }
@@ -417,12 +431,17 @@ class IsometricDioramaWorldComponent extends Component
           }
         }
       }
-      _fxPainter.drawOnboardingSpotlight(canvas, target, '👇 🍅', _animTime);
+      _fxPainter.drawOnboardingSpotlight(
+        canvas,
+        target,
+        controller.spotlightHarvestLabel,
+        _animTime,
+      );
     } else if (state.onboardingStep == 1) {
       _fxPainter.drawOnboardingSpotlight(
         canvas,
         FarmSimulationEngine.marketStallPos,
-        '👇 🏪',
+        controller.spotlightSellLabel,
         _animTime,
       );
     } else if (state.onboardingStep == 2) {
@@ -440,7 +459,12 @@ class IsometricDioramaWorldComponent extends Component
           }
         }
       }
-      _fxPainter.drawOnboardingSpotlight(canvas, target, '×3 🌱💧', _animTime);
+      _fxPainter.drawOnboardingSpotlight(
+        canvas,
+        target,
+        controller.spotlightPlantLabel,
+        _animTime,
+      );
     }
   }
 

@@ -272,6 +272,40 @@ class TrophyDef {
   final int rewardCoins;
 }
 
+/// Guided milestone quests ("Mayor Sunny's Homestead Journal") teaching core loops.
+enum QuestId {
+  firstHarvest,
+  firstSale,
+  smartComboPlant,
+  clearWeeds,
+  buyGloves,
+  unlockStrawberry,
+  enrichCompost,
+  buildSprinkler,
+  fulfillVillageOrder,
+  buildCoopOrExpand,
+}
+
+class HomesteadQuestDef {
+  const HomesteadQuestDef({
+    required this.id,
+    required this.stepNumber,
+    required this.emoji,
+    required this.title,
+    required this.hint,
+    required this.rewardCoins,
+    this.rewardTrialSeed,
+  });
+
+  final QuestId id;
+  final int stepNumber;
+  final String emoji;
+  final String title;
+  final String hint;
+  final int rewardCoins;
+  final ProductId? rewardTrialSeed;
+}
+
 /// Central catalog of balanced game definitions for Solville.
 abstract final class SolvilleCatalog {
   static const int starterGridSize = 11;
@@ -766,6 +800,92 @@ abstract final class SolvilleCatalog {
       emoji: '🏆',
       description: 'Earn 2,000 lifetime Sols and expand your farm.',
       rewardCoins: 150,
+    ),
+  ];
+
+  static const List<HomesteadQuestDef> quests = <HomesteadQuestDef>[
+    HomesteadQuestDef(
+      id: QuestId.firstHarvest,
+      stepNumber: 1,
+      emoji: '🍅',
+      title: 'First Harvest',
+      hint: 'Tap the ripe Tomato at (4,3) to harvest a crate.',
+      rewardCoins: 15,
+    ),
+    HomesteadQuestDef(
+      id: QuestId.firstSale,
+      stepNumber: 2,
+      emoji: '🏪',
+      title: 'Open for Business',
+      hint: 'Tap the Market Stall (5,1) to display your crate for villagers.',
+      rewardCoins: 20,
+    ),
+    HomesteadQuestDef(
+      id: QuestId.smartComboPlant,
+      stepNumber: 3,
+      emoji: '🌱',
+      title: '3-Tap Smart Combo',
+      hint: 'Tap an empty plot 3× in a row to Dig → Plant → Water.',
+      rewardCoins: 25,
+    ),
+    HomesteadQuestDef(
+      id: QuestId.clearWeeds,
+      stepNumber: 4,
+      emoji: '🌿',
+      title: 'Clear the Meadow',
+      hint: 'Dig up 3 wildflower weed patches to uncover hidden treasures.',
+      rewardCoins: 25,
+    ),
+    HomesteadQuestDef(
+      id: QuestId.buyGloves,
+      stepNumber: 5,
+      emoji: '📦',
+      title: 'Double Capacity',
+      hint: 'Buy Crate Stacker Gloves (90☀️) in the Shop to carry 2 crates.',
+      rewardCoins: 30,
+    ),
+    HomesteadQuestDef(
+      id: QuestId.unlockStrawberry,
+      stepNumber: 6,
+      emoji: '🍓',
+      title: 'Sweet Expansion',
+      hint: 'Unlock Sweet Strawberry seeds in the Shop and plant a bush.',
+      rewardCoins: 35,
+    ),
+    HomesteadQuestDef(
+      id: QuestId.enrichCompost,
+      stepNumber: 7,
+      emoji: '✨',
+      title: 'Living Soil',
+      hint:
+          'Enrich 2 garden beds with Rich Compost (5) for +35% speed & 2× Golden crops.',
+      rewardCoins: 35,
+    ),
+    HomesteadQuestDef(
+      id: QuestId.buildSprinkler,
+      stepNumber: 8,
+      emoji: '💦',
+      title: 'Automated Hydration',
+      hint: 'Place a Rotary Sprinkler (6) to water a 3×3 garden zone.',
+      rewardCoins: 45,
+    ),
+    HomesteadQuestDef(
+      id: QuestId.fulfillVillageOrder,
+      stepNumber: 9,
+      emoji: '💌',
+      title: 'Beloved Neighbor',
+      hint:
+          'Fulfill a Daily Village Request or Express Order at the Market Stall.',
+      rewardCoins: 50,
+      rewardTrialSeed: ProductId.corn,
+    ),
+    HomesteadQuestDef(
+      id: QuestId.buildCoopOrExpand,
+      stepNumber: 10,
+      emoji: '🐔',
+      title: 'Growing Homestead',
+      hint: 'Build a Cozy Henhouse or expand your island with a Meadow Deed.',
+      rewardCoins: 75,
     ),
   ];
 

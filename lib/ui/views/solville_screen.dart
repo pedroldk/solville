@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -37,6 +38,7 @@ class SolvilleScreen extends StatefulWidget {
 class _SolvilleScreenState extends State<SolvilleScreen>
     with WidgetsBindingObserver {
   late final SolvilleGame _game;
+  bool _questPinCollapsed = true;
 
   @override
   void initState() {
@@ -88,11 +90,16 @@ class _SolvilleScreenState extends State<SolvilleScreen>
     }
   }
 
-  void _openShop() {
+  void _openShop() => _openShopTab(0);
+
+  void _openShopTab(int initialTab) {
     widget.controller.notifyUserGestureForAudio();
     showDialog<void>(
       context: context,
-      builder: (_) => ShopModal(controller: widget.controller),
+      builder: (_) => ShopModal(
+        controller: widget.controller,
+        initialTab: initialTab,
+      ),
     );
   }
 
@@ -159,16 +166,288 @@ class _SolvilleScreenState extends State<SolvilleScreen>
                   listenable: widget.controller,
                   builder: (context, _) {
                     final l10n = AppLocalizations.of(context);
+                    widget.controller.syncLocalizedWorldLabels(
+                      spotlightHarvest: l10n.spotlightHarvest,
+                      spotlightSell: l10n.spotlightSell,
+                      spotlightPlant: l10n.spotlightPlant,
+                      landmarkHomestead: l10n.landmarkHomesteadPill,
+                      landmarkRefill: l10n.landmarkRefillPill,
+                      landmarkBarn: l10n.landmarkBarnPill,
+                    );
                     final toastData = widget.controller.toast;
                     final toast = toastData != null
                         ? l10n.resolveToast(toastData)
                         : widget.controller.toastMessage;
                     final state = widget.controller.state;
                     final express = state.market.expressOrder;
+                    final dailyReq = state.market.dailyRequest;
+                    final showDailyReq =
+                        dailyReq != null && !dailyReq.isCompleted;
+                    final activeQuest = state.activeQuest;
+                    final questProg = state.activeQuestProgress;
+                    final isCompactScreen =
+                        MediaQuery.sizeOf(context).shortestSide < 600 ||
+                        MediaQuery.sizeOf(context).width < 860;
                     final showEventBadges =
                         express != null ||
+                        showDailyReq ||
                         state.market.isRushActive ||
                         state.comboStreak >= 2;
+
+                    final viewportW =
+                        MediaQuery.sizeOf(context).width -
+                        MediaQuery.paddingOf(context).horizontal;
+                    final compactQuestMaxWidth = math.max(
+                      200.0,
+                      math.min(420.0, viewportW - 24),
+                    );
+
+                    Widget buildQuestPill({required bool compact}) {
+                      if (activeQuest == null) return const SizedBox.shrink();
+                      final radius = compact ? 12.0 : 16.0;
+                      return ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: compact
+                              ? compactQuestMaxWidth
+                              : double.infinity,
+                        ),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          decoration: SolvilleTheme.panelDecoration(
+                            color: questProg.isReadyToClaim
+                                ? const Color(0xF5FFE082)
+                                : const Color(0xEEFFFDF6),
+                            borderColor: questProg.isReadyToClaim
+                                ? const Color(0xFFE65100)
+                                : SolvilleTheme.timberBorder,
+                            radius: radius,
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(radius),
+                            clipBehavior: Clip.antiAlias,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Flexible(
+                                  child: InkWell(
+                                    onTap: () => widget.controller
+                                        .claimOrFocusActiveQuest(
+                                          onOpenShop: _openShopTab,
+                                          onOpenMarket: _openMarket,
+                                        ),
+                                    child: Padding(
+                                      padding: compact
+                                          ? const EdgeInsets.fromLTRB(
+                                              8,
+                                              3,
+                                              4,
+                                              3,
+                                            )
+                                          : const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 6,
+                                            ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: <Widget>[
+                                          Text(
+                                            activeQuest.emoji,
+                                            style: TextStyle(
+                                              fontSize: compact ? 13 : 18,
+                                            ),
+                                          ),
+                                          SizedBox(width: compact ? 5 : 7),
+                                          Flexible(
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: <Widget>[
+                                                Text(
+                                                  compact
+                                                      ? '${activeQuest.stepNumber}/${SolvilleCatalog.quests.length}: ${l10n.questTitle(activeQuest.id)}'
+                                                      : l10n.questGoalHeader(
+                                                          activeQuest.stepNumber,
+                                                          SolvilleCatalog
+                                                              .quests
+                                                              .length,
+                                                          l10n.questTitle(
+                                                            activeQuest.id,
+                                                          ),
+                                                        ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    color: SolvilleTheme
+                                                        .timberDark,
+                                                    fontWeight: FontWeight.w900,
+                                                    fontSize: compact
+                                                        ? 11
+                                                        : 12.5,
+                                                  ),
+                                                ),
+                                                if (!compact)
+                                                  Text(
+                                                    l10n.questHint(
+                                                      activeQuest.id,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                      color: SolvilleTheme
+                                                          .timberDark
+                                                          .withValues(
+                                                            alpha: 0.78,
+                                                          ),
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontSize: 11,
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                          SizedBox(width: compact ? 6 : 8),
+                                          Container(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: compact ? 6 : 8,
+                                              vertical: compact ? 2 : 3,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: questProg.isReadyToClaim
+                                                  ? const Color(0xFFE65100)
+                                                  : const Color(0x22795548),
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                            child: Text(
+                                              questProg.isReadyToClaim
+                                                  ? l10n.questClaimBtn(
+                                                      activeQuest.rewardCoins,
+                                                    )
+                                                  : '${questProg.current}/${questProg.required} • +${activeQuest.rewardCoins}☀️',
+                                              style: TextStyle(
+                                                color: questProg.isReadyToClaim
+                                                    ? Colors.white
+                                                    : SolvilleTheme.timberDark,
+                                                fontWeight: FontWeight.w900,
+                                                fontSize: compact ? 10 : 11.5,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                if (compact)
+                                  InkWell(
+                                    onTap: () => setState(() {
+                                      _questPinCollapsed = true;
+                                    }),
+                                    child: const Padding(
+                                      padding: EdgeInsets.fromLTRB(4, 5, 7, 5),
+                                      child: Icon(
+                                        Icons.expand_less_rounded,
+                                        size: 16,
+                                        color: SolvilleTheme.timberDark,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    final compactBadgePad = isCompactScreen
+                        ? const EdgeInsets.symmetric(horizontal: 8, vertical: 3)
+                        : const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          );
+                    final badgeRadius = isCompactScreen ? 12.0 : 14.0;
+                    final badgeFontSize = isCompactScreen ? 11.0 : 11.5;
+
+                    final eventBadgeWidgets = <Widget>[
+                      if (showDailyReq)
+                        InkWell(
+                          borderRadius: BorderRadius.circular(badgeRadius),
+                          onTap: _openMarket,
+                          child: Container(
+                            padding: compactBadgePad,
+                            decoration: SolvilleTheme.panelDecoration(
+                              color: const Color(0xF2FFF8E1),
+                              radius: badgeRadius,
+                            ),
+                            child: Text(
+                              '💌 ${SolvilleCatalog.productEmoji(dailyReq.product)} ${dailyReq.deliveredCount}/${dailyReq.requiredCount} +${dailyReq.bonusReward}☀️',
+                              style: TextStyle(
+                                color: SolvilleTheme.timberDark,
+                                fontWeight: FontWeight.w800,
+                                fontSize: badgeFontSize,
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (express != null)
+                        InkWell(
+                          borderRadius: BorderRadius.circular(badgeRadius),
+                          onTap: _openMarket,
+                          child: Container(
+                            padding: compactBadgePad,
+                            decoration: SolvilleTheme.panelDecoration(
+                              color: const Color(0xF2FFF3E0),
+                              radius: badgeRadius,
+                            ),
+                            child: Text(
+                              '⚡ ${SolvilleCatalog.productEmoji(express.product)} ${express.deliveredCount}/${express.requiredCount} +${express.bonusCoins}☀️ • ${express.remainingSeconds.ceil()}s',
+                              style: TextStyle(
+                                color: SolvilleTheme.timberDark,
+                                fontWeight: FontWeight.w800,
+                                fontSize: badgeFontSize,
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (state.market.isRushActive)
+                        Container(
+                          padding: compactBadgePad,
+                          decoration: SolvilleTheme.panelDecoration(
+                            color: const Color(0xF2FFE082),
+                            radius: badgeRadius,
+                          ),
+                          child: Text(
+                            '${l10n.hudRushBadge} ${state.market.rushSecondsRemaining.ceil()}s',
+                            style: TextStyle(
+                              color: SolvilleTheme.timberDark,
+                              fontWeight: FontWeight.w900,
+                              fontSize: badgeFontSize,
+                            ),
+                          ),
+                        ),
+                      if (state.comboStreak >= 2)
+                        Container(
+                          padding: compactBadgePad,
+                          decoration: SolvilleTheme.panelDecoration(
+                            color: const Color(0xF2E8F5E9),
+                            radius: badgeRadius,
+                          ),
+                          child: Text(
+                            '✨ ${state.comboStreak}×',
+                            style: TextStyle(
+                              color: const Color(0xFF2E7D32),
+                              fontWeight: FontWeight.w900,
+                              fontSize: badgeFontSize,
+                            ),
+                          ),
+                        ),
+                    ];
+
                     return Column(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: <Widget>[
@@ -186,96 +465,73 @@ class _SolvilleScreenState extends State<SolvilleScreen>
                                   onOpenAudio: _openAudioAndHomestead,
                                   onOpenHelp: _openHelp,
                                   onOpenSunPass: _openSunPass,
+                                  isJournalExpanded: !_questPinCollapsed,
+                                  onToggleJournal: () => setState(() {
+                                    _questPinCollapsed = !_questPinCollapsed;
+                                  }),
                                 ),
-                                if (showEventBadges)
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                      top: 4,
-                                      left: 12,
-                                      right: 12,
-                                    ),
-                                    child: Wrap(
-                                      spacing: 6,
-                                      runSpacing: 4,
-                                      alignment: WrapAlignment.center,
-                                      children: <Widget>[
-                                        if (express != null)
-                                          InkWell(
-                                            borderRadius: BorderRadius.circular(
-                                              14,
-                                            ),
-                                            onTap: _openMarket,
-                                            child: Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 10,
-                                                    vertical: 4,
-                                                  ),
-                                              decoration:
-                                                  SolvilleTheme.panelDecoration(
-                                                    color: const Color(
-                                                      0xF2FFF3E0,
-                                                    ),
-                                                    radius: 14,
-                                                  ),
-                                              child: Text(
-                                                '⚡ ${SolvilleCatalog.productEmoji(express.product)} ${express.deliveredCount}/${express.requiredCount} +${express.bonusCoins}☀️ • ${express.remainingSeconds.ceil()}s',
-                                                style: const TextStyle(
-                                                  color:
-                                                      SolvilleTheme.timberDark,
-                                                  fontWeight: FontWeight.w800,
-                                                  fontSize: 11.5,
+                                if (!_questPinCollapsed &&
+                                    (activeQuest != null || showEventBadges))
+                                  if (isCompactScreen)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        top: 2,
+                                        left: 8,
+                                        right: 8,
+                                      ),
+                                      child: Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: SingleChildScrollView(
+                                          scrollDirection: Axis.horizontal,
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: <Widget>[
+                                              if (activeQuest != null)
+                                                buildQuestPill(compact: true),
+                                              for (final badge
+                                                  in eventBadgeWidgets)
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                        left: 5,
+                                                      ),
+                                                  child: badge,
                                                 ),
-                                              ),
-                                            ),
+                                            ],
                                           ),
-                                        if (state.market.isRushActive)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 10,
-                                              vertical: 4,
-                                            ),
-                                            decoration:
-                                                SolvilleTheme.panelDecoration(
-                                                  color: const Color(
-                                                    0xF2FFE082,
-                                                  ),
-                                                  radius: 14,
-                                                ),
-                                            child: Text(
-                                              '${l10n.hudRushBadge} ${state.market.rushSecondsRemaining.ceil()}s',
-                                              style: const TextStyle(
-                                                color: SolvilleTheme.timberDark,
-                                                fontWeight: FontWeight.w900,
-                                                fontSize: 11.5,
-                                              ),
-                                            ),
+                                        ),
+                                      ),
+                                    )
+                                  else ...<Widget>[
+                                    if (activeQuest != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 4,
+                                          left: 10,
+                                          right: 10,
+                                        ),
+                                        child: ConstrainedBox(
+                                          constraints: const BoxConstraints(
+                                            maxWidth: 680,
                                           ),
-                                        if (state.comboStreak >= 2)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 9,
-                                              vertical: 4,
-                                            ),
-                                            decoration:
-                                                SolvilleTheme.panelDecoration(
-                                                  color: const Color(
-                                                    0xF2E8F5E9,
-                                                  ),
-                                                  radius: 14,
-                                                ),
-                                            child: Text(
-                                              '✨ ${state.comboStreak}×',
-                                              style: const TextStyle(
-                                                color: Color(0xFF2E7D32),
-                                                fontWeight: FontWeight.w900,
-                                                fontSize: 11.5,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
+                                          child: buildQuestPill(compact: false),
+                                        ),
+                                      ),
+                                    if (showEventBadges)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 4,
+                                          left: 12,
+                                          right: 12,
+                                        ),
+                                        child: Wrap(
+                                          spacing: 6,
+                                          runSpacing: 4,
+                                          alignment: WrapAlignment.center,
+                                          children: eventBadgeWidgets,
+                                        ),
+                                      ),
+                                  ],
                                 if (toast != null)
                                   Padding(
                                     padding: const EdgeInsets.only(

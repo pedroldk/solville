@@ -484,6 +484,115 @@ void main() {
         expect(state.coins, equals(coinsBefore + 35));
       },
     );
+
+    test(
+      'describeTileAt summarizes crops, grass 3-tap combos, and landmarks',
+      () {
+        final ripeInfo = engine.describeTileAt(state, const GridPos(4, 3));
+        expect(ripeInfo.emoji, equals('🍅'));
+        expect(ripeInfo.title, equals('Sunripe Tomato'));
+        expect(ripeInfo.statusSummary, contains('Ripe!'));
+        expect(ripeInfo.nextTapHint, contains('Harvest'));
+
+        final grassInfo = engine.describeTileAt(state, const GridPos(7, 4));
+        expect(grassInfo.emoji, equals('🌱'));
+        expect(grassInfo.nextTapHint, contains('Tap 3×'));
+
+        final wellInfo = engine.describeTileAt(
+          state,
+          FarmSimulationEngine.wellPos,
+        );
+        expect(wellInfo.emoji, equals('🪣'));
+        expect(wellInfo.nextTapHint, contains('Refill'));
+
+        final stallEmptyInfo = engine.describeTileAt(
+          state,
+          FarmSimulationEngine.marketStallPos,
+        );
+        expect(stallEmptyInfo.nextTapHint, contains('Open Market'));
+
+        final carryingState = state.copyWith(
+          farmer: state.farmer.copyWith(
+            carriedCrates: const <ProductId>[ProductId.tomato],
+          ),
+        );
+        final stallCarryingInfo = engine.describeTileAt(
+          carryingState,
+          FarmSimulationEngine.marketStallPos,
+        );
+        expect(stallCarryingInfo.nextTapHint, contains('Stock'));
+      },
+    );
+
+    test(
+      'tracks Mayor Sunny quests, weed clear count, rewards, and JSON persistence',
+      () {
+        expect(state.activeQuest?.id, equals(QuestId.firstHarvest));
+        expect(state.activeQuestProgress.isReadyToClaim, isFalse);
+
+        // 1. Harvest ripe starter tomato -> Quest 1 ready to claim
+        state = engine.enqueueTileTap(state, const GridPos(4, 3)).state;
+        for (var i = 0; i < 60; i++) {
+          state = engine.tick(state, 0.1).state;
+        }
+        expect(state.activeQuestProgress.isReadyToClaim, isTrue);
+
+        final coinsBeforeQ1 = state.coins;
+        final q1Res = engine.claimActiveQuestReward(state);
+        state = q1Res.state;
+        expect(state.coins, equals(coinsBeforeQ1 + 15));
+        expect(
+          q1Res.events.any((e) => e.type == SimEventType.questCompleted),
+          isTrue,
+        );
+        expect(state.activeQuest?.id, equals(QuestId.firstSale));
+
+        // 2. Stock Market Stall -> Quest 2 ready to claim
+        state = engine
+            .enqueueTileTap(state, FarmSimulationEngine.marketStallPos)
+            .state;
+        for (var i = 0; i < 60; i++) {
+          state = engine.tick(state, 0.1).state;
+        }
+        expect(state.activeQuestProgress.isReadyToClaim, isTrue);
+        state = engine.claimActiveQuestReward(state).state;
+        expect(state.activeQuest?.id, equals(QuestId.smartComboPlant));
+
+        // 3. Dig & plant new plot -> Quest 3 ready to claim
+        const newPlot = GridPos(7, 4);
+        state = engine.enqueueTileTap(state, newPlot).state;
+        state = engine.enqueueTileTap(state, newPlot).state;
+        for (var i = 0; i < 80; i++) {
+          state = engine.tick(state, 0.1).state;
+        }
+        expect(state.activeQuestProgress.isReadyToClaim, isTrue);
+        state = engine.claimActiveQuestReward(state).state;
+        expect(state.activeQuest?.id, equals(QuestId.clearWeeds));
+
+        // 4. Clear 3 wildflower weed patches -> weedsClearedCount == 3 -> Quest 4 ready
+        for (final weedPos in const <GridPos>[
+          GridPos(5, 4),
+          GridPos(6, 4),
+          GridPos(7, 3),
+        ]) {
+          state = engine.enqueueTileTap(state, weedPos).state;
+        }
+        for (var i = 0; i < 150 && state.actionQueue.isNotEmpty; i++) {
+          state = engine.tick(state, 0.1).state;
+        }
+        expect(state.weedsClearedCount, equals(3));
+        expect(state.activeQuestProgress.current, equals(3));
+        expect(state.activeQuestProgress.isReadyToClaim, isTrue);
+
+        // Verify JSON round-trip preserves quest & weed progress
+        final restored = GameState.fromJson(
+          jsonDecode(jsonEncode(state.toJson())) as Map<String, dynamic>,
+        );
+        expect(restored.claimedQuestsCount, equals(3));
+        expect(restored.weedsClearedCount, equals(3));
+        expect(restored.activeQuest?.id, equals(QuestId.clearWeeds));
+      },
+    );
   });
 
   group('CozySoundService seamless BGM synthesis', () {

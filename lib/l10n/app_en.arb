@@ -966,5 +966,297 @@
   "helpTouchControls": "Tap 1–3×  •  Pinch Zoom  •  Drag",
   "helpPcControls": "Click 1–3×  •  Shift+Drag  •  1–7  •  H  •  Space",
   "helpTipKettle": "Idle Kettle tap = Recipe  •  Lavender + Bees = ⚡ Honey",
-  "helpTipMarket": "🔥 Boom +45%  •  🏚️ Hold Barn  •  🎪 Rush 1.65×"
+  "helpTipMarket": "🔥 Boom +45%  •  🏚️ Hold Barn  •  🎪 Rush 1.65×",
+
+  "questGoalHeader": "Goal {step}/{total}: {title}",
+  "@questGoalHeader": {
+    "placeholders": {
+      "step": { "type": "int" },
+      "total": { "type": "int" },
+      "title": { "type": "String" }
+    }
+  },
+  "questClaimBtn": "✨ Claim +{coins}☀️",
+  "@questClaimBtn": {
+    "placeholders": {
+      "coins": { "type": "int" }
+    }
+  },
+  "toastQuestRewardClaimed": "🌻 Goal {step}/{total} complete! +{coins}☀️{seedBonus}",
+  "@toastQuestRewardClaimed": {
+    "placeholders": {
+      "step": { "type": "int" },
+      "total": { "type": "int" },
+      "coins": { "type": "int" },
+      "seedBonus": { "type": "String" }
+    }
+  },
+  "quest1Title": "First Harvest",
+  "quest1Hint": "Tap the ripe Tomato at (4,3) to harvest a crate.",
+  "quest2Title": "Open for Business",
+  "quest2Hint": "Tap the Market Stall (5,1) to display your crate for villagers.",
+  "quest3Title": "3-Tap Smart Combo",
+  "quest3Hint": "Tap an empty plot 3× in a row to Dig → Plant → Water.",
+  "quest4Title": "Clear the Meadow",
+  "quest4Hint": "Dig up 3 wildflower weed patches to uncover hidden treasures.",
+  "quest5Title": "Double Capacity",
+  "quest5Hint": "Buy Crate Stacker Gloves (90☀️) in the Shop to carry 2 crates.",
+  "quest6Title": "Sweet Expansion",
+  "quest6Hint": "Unlock Sweet Strawberry seeds in the Shop and plant a bush.",
+  "quest7Title": "Living Soil",
+  "quest7Hint": "Enrich 2 garden beds with Rich Compost (5) for +35% speed & 2× Golden crops.",
+  "quest8Title": "Automated Hydration",
+  "quest8Hint": "Place a Rotary Sprinkler (6) to water a 3×3 garden zone.",
+  "quest9Title": "Beloved Neighbor",
+  "quest9Hint": "Fulfill a Daily Village Request or Express Order at the Market Stall.",
+  "quest10Title": "Growing Homestead",
+  "quest10Hint": "Build a Cozy Henhouse or expand your island with a Meadow Deed.",
+
+  "dockSweepLabel": "Sweep",
+  "dockSweepTooltip": "Sweep Paint Mode (drag across tiles)",
+  "inspectorRecipeBtn": "🔄 Recipe",
+  "inspectorClearBtn": "🌿 Clear",
+  "inspectorClearTooltip": "Restore tile to grass",
+  "marketStallFlowHint": "🚶 Villagers strolling the top lane buy from your 8 Stall slots every few seconds. Extra crates stay safe in the Barn!",
+
+  "spotlightHarvest": "👇 Harvest 🍅",
+  "spotlightSell": "👇 Sell at Stall 🏪",
+  "spotlightPlant": "👇 Tap 3× Plant 🌱",
+  "landmarkHomesteadPill": "🏡 Homestead",
+  "landmarkRefillPill": "🪣 Refill",
+  "landmarkBarnPill": "🏠 Barn",
+
+  "inspectorFarmhouseTitle": "Sunlit Farmhouse",
+  "inspectorWellTitle": "Stone Well",
+  "inspectorBarnTitle": "Storage Barn",
+  "inspectorStallTitle": "Market Stall",
+  "inspectorTreasureTitle": "Hidden Treasure Cache",
+  "inspectorShrineTitle": "Wildflower Shrine",
+  "inspectorOasisTitle": "Oasis Fountain",
+  "inspectorSoilTitle": "Tilled Garden Bed",
+  "inspectorWeedsTitle": "Wildflower Weeds",
+  "inspectorCobbleTitle": "Village Cobble Lane",
+  "inspectorGrassTitle": "Sunny Meadow Grass",
+  "inspectorCrateTitle": "{product} Crate",
+  "@inspectorCrateTitle": {
+    "placeholders": {
+      "product": { "type": "String" }
+    }
+  },
+
+  "inspectorFarmhouseStatus": "Soundscape, Language & Save",
+  "inspectorWellStatus": "Water Can: {current}/{max}",
+  "@inspectorWellStatus": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "inspectorBarnStatus": "{count} crate(s) stored safely",
+  "@inspectorBarnStatus": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inspectorStallStatus": "{count}/{max} stocked • Villagers buy auto",
+  "@inspectorStallStatus": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "inspectorSprinkler3Status": "Auto-waters 3×3 garden beds",
+  "inspectorSprinkler5Status": "Auto-waters 5×5 garden beds",
+  "inspectorLemonReadyStatus": "{count} crate(s) ready! • 🌸 +2%",
+  "@inspectorLemonReadyStatus": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inspectorLemonGrowStatus": "{pct}% (~{secs}s) • 🌸 +2% Charm",
+  "@inspectorLemonGrowStatus": {
+    "placeholders": {
+      "pct": { "type": "int" },
+      "secs": { "type": "int" }
+    }
+  },
+  "inspectorKettleReadyStatus": "{count} {emoji} ready!",
+  "@inspectorKettleReadyStatus": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "emoji": { "type": "String" }
+    }
+  },
+  "inspectorKettleCookingStatus": "Cooking {formula} ({pct}%, ~{secs}s)",
+  "@inspectorKettleCookingStatus": {
+    "placeholders": {
+      "formula": { "type": "String" },
+      "pct": { "type": "int" },
+      "secs": { "type": "int" }
+    }
+  },
+  "inspectorKettleIdleStatus": "Recipe: {formula} (auto-pulls from Barn)",
+  "@inspectorKettleIdleStatus": {
+    "placeholders": {
+      "formula": { "type": "String" }
+    }
+  },
+  "inspectorReadyCratesStatus": "{count} crate(s) ready!",
+  "@inspectorReadyCratesStatus": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inspectorAnimalHungryStatus": "Hungry — tap to feed ({cost}☀️)",
+  "@inspectorAnimalHungryStatus": {
+    "placeholders": {
+      "cost": { "type": "int" }
+    }
+  },
+  "inspectorBeeStatus": "{pct}% • 🌸+{bonus}% speed",
+  "@inspectorBeeStatus": {
+    "placeholders": {
+      "pct": { "type": "int" },
+      "bonus": { "type": "int" }
+    }
+  },
+  "inspectorAnimalFeedStatus": "{pct}% • Feed {feed}%",
+  "@inspectorAnimalFeedStatus": {
+    "placeholders": {
+      "pct": { "type": "int" },
+      "feed": { "type": "int" }
+    }
+  },
+  "inspectorLanternStatus": "Dusk glow • +3% Market Charm",
+  "inspectorArchStatus": "Walkable • +6% Charm & +18% Bees",
+  "inspectorTreasureStatus": "Unclaimed reward (+35☀️ + rare seed)",
+  "inspectorShrineStatus": "Enriches 3×3 soil & awards +25☀️",
+  "inspectorOasisClaimedStatus": "Refills Water Can & hydrates 3×3",
+  "inspectorOasisUnclaimedStatus": "Claim +20☀️ & infinite water source",
+  "inspectorRipeStatus": "Ripe! • {count} harvest(s) left",
+  "@inspectorRipeStatus": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inspectorGoldenRipeStatus": "✨ Golden 2×! Ripe! • {count} harvest(s) left",
+  "@inspectorGoldenRipeStatus": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inspectorCropGrowStatus": "{pct}% (~{secs}s) • 💧{moisture}%",
+  "@inspectorCropGrowStatus": {
+    "placeholders": {
+      "pct": { "type": "int" },
+      "secs": { "type": "int" },
+      "moisture": { "type": "int" }
+    }
+  },
+  "inspectorCompostTag": " • ✨Compost",
+  "inspectorCrateTag": " • 📦 Crate",
+  "inspectorCrateGroundStatus": "Ready to pick up for Stall or Barn",
+  "inspectorSoilCompostStatus": "💧{moisture}% • ✨Compost (+35%)",
+  "@inspectorSoilCompostStatus": {
+    "placeholders": {
+      "moisture": { "type": "int" }
+    }
+  },
+  "inspectorSoilReadyStatus": "💧{moisture}% • Ready for seeds",
+  "@inspectorSoilReadyStatus": {
+    "placeholders": {
+      "moisture": { "type": "int" }
+    }
+  },
+  "inspectorWeedsStatus": "Dig for +1☀️ & treasure chance",
+  "inspectorPathStatus": "+40% walking speed",
+  "inspectorCobbleStatus": "Townsfolk stroll here (+40% speed)",
+  "inspectorGrassStatus": "Open ground for crops or builds",
+
+  "inspectorTapHomestead": "Tap: Soundscape & Settings",
+  "inspectorTapOpenMarket": "Tap: Open Market & Barn 📈",
+  "inspectorTapSunPass": "Tap: Unlock via Sun Pass ☀️",
+  "inspectorTapRefill": "Tap: Refill Water Can 🪣",
+  "inspectorTapClaimLandmark": "Tap: Claim Discovery! 🗺️",
+  "inspectorTapStockStall": "Tap: Stock {count} crate(s) on Stall 🪙",
+  "@inspectorTapStockStall": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inspectorTapDeliverStall": "Tap: Deliver queued crate(s) to Stall 🪙",
+  "inspectorTapStoreBarn": "Tap: Store {count} crate(s) in Barn",
+  "@inspectorTapStoreBarn": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "inspectorTapPickupBarn": "Tap: Pick up crates from Barn 📦",
+  "inspectorTapHarvest": "Tap: Harvest {emoji} Crate",
+  "@inspectorTapHarvest": {
+    "placeholders": {
+      "emoji": { "type": "String" }
+    }
+  },
+  "inspectorTapPickupCrate": "Tap: Pick up {emoji} Crate",
+  "@inspectorTapPickupCrate": {
+    "placeholders": {
+      "emoji": { "type": "String" }
+    }
+  },
+  "inspectorTapFeedAnimal": "Tap: Feed {name} ({cost}☀️)",
+  "@inspectorTapFeedAnimal": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "cost": { "type": "int" }
+    }
+  },
+  "inspectorTapLoadKettle": "Tap: Load Kettle Ingredients 🫙",
+  "inspectorTapCombo3": "Tap 3×: Dig → Sow {emoji} → Water",
+  "@inspectorTapCombo3": {
+    "placeholders": {
+      "emoji": { "type": "String" }
+    }
+  },
+  "inspectorTapClearWeeds": "Tap: Clear Weeds (+1☀️ & treasure)",
+  "inspectorTapDig": "Tap: Dig Soil Bed ⛏️",
+  "inspectorTapSow": "Tap: Sow {emoji} ({cost})",
+  "@inspectorTapSow": {
+    "placeholders": {
+      "emoji": { "type": "String" },
+      "cost": { "type": "String" }
+    }
+  },
+  "inspectorTapSowSmart": "Tap: Sow {emoji} ({cost}) — tap again to Water",
+  "@inspectorTapSowSmart": {
+    "placeholders": {
+      "emoji": { "type": "String" },
+      "cost": { "type": "String" }
+    }
+  },
+  "inspectorFreeGiftCost": "Free Gift 🎁",
+  "inspectorTapWater": "Tap: Water Plot 💧",
+  "inspectorTapCompost": "Tap: Rich Compost ({cost}☀️, +35% speed)",
+  "@inspectorTapCompost": {
+    "placeholders": {
+      "cost": { "type": "int" }
+    }
+  },
+  "inspectorTapBuild": "Tap: Build {name} ({cost}☀️)",
+  "@inspectorTapBuild": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "cost": { "type": "int" }
+    }
+  },
+  "inspectorTapUntill": "Tap: Clear / Untill to Grass 🌿",
+  "inspectorTapSwitchRecipe": "Tap: Switch Recipe 🔄",
+  "inspectorGrowingWait": "Growing — check back soon 🌱",
+  "inspectorLaneWait": "Village lane (villagers stroll here)",
+  "inspectorClearToBuild": "Clear tile first to build here",
+  "inspectorDigHint": "Switch to Smart (1) or Seeds (3)",
+  "inspectorWaterHint": "Only tilled soil needs watering",
+  "inspectorCompostHint": "Select uncomposted tilled soil",
+  "inspectorAlreadyGrass": "Already lush meadow grass",
+  "inspectorTapInteract": "Tap to interact"
 }

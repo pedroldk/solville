@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:solville/data/services/cozy_sound_service.dart';
+import 'package:solville/domain/models/grid_pos.dart';
 import 'package:solville/l10n/app_localizations.dart';
 import 'package:solville/l10n/solville_l10n_extensions.dart';
 import 'package:solville/main.dart';
@@ -96,9 +97,13 @@ void main() {
 
         // 1. Default US English
         expect(find.text('Shop'), findsOneWidget);
+        expect(find.text('Lullaby'), findsNothing);
+
+        // Expand secondary controls and open Homestead modal
+        await tester.tap(find.byIcon(Icons.more_horiz_rounded));
+        await tester.pump();
         expect(find.text('Lullaby'), findsOneWidget);
 
-        // Open Homestead modal and scroll to Language selector
         await tester.tap(find.text('Lullaby'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 250));
@@ -213,6 +218,79 @@ void main() {
           await tester.tap(find.byIcon(Icons.close_rounded));
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 250));
+
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          controller.dispose();
+        }
+      },
+    );
+
+    testWidgets(
+      'localizes Quest Banner, Sweep toggle, and Tile Inspector Pill across all 6 languages',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1280, 720);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final expectations = <(Locale, String, String, String)>[
+          (
+            const Locale('en', 'US'),
+            'Goal 1/10: First Harvest',
+            'Sweep',
+            'Tilled Garden Bed',
+          ),
+          (
+            const Locale('en', 'GB'),
+            'Goal 1/10: First Harvest',
+            'Sweep',
+            'Tilled Garden Bed',
+          ),
+          (
+            const Locale('pt', 'PT'),
+            'Objetivo 1/10: Primeira Colheita',
+            'Varrer',
+            'Canteiro Lavrado',
+          ),
+          (
+            const Locale('fr'),
+            'Objectif 1/10 : Première Récolte',
+            'Balayer',
+            'Parcelle Bêchée',
+          ),
+          (
+            const Locale('es'),
+            'Meta 1/10: Primera Cosecha',
+            'Barrer',
+            'Parcela Labrada',
+          ),
+          (
+            const Locale('de'),
+            'Ziel 1/10: Erste Ernte',
+            'Ziehen',
+            'Gegrabenes Beet',
+          ),
+        ];
+
+        for (final (locale, questHeader, sweepLabel, soilTitle)
+            in expectations) {
+          final controller = SolvilleController(
+            soundService: CozySoundService(silentPlatformOutput: true),
+          );
+          await controller.initialize();
+          await controller.setAppLocale(locale);
+          controller.inspectTile(const GridPos(6, 3));
+
+          await tester.pumpWidget(SolvilleApp(controller: controller));
+          await tester.pump(const Duration(milliseconds: 50));
+
+          await tester.tap(find.text('1/10'));
+          await tester.pump();
+
+          expect(find.text(questHeader), findsOneWidget);
+          expect(find.text(sweepLabel), findsOneWidget);
+          expect(find.text(soilTitle), findsOneWidget);
 
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();

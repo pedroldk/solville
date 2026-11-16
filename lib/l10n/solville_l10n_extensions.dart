@@ -5,6 +5,8 @@ import '../domain/models/entitlement_state.dart';
 import '../domain/models/game_state.dart';
 import '../domain/models/market_state.dart';
 import '../domain/models/solville_toast.dart';
+import '../domain/models/tile_state.dart';
+import '../domain/simulation/farm_simulation_engine.dart';
 import 'app_localizations.dart';
 
 /// Supported user-selectable locales in Solville.
@@ -371,10 +373,13 @@ extension SolvilleL10nX on AppLocalizations {
           upgradeName(toast.upgradeTrack!, toast.tier ?? 1),
         );
       case SolvilleToastKind.newDay:
-        return toastNewDay(
+        final base = toastNewDay(
           toast.day ?? 1,
           weatherLabel(toast.weather ?? WeatherType.sunny),
         );
+        return toast.forecastSummary != null
+            ? '$base • ${toast.forecastSummary}'
+            : base;
       case SolvilleToastKind.pathBlocked:
         return toastPathBlocked;
       case SolvilleToastKind.waterRefilled:
@@ -485,6 +490,338 @@ extension SolvilleL10nX on AppLocalizations {
         return toastGoldenHarvest;
       case SolvilleToastKind.villageRushStarted:
         return toastVillageRushStarted;
+      case SolvilleToastKind.questRewardClaimed:
+        final seedBonus = toast.product != null
+            ? ' +1 ${SolvilleCatalog.productEmoji(toast.product!)}'
+            : '';
+        return toastQuestRewardClaimed(
+          toast.questIndex ?? 1,
+          SolvilleCatalog.quests.length,
+          toast.coins ?? 0,
+          seedBonus,
+        );
     }
+  }
+
+  String questTitle(QuestId id) => switch (id) {
+    QuestId.firstHarvest => quest1Title,
+    QuestId.firstSale => quest2Title,
+    QuestId.smartComboPlant => quest3Title,
+    QuestId.clearWeeds => quest4Title,
+    QuestId.buyGloves => quest5Title,
+    QuestId.unlockStrawberry => quest6Title,
+    QuestId.enrichCompost => quest7Title,
+    QuestId.buildSprinkler => quest8Title,
+    QuestId.fulfillVillageOrder => quest9Title,
+    QuestId.buildCoopOrExpand => quest10Title,
+  };
+
+  String questHint(QuestId id) => switch (id) {
+    QuestId.firstHarvest => quest1Hint,
+    QuestId.firstSale => quest2Hint,
+    QuestId.smartComboPlant => quest3Hint,
+    QuestId.clearWeeds => quest4Hint,
+    QuestId.buyGloves => quest5Hint,
+    QuestId.unlockStrawberry => quest6Hint,
+    QuestId.enrichCompost => quest7Hint,
+    QuestId.buildSprinkler => quest8Hint,
+    QuestId.fulfillVillageOrder => quest9Hint,
+    QuestId.buildCoopOrExpand => quest10Hint,
+  };
+
+  TileInspectionInfo localizeTileInspection(
+    GameState state,
+    TileInspectionInfo raw, {
+    required bool isSunPassActive,
+  }) {
+    final pos = raw.pos;
+    final tile = state.tileAt(pos);
+
+    final String nextTapHint;
+    if (tile.structure == StructureType.farmhouse) {
+      nextTapHint = inspectorTapHomestead;
+    } else if (tile.structure == StructureType.marketStall &&
+        !raw.willHaveCrates) {
+      nextTapHint = inspectorTapOpenMarket;
+    } else if (tile.structure == StructureType.barn &&
+        !raw.willHaveCrates &&
+        state.totalBarnCrates == 0) {
+      nextTapHint = inspectorTapOpenMarket;
+    } else if (tile.structure.requiresSunPass &&
+        !isSunPassActive &&
+        !tile.isReadyToHarvest &&
+        state.activeTool != ToolMode.remove) {
+      nextTapHint = inspectorTapSunPass;
+    } else if (raw.nextActionKind != null) {
+      nextTapHint = switch (raw.nextActionKind!) {
+        ActionKind.refillWater => inspectorTapRefill,
+        ActionKind.claimLandmark => inspectorTapClaimLandmark,
+        ActionKind.sellAtStall =>
+          state.farmer.carriedCrates.isNotEmpty
+              ? inspectorTapStockStall(state.farmer.carriedCrates.length)
+              : inspectorTapDeliverStall,
+        ActionKind.storeInBarn =>
+          state.farmer.carriedCrates.isNotEmpty
+              ? inspectorTapStoreBarn(state.farmer.carriedCrates.length)
+              : inspectorTapPickupBarn,
+        ActionKind.harvest =>
+          tile.crop != null
+              ? inspectorTapHarvest(
+                  SolvilleCatalog.productEmoji(tile.crop!.cropId),
+                )
+              : (tile.animal != null
+                    ? inspectorTapHarvest(
+                        SolvilleCatalog.productEmoji(
+                          SolvilleCatalog.animals[tile.animal!.type]!.product,
+                        ),
+                      )
+                    : (tile.structure == StructureType.lemonTree
+                          ? inspectorTapHarvest('🍋')
+                          : inspectorTapHarvest(
+                              SolvilleCatalog.productEmoji(
+                                tile.kettleRecipe.outputProduct,
+                              ),
+                            ))),
+        ActionKind.pickupCrate => inspectorTapPickupCrate(
+          SolvilleCatalog.productEmoji(tile.droppedCrate!),
+        ),
+        ActionKind.tendAnimal => inspectorTapFeedAnimal(
+          animalName(tile.animal!.type),
+          SolvilleCatalog.animals[tile.animal!.type]!.tendCost,
+        ),
+        ActionKind.loadArtisan => inspectorTapLoadKettle,
+        ActionKind.dig =>
+          state.activeTool == ToolMode.smart
+              ? inspectorTapCombo3(
+                  SolvilleCatalog.productEmoji(state.selectedSeed),
+                )
+              : (tile.ground == GroundType.weeds
+                    ? inspectorTapClearWeeds
+                    : inspectorTapDig),
+        ActionKind.plant => () {
+          final seed = raw.nextSeedId ?? state.selectedSeed;
+          final def = SolvilleCatalog.crops[seed]!;
+          final isFree =
+              !state.unlockedSeeds.contains(seed) &&
+              (state.trialSeeds[seed] ?? 0) > 0;
+          final costText = isFree ? inspectorFreeGiftCost : '${def.seedCost}☀️';
+          final emoji = SolvilleCatalog.productEmoji(seed);
+          return state.activeTool == ToolMode.smart
+              ? inspectorTapSowSmart(emoji, costText)
+              : inspectorTapSow(emoji, costText);
+        }(),
+        ActionKind.water => inspectorTapWater,
+        ActionKind.compost => inspectorTapCompost(SolvilleCatalog.compostCost),
+        ActionKind.placeBuild => () {
+          final item = raw.nextBuildItem ?? state.selectedBuildItem;
+          final b = SolvilleCatalog.buildItems[item]!;
+          return inspectorTapBuild(buildItemName(item), b.cost);
+        }(),
+        ActionKind.removeStructure => inspectorTapUntill,
+        ActionKind.smart => inspectorTapInteract,
+      };
+    } else if (tile.structure == StructureType.artisanPress &&
+        isSunPassActive &&
+        !tile.producerActive &&
+        tile.producerCrates == 0) {
+      nextTapHint = inspectorTapSwitchRecipe;
+    } else if (tile.crop != null && !tile.crop!.isRipe) {
+      nextTapHint = inspectorGrowingWait;
+    } else if (pos.y == 0 && tile.structure != StructureType.marketStall) {
+      nextTapHint = inspectorLaneWait;
+    } else if (state.activeTool == ToolMode.build) {
+      nextTapHint = inspectorClearToBuild;
+    } else if (state.activeTool == ToolMode.dig) {
+      nextTapHint = inspectorDigHint;
+    } else if (state.activeTool == ToolMode.water) {
+      nextTapHint = inspectorWaterHint;
+    } else if (state.activeTool == ToolMode.compost) {
+      nextTapHint = inspectorCompostHint;
+    } else if (state.activeTool == ToolMode.remove) {
+      nextTapHint = inspectorAlreadyGrass;
+    } else {
+      nextTapHint = inspectorTapInteract;
+    }
+
+    late final String title;
+    late String statusSummary;
+
+    if (tile.structure != StructureType.none) {
+      switch (tile.structure) {
+        case StructureType.farmhouse:
+          title = inspectorFarmhouseTitle;
+          statusSummary = inspectorFarmhouseStatus;
+        case StructureType.well:
+          title = inspectorWellTitle;
+          statusSummary = inspectorWellStatus(
+            state.farmer.waterCharges,
+            state.maxWaterCharges,
+          );
+        case StructureType.barn:
+          title = inspectorBarnTitle;
+          statusSummary = inspectorBarnStatus(state.totalBarnCrates);
+        case StructureType.marketStall:
+          title = inspectorStallTitle;
+          statusSummary = inspectorStallStatus(
+            state.market.stallCrates.length,
+            MarketState.maxStallSlots,
+          );
+        case StructureType.sprinklerRotary:
+          title = buildItemName(BuildItemType.sprinklerRotary);
+          statusSummary = inspectorSprinkler3Status;
+        case StructureType.sprinklerSolar:
+          title = buildItemName(BuildItemType.sprinklerSolar);
+          statusSummary = inspectorSprinkler5Status;
+        case StructureType.lemonTree:
+          title = buildItemName(BuildItemType.lemonTree);
+          if (tile.producerCrates > 0) {
+            statusSummary = inspectorLemonReadyStatus(tile.producerCrates);
+          } else {
+            final pct = (tile.producerProgress * 100).round();
+            final secs =
+                ((1.0 - tile.producerProgress).clamp(0.0, 1.0) *
+                        SolvilleCatalog.lemonTreeCycleSeconds)
+                    .ceil();
+            statusSummary = inspectorLemonGrowStatus(pct, secs);
+          }
+        case StructureType.artisanPress:
+          title = buildItemName(BuildItemType.artisanPress);
+          if (tile.producerCrates > 0) {
+            statusSummary = inspectorKettleReadyStatus(
+              tile.producerCrates,
+              SolvilleCatalog.productEmoji(tile.kettleRecipe.outputProduct),
+            );
+          } else if (tile.producerActive) {
+            final pct = (tile.producerProgress * 100).round();
+            final secs =
+                ((1.0 - tile.producerProgress).clamp(0.0, 1.0) *
+                        SolvilleCatalog.artisanPressCycleSeconds)
+                    .ceil();
+            statusSummary = inspectorKettleCookingStatus(
+              tile.kettleRecipe.formulaEmoji,
+              pct,
+              secs,
+            );
+          } else {
+            statusSummary = inspectorKettleIdleStatus(
+              tile.kettleRecipe.formulaEmoji,
+            );
+          }
+        case StructureType.henhouse:
+        case StructureType.beehive:
+        case StructureType.cowPaddock:
+          final animal = tile.animal;
+          final def = animal != null
+              ? SolvilleCatalog.animals[animal.type]
+              : null;
+          title = animal != null ? animalName(animal.type) : raw.title;
+          if (animal == null || def == null) {
+            statusSummary = raw.statusSummary;
+          } else if (animal.readyCrates > 0) {
+            statusSummary = inspectorReadyCratesStatus(animal.readyCrates);
+          } else if (animal.needsTending) {
+            statusSummary = inspectorAnimalHungryStatus(def.tendCost);
+          } else if (animal.type == AnimalType.bee) {
+            statusSummary = inspectorBeeStatus(
+              (animal.progress * 100).round(),
+              raw.beeBonusPct,
+            );
+          } else {
+            statusSummary = inspectorAnimalFeedStatus(
+              (animal.progress * 100).round(),
+              (animal.feedLevel * 100).round(),
+            );
+          }
+        case StructureType.lantern:
+          title = buildItemName(BuildItemType.lantern);
+          statusSummary = inspectorLanternStatus;
+        case StructureType.flowerArch:
+          title = buildItemName(BuildItemType.flowerArch);
+          statusSummary = inspectorArchStatus;
+        case StructureType.none:
+          title = raw.title;
+          statusSummary = raw.statusSummary;
+      }
+    } else if (tile.landmark != LandmarkKind.none) {
+      switch (tile.landmark) {
+        case LandmarkKind.treasureCache:
+          title = inspectorTreasureTitle;
+          statusSummary = inspectorTreasureStatus;
+        case LandmarkKind.wildflowerShrine:
+          title = inspectorShrineTitle;
+          statusSummary = inspectorShrineStatus;
+        case LandmarkKind.oasisFountain:
+          title = inspectorOasisTitle;
+          statusSummary = tile.landmarkClaimed
+              ? inspectorOasisClaimedStatus
+              : inspectorOasisUnclaimedStatus;
+        case LandmarkKind.none:
+          title = raw.title;
+          statusSummary = raw.statusSummary;
+      }
+    } else if (tile.crop != null) {
+      final crop = tile.crop!;
+      final def = SolvilleCatalog.crops[crop.cropId]!;
+      title = productName(crop.cropId);
+      final moisturePct = (tile.moisture * 100).round();
+      if (crop.isRipe) {
+        statusSummary = crop.isGolden
+            ? inspectorGoldenRipeStatus(crop.harvestsLeft)
+            : inspectorRipeStatus(crop.harvestsLeft);
+      } else {
+        final pct = (crop.growth * 100).round();
+        final compostMult = tile.fertilized ? 1.35 : 1.0;
+        final hydMult = tile.moisture > 0.35
+            ? 1.0
+            : (tile.moisture > 0.02 ? 0.65 : 0.12);
+        final secPerProg = def.growthSeconds / (compostMult * hydMult);
+        final secsLeft =
+            ((1.0 - crop.growth).clamp(0.0, 1.0) * secPerProg).ceil();
+        statusSummary =
+            '${inspectorCropGrowStatus(pct, secsLeft, moisturePct)}${tile.fertilized ? inspectorCompostTag : ''}';
+      }
+      if (tile.droppedCrate != null) {
+        statusSummary = '$statusSummary$inspectorCrateTag';
+      }
+    } else if (tile.droppedCrate != null) {
+      title = inspectorCrateTitle(productName(tile.droppedCrate!));
+      statusSummary = inspectorCrateGroundStatus;
+    } else {
+      switch (tile.ground) {
+        case GroundType.soil:
+          title = inspectorSoilTitle;
+          final moisturePct = (tile.moisture * 100).round();
+          statusSummary = tile.fertilized
+              ? inspectorSoilCompostStatus(moisturePct)
+              : inspectorSoilReadyStatus(moisturePct);
+        case GroundType.weeds:
+          title = inspectorWeedsTitle;
+          statusSummary = inspectorWeedsStatus;
+        case GroundType.stonePath:
+          title = buildItemName(BuildItemType.stonePath);
+          statusSummary = inspectorPathStatus;
+        case GroundType.cobbleLane:
+          title = inspectorCobbleTitle;
+          statusSummary = inspectorCobbleStatus;
+        case GroundType.grass:
+          title = inspectorGrassTitle;
+          statusSummary = inspectorGrassStatus;
+      }
+    }
+
+    return TileInspectionInfo(
+      pos: pos,
+      emoji: raw.emoji,
+      title: title,
+      statusSummary: statusSummary,
+      nextTapHint: nextTapHint,
+      canQuickUntill: raw.canQuickUntill,
+      canCycleKettleRecipe: raw.canCycleKettleRecipe,
+      nextActionKind: raw.nextActionKind,
+      nextSeedId: raw.nextSeedId,
+      nextBuildItem: raw.nextBuildItem,
+      beeBonusPct: raw.beeBonusPct,
+      willHaveCrates: raw.willHaveCrates,
+    );
   }
 }

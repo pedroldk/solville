@@ -170,6 +170,8 @@ class CozySoundService with WidgetsBindingObserver {
         _cachedSfx[SimEventType.goldenHarvest]!;
     _cachedSfx[SimEventType.villageRushStarted] =
         _cachedSfx[SimEventType.shopPurchase]!;
+    _cachedSfx[SimEventType.questCompleted] =
+        _cachedSfx[SimEventType.trophyUnlocked]!;
     _cachedSfx[SimEventType.newDay] = _cachedSfx[SimEventType.trophyUnlocked]!;
 
     // Ascending F-major pentatonic combo chimes for rapid harvest streaks
