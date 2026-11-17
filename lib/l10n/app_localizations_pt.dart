@@ -473,7 +473,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get hudSunPassTooltip =>
-      'Passe Solar Solville (24h–48h por anúncio ou 2,99€/ano)';
+      'Passe Solar Solville (desbloqueio único do jogo completo por 0,49€)';
 
   @override
   String get hudHomesteadTooltip => 'Casa da Quinta e Ambiente Sonoro';
@@ -544,7 +544,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get entitlementAnnualPrice => '2,99€ / ano';
 
   @override
-  String get entitlementLifetimePrice => '4,99€';
+  String get entitlementLifetimePrice => '0,49€';
 
   @override
   String dockQueuedCount(int count) {
@@ -898,7 +898,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get marketSurgeFreeSubtitle =>
-      'Vê 1 anúncio curto (ou desbloqueia o Passe Solar para impulsos diários gratuitos)!';
+      'Desbloqueia o jogo completo uma vez por 0,49€ para impulsos diários gratuitos!';
 
   @override
   String get marketSurgeActiveBtn => 'Ativo ✓';
@@ -1027,7 +1027,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get sunPassIncludedBody =>
-      '• 🌽🪻🎃 Culturas Gourmet: Milho Dourado, Lavanda Perfumada (+35% velocidade das Abelhas) e Abóbora de Solville\n• 🍋🫙🐝🐄 Pomar e Rancho: Limoeiros, Caldeirão Artesanal, Apiário Silvestre, Prado Ensolarado, Torre de Bruma Solar (5×5) e Arco Florido\n• 🏝️🛠️ Grandes Expansões e Ferramentas: Expande a tua ilha até 35×35 + Melhorias de Nível 2\n• 💚 Promessa Cozy: A tua quinta nunca é apagada quando o tempo termina — as construções ficam apenas em pausa até desbloqueares de novo!';
+      '• 🌽🪻🎃 Culturas Gourmet: Milho Dourado, Lavanda Perfumada (+35% velocidade das Abelhas) e Abóbora de Solville\n• 🍋🫙🐝🐄 Pomar e Rancho: Limoeiros, Caldeirão Artesanal, Apiário Silvestre, Prado Ensolarado, Torre de Bruma Solar (5×5) e Arco Florido\n• 🏝️🛠️ Grandes Expansões e Ferramentas: Expande a tua ilha até 35×35 + Melhorias de Nível 2\n• 💚 Promessa Cozy: Zero anúncios, zero subscrições — uma única compra de 0,49€ desbloqueia tudo para sempre!';
 
   @override
   String get sunPassAdTitle => 'Ver 1 Anúncio Curto • +24 Horas Desbloqueadas';
@@ -1085,7 +1085,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sunPassOwnedCheck => 'Adquirido ✓';
 
   @override
-  String get sunPassBuyOnceBtn => 'Comprar 4,99€';
+  String get sunPassBuyOnceBtn => 'Comprar 0,49€';
 
   @override
   String get sunPassSurgeCardTitle =>
@@ -1097,7 +1097,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get sunPassSurgeFreeDesc =>
-      'Vê 1 anúncio opcional por dia para regar toda a quinta e aumentar os ganhos da Banca!';
+      'Incluído gratuitamente todos os dias ao desbloqueares o jogo completo por 0,49€!';
 
   @override
   String get sunPassActiveTodayCheck => 'Ativo Hoje ✓';
@@ -1142,7 +1142,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get sunPassStatusStarterSubtext =>
-      'Vê 1 anúncio curto para 24h de acesso total (acumulável até 48h), ou desbloqueia em definitivo abaixo!';
+      'Desbloqueia toda a experiência de Solville para sempre com uma única compra de 0,49€ — sem anúncios nem subscrições!';
 
   @override
   String trophyCabinetTitle(int unlocked, int total) {
@@ -1384,7 +1384,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String toastPromptSunPass(String item) {
-    return '☀️ $item faz parte do Passe Solar! Vê 1 anúncio para +24h (até 48h) ou desbloqueia para sempre.';
+    return '☀️ $item faz parte do Jogo Completo! Desbloqueia tudo para sempre por 0,49€.';
   }
 
   @override

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,45 +19,36 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
-  group('EntitlementState & 24h->48h Ad Stacking', () {
+  group('EntitlementState & 0,49€ One-Time Unlock', () {
     test(
-      'Single ad grants 24h, second ad stacks to 48h cap, and expires cleanly',
+      'One-time 0,49€ unlock and FULL_EDITION grant permanent Full Game access',
       () {
-        final t0 = DateTime.utc(2026, 11, 10, 10, 0);
-        const start = EntitlementState(isFullEditionBuild: false);
+        const starter = EntitlementState(isFullEditionBuild: false);
+        expect(starter.isSunPassActive(), isFalse);
+        expect(starter.isPermanentSupporter, isFalse);
+        expect(EntitlementState.lifetimePassPriceLabel, equals('0,49€'));
+        expect(starter.statusPillText(), equals('Sun Pass'));
 
-        expect(start.isSunPassActive(t0), isFalse);
-        expect(start.canStackAnotherAd(t0), isTrue);
+        final purchased = starter.copyWith(hasLifetimePass: true);
+        expect(purchased.isSunPassActive(), isTrue);
+        expect(purchased.isPermanentSupporter, isTrue);
+        expect(purchased.statusPillText(), equals('Cozy Edition'));
 
-        // Watch 1st ad -> +24h
-        final after1Ad = start.grantRewardedAdPass(t0);
-        expect(after1Ad.isSunPassActive(t0), isTrue);
-        expect(
-          after1Ad.remainingAdPassDuration(t0),
-          equals(const Duration(hours: 24)),
+        const fullEdition = EntitlementState(isFullEditionBuild: true);
+        expect(fullEdition.isSunPassActive(), isTrue);
+        expect(fullEdition.isPermanentSupporter, isTrue);
+
+        // JSON round-trip and legacy annual pass backwards compatibility
+        final restoredLifetime = EntitlementState.fromJson(
+          jsonDecode(jsonEncode(purchased.toJson())) as Map<String, dynamic>,
         );
-        expect(after1Ad.canStackAnotherAd(t0), isTrue);
+        expect(restoredLifetime.hasLifetimePass, isTrue);
 
-        // Watch 2nd ad back-to-back -> stacks to 48h max
-        final after2Ads = after1Ad.grantRewardedAdPass(t0);
-        expect(
-          after2Ads.remainingAdPassDuration(t0),
-          equals(const Duration(hours: 48)),
+        final restoredLegacyAnnual = EntitlementState.fromJson(
+          const <String, dynamic>{'hasAnnualPass': true, 'lastSunnySurgeDay': 4},
         );
-        expect(after2Ads.canStackAnotherAd(t0), isFalse);
-
-        // 30 hours later -> 18h remaining, can top up again
-        final t30h = t0.add(const Duration(hours: 30));
-        expect(after2Ads.isSunPassActive(t30h), isTrue);
-        expect(
-          after2Ads.remainingAdPassDuration(t30h),
-          equals(const Duration(hours: 18)),
-        );
-        expect(after2Ads.canStackAnotherAd(t30h), isTrue);
-
-        // 49 hours later -> expired
-        final t49h = t0.add(const Duration(hours: 49));
-        expect(after2Ads.isSunPassActive(t49h), isFalse);
+        expect(restoredLegacyAnnual.hasLifetimePass, isTrue);
+        expect(restoredLegacyAnnual.lastSunnySurgeDay, equals(4));
       },
     );
 
@@ -125,7 +118,7 @@ void main() {
 
   group('Graceful Lock & Sunny Surge Simulation', () {
     test(
-      'Existing crops keep growing and Sun Pass buildings pause gracefully without deletion when pass expires',
+      'Existing crops keep growing and Sun Pass buildings pause gracefully without deletion when locked',
       () {
         final engine = FarmSimulationEngine();
         var state = engine.createNewGame();
@@ -192,20 +185,18 @@ void main() {
     );
 
     testWidgets(
-      'Sun Pass Modal opens from HUD, stacks 2 ads to 48h, and activates Sunny Surge',
+      'Sun Pass Modal shows only 0,49€ one-time purchase (no ads/subscriptions), gates behind Parental Gate, and unlocks free Sunny Surge',
       (WidgetTester tester) async {
         tester.view.physicalSize = const Size(1280, 720);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
 
-        final fixedNow = DateTime.utc(2026, 11, 10, 12, 0);
         final controller = SolvilleController(
           soundService: CozySoundService(silentPlatformOutput: true),
           initialEntitlements: const EntitlementState(
             isFullEditionBuild: false,
           ),
-          clock: () => fixedNow,
         );
         await controller.initialize();
 
@@ -221,76 +212,19 @@ void main() {
         await tester.pump(const Duration(milliseconds: 250));
 
         expect(find.text('Solville Sun Pass'), findsOneWidget);
-        expect(find.text('Watch Ad (+24h)'), findsOneWidget);
-        expect(find.text('Subscribe 2,99€/yr'), findsOneWidget);
-        expect(find.text('Buy Once 4,99€'), findsOneWidget);
+        expect(find.text('Buy Once 0,49€'), findsOneWidget);
+        expect(find.text('Watch Ad (+24h)'), findsNothing);
+        expect(find.text('Subscribe 2,99€/yr'), findsNothing);
+        expect(find.text('Watch Ad (Surge)'), findsNothing);
 
-        // Watch 1st ad -> +24h unlocked
-        await tester.tap(find.text('Watch Ad (+24h)'));
+        // Tap Buy Once 0,49€ -> Parental Gate blocks until solved
+        await tester.ensureVisible(find.text('Buy Once 0,49€'));
         await tester.pump();
-        expect(controller.isSunPassActive, isTrue);
-        expect(
-          controller.entitlements.remainingAdPassDuration(fixedNow),
-          equals(const Duration(hours: 24)),
-        );
-        expect(find.text('Watch Ad (+24h Top-Up)'), findsOneWidget);
-
-        // Watch 2nd ad back-to-back -> stacks to 48h max
-        await tester.tap(find.text('Watch Ad (+24h Top-Up)'));
-        await tester.pump();
-        expect(
-          controller.entitlements.remainingAdPassDuration(fixedNow),
-          equals(const Duration(hours: 48)),
-        );
-        expect(find.text('Maxed (48h)'), findsOneWidget);
-
-        // Activate Daily Sunny Surge
-        await tester.ensureVisible(find.text('Watch Ad (Surge)'));
-        await tester.pump();
-        await tester.tap(find.text('Watch Ad (Surge)'));
-        await tester.pump();
-        expect(controller.state.market.sunnySurgeActive, isTrue);
-        expect(find.text('Active Today ✓'), findsOneWidget);
-
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump();
-        controller.dispose();
-      },
-    );
-
-    testWidgets(
-      'Parental gate blocks accidental IAP taps until solved',
-      (WidgetTester tester) async {
-        tester.view.physicalSize = const Size(1280, 720);
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
-
-        final controller = SolvilleController(
-          soundService: CozySoundService(silentPlatformOutput: true),
-          initialEntitlements: const EntitlementState(
-            isFullEditionBuild: false,
-          ),
-        );
-        await controller.initialize();
-
-        await tester.pumpWidget(SolvilleApp(controller: controller));
-        await tester.pump(const Duration(milliseconds: 50));
-
-        await tester.tap(find.byIcon(Icons.more_horiz_rounded));
-        await tester.pump();
-        await tester.tap(find.text('Sun Pass'));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 250));
-
-        // Tap Subscribe -> Parental Gate appears, purchase does not run yet
-        await tester.ensureVisible(find.text('Subscribe 2,99€/yr'));
-        await tester.pump();
-        await tester.tap(find.text('Subscribe 2,99€/yr'));
+        await tester.tap(find.text('Buy Once 0,49€'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 250));
         expect(find.text('Grown-Up Check'), findsOneWidget);
-        expect(controller.entitlements.hasAnnualPass, isFalse);
+        expect(controller.entitlements.hasLifetimePass, isFalse);
 
         // Wrong answer keeps the dialog open and shows an error
         await tester.enterText(find.byType(TextField), '1');
@@ -300,9 +234,9 @@ void main() {
           find.text("That wasn't quite right. Please ask a grown-up!"),
           findsOneWidget,
         );
-        expect(controller.entitlements.hasAnnualPass, isFalse);
+        expect(controller.entitlements.hasLifetimePass, isFalse);
 
-        // Solve the multiplication question to unlock the purchase
+        // Solve the multiplication question to unlock the Full Game
         final questionFinder = find.textContaining('What is ');
         final questionText = tester.widget<Text>(questionFinder).data!;
         final match = RegExp(r'What is (\d+) × (\d+)\?').firstMatch(
@@ -320,7 +254,17 @@ void main() {
         await tester.pump(const Duration(milliseconds: 250));
 
         expect(find.text('Grown-Up Check'), findsNothing);
-        expect(controller.entitlements.hasAnnualPass, isTrue);
+        expect(controller.entitlements.hasLifetimePass, isTrue);
+        expect(controller.isSunPassActive, isTrue);
+        expect(find.text('Owned ✓'), findsOneWidget);
+
+        // Daily Sunny Surge is now claimable for free
+        await tester.ensureVisible(find.text('Claim Free Surge'));
+        await tester.pump();
+        await tester.tap(find.text('Claim Free Surge'));
+        await tester.pump();
+        expect(controller.state.market.sunnySurgeActive, isTrue);
+        expect(find.text('Active Today ✓'), findsOneWidget);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();

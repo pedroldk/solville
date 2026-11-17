@@ -2,17 +2,14 @@
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-    <!-- Families / 6-7+ compliance: remove Advertising ID permissions pulled in by
-         play-services-ads so the app does not collect or transmit AD_ID. -->
+    <!-- Defensive Play Console safeguards: Solville is 100% ad-free and does
+         not collect or transmit Advertising IDs or run foreground services. -->
     <uses-permission
         android:name="com.google.android.gms.permission.AD_ID"
         tools:node="remove"/>
     <uses-permission
         android:name="android.permission.ACCESS_ADSERVICES_AD_ID"
         tools:node="remove"/>
-    <!-- Remove unused transitive WorkManager foreground service permission pulled in by
-         play-services-ads; Solville does not run foreground services (prevents Android 14+
-         Play Console foreground service policy blocks). -->
     <uses-permission
         android:name="android.permission.FOREGROUND_SERVICE"
         tools:node="remove"/>
@@ -57,10 +54,6 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <!-- AdMob App ID (defaults to Solville's production App ID; override via ADMOB_APP_ID env var) -->
-        <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="${admobAppId}" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

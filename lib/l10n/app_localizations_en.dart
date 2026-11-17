@@ -472,7 +472,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hudSunPassTooltip =>
-      'Solville Sun Pass (24h–48h Ad Pass or 2,99€/yr)';
+      'Solville Sun Pass (0,49€ one-time Full Game unlock)';
 
   @override
   String get hudHomesteadTooltip => 'Homestead & Cozy Soundscape';
@@ -543,7 +543,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get entitlementAnnualPrice => '2,99€ / year';
 
   @override
-  String get entitlementLifetimePrice => '4,99€';
+  String get entitlementLifetimePrice => '0,49€';
 
   @override
   String dockQueuedCount(int count) {
@@ -897,7 +897,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get marketSurgeFreeSubtitle =>
-      'Watch 1 short ad (or unlock Sun Pass for free daily surges)!';
+      'Unlock the Full Game once for 0,49€ to claim free daily surges!';
 
   @override
   String get marketSurgeActiveBtn => 'Active ✓';
@@ -1025,7 +1025,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sunPassIncludedBody =>
-      '• 🌽🪻🎃 Gourmet Crops: Golden Corn, Fragrant Lavender (+35% Bee speed) & Solville Pumpkin\n• 🍋🫙🐝🐄 Artisan & Ranch: Lemon Trees, Artisan Preserves Kettle, Wildflower Apiary, Sunny Cow Paddock, Solar Mist Tower (5×5) & Blossom Arch\n• 🏝️🛠️ Grand Expansions & Master Tools: Expand your isle up to 35×35 + Tier 2 Tool Upgrades\n• 💚 Cozy Promise: Your farm is never deleted if the ad timer ends—existing builds simply pause until you unlock again!';
+      '• 🌽🪻🎃 Gourmet Crops: Golden Corn, Fragrant Lavender (+35% Bee speed) & Solville Pumpkin\n• 🍋🫙🐝🐄 Artisan & Ranch: Lemon Trees, Artisan Preserves Kettle, Wildflower Apiary, Sunny Cow Paddock, Solar Mist Tower (5×5) & Blossom Arch\n• 🏝️🛠️ Grand Expansions & Master Tools: Expand your isle up to 35×35 + Tier 2 Tool Upgrades\n• 💚 Cozy Promise: Zero ads, zero subscriptions—one 0,49€ unlock keeps your full farm forever!';
 
   @override
   String get sunPassAdTitle => 'Watch 1 Short Ad • +24 Hours Unlock';
@@ -1083,7 +1083,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sunPassOwnedCheck => 'Owned ✓';
 
   @override
-  String get sunPassBuyOnceBtn => 'Buy Once 4,99€';
+  String get sunPassBuyOnceBtn => 'Buy Once 0,49€';
 
   @override
   String get sunPassSurgeCardTitle =>
@@ -1095,7 +1095,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sunPassSurgeFreeDesc =>
-      'Watch 1 optional ad once per day to drench your farm & boost Market Stall payouts!';
+      'Included free every day once you unlock the Full Game for 0,49€!';
 
   @override
   String get sunPassActiveTodayCheck => 'Active Today ✓';
@@ -1140,7 +1140,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sunPassStatusStarterSubtext =>
-      'Watch 1 short ad for 24h of full access (stackable to 48h), or unlock permanently below!';
+      'Unlock the entire Solville experience forever with a single 0,49€ purchase—no ads, no subscriptions!';
 
   @override
   String trophyCabinetTitle(int unlocked, int total) {
@@ -1381,7 +1381,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String toastPromptSunPass(String item) {
-    return '☀️ $item is part of Sun Pass! Watch 1 ad for +24h (up to 48h) or unlock forever.';
+    return '☀️ $item is part of the Full Game! Unlock everything forever for 0,49€.';
   }
 
   @override
@@ -1989,7 +1989,7 @@ class AppLocalizationsEnGb extends AppLocalizationsEn {
 
   @override
   String get sunPassIncludedBody =>
-      '• 🌽🪻🎃 Gourmet Crops: Golden Corn, Fragrant Lavender (+35% Bee speed) & Solville Pumpkin\n• 🍋🫙🐝🐄 Artisan & Ranch: Lemon Trees, Artisan Preserves Kettle, Wildflower Apiary, Sunny Cow Paddock, Solar Mist Tower (5×5) & Blossom Arch\n• 🏝️🛠️ Grand Expansions & Master Tools: Expand your isle up to 35×35 + Tier 2 Tool Upgrades\n• 💚 Cosy Promise: Your farm is never deleted if the ad timer ends—existing builds simply pause until you unlock again!';
+      '• 🌽🪻🎃 Gourmet Crops: Golden Corn, Fragrant Lavender (+35% Bee speed) & Solville Pumpkin\n• 🍋🫙🐝🐄 Artisan & Ranch: Lemon Trees, Artisan Preserves Kettle, Wildflower Apiary, Sunny Cow Paddock, Solar Mist Tower (5×5) & Blossom Arch\n• 🏝️🛠️ Grand Expansions & Master Tools: Expand your isle up to 35×35 + Tier 2 Tool Upgrades\n• 💚 Cosy Promise: Zero ads, zero subscriptions—one 0,49€ unlock keeps your full farm forever!';
 
   @override
   String sunPassLifetimeTitle(String price) {

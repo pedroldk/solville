@@ -209,9 +209,7 @@ class _TopStatusBarState extends State<TopStatusBar> {
           if (!controller.entitlements.isFullEditionBuild &&
               widget.onOpenSunPass != null)
             SolvillePillButton(
-              emoji: controller.entitlements.hasLifetimePass
-                  ? '👑'
-                  : (controller.entitlements.hasAnnualPass ? '🌻' : '☀️'),
+              emoji: controller.entitlements.isPermanentSupporter ? '👑' : '☀️',
               label: compact
                   ? (controller.isSunPassActive
                         ? l10n.hudPassShortActive

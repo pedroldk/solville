@@ -100,14 +100,12 @@ void main() {
 
     test('entitlement JSON round-trips ownership flags', () {
       const owned = EntitlementState(
-        hasAnnualPass: true,
         hasLifetimePass: true,
         lastSunnySurgeDay: 3,
       );
       final restored = EntitlementState.fromJson(
         jsonDecode(jsonEncode(owned.toJson())) as Map<String, dynamic>,
       );
-      expect(restored.hasAnnualPass, isTrue);
       expect(restored.hasLifetimePass, isTrue);
       expect(restored.lastSunnySurgeDay, equals(3));
     });
@@ -115,31 +113,28 @@ void main() {
 
   group('MonetizationService error handling', () {
     test(
-      'ad callback exceptions resolve to unavailable and clear busy',
+      'purchase callback exceptions resolve to unavailable and clear busy',
       () async {
         final service = MonetizationService(
           enablePlatformSdk: false,
-          onShowRewardedAd: () async => throw StateError('no fill'),
+          onPurchaseProduct: (_) async => throw StateError('billing error'),
         );
         expect(
-          await service.showRewardedAd(),
+          await service.purchaseLifetimePass(),
           equals(MonetizationResult.unavailable),
         );
         expect(service.isBusy, isFalse);
       },
     );
 
-    test('re-entrant ad/purchase requests are rejected while busy', () async {
+    test('re-entrant purchase/restore requests are rejected while busy', () async {
       final service = MonetizationService(
         enablePlatformSdk: false,
         simulatedLatency: const Duration(milliseconds: 50),
       );
-      final first = service.showRewardedAd();
+      final first = service.purchaseLifetimePass();
       expect(service.isBusy, isTrue);
-      expect(
-        await service.purchaseAnnualPass(),
-        equals(MonetizationResult.cancelled),
-      );
+      expect(await service.restorePurchases(), isEmpty);
       expect(await first, equals(MonetizationResult.success));
       expect(service.isBusy, isFalse);
     });

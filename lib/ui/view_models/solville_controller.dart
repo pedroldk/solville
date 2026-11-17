@@ -39,7 +39,6 @@ class SolvilleController extends ChangeNotifier {
        _hasExplicitInitialEntitlements = initialEntitlements != null,
        _clock = clock ?? DateTime.now {
     _state = _engine.createNewGame();
-    _wasSunPassActiveLastTick = isSunPassActive;
   }
 
   final FarmSimulationEngine _engine;
@@ -62,8 +61,6 @@ class SolvilleController extends ChangeNotifier {
   bool get canClaimSunnySurgeToday =>
       _entitlements.canClaimSunnySurgeOnDay(_state.day) &&
       !_state.market.sunnySurgeActive;
-
-  late bool _wasSunPassActiveLastTick;
 
   final ValueNotifier<GridPos?> hoverNotifier = ValueNotifier<GridPos?>(null);
   GridPos? get hoveredTile => hoverNotifier.value;
@@ -149,7 +146,6 @@ class SolvilleController extends ChangeNotifier {
     if (!_hasExplicitInitialEntitlements) {
       _entitlements = await _saveRepo.loadEntitlementState();
     }
-    _wasSunPassActiveLastTick = isSunPassActive;
 
     unawaited(
       _monetization.initialize(
@@ -224,22 +220,10 @@ class SolvilleController extends ChangeNotifier {
 
     if (_isPaused) return;
 
-    final activeNow = isSunPassActive;
-    if (_wasSunPassActiveLastTick && !activeNow) {
-      _wasSunPassActiveLastTick = false;
-      _ensureValidEquippedSelection();
-      _showToast(
-        '☀️ Your Sun Pass timer ended! Watch 1 ad for +24h anytime.',
-        toast: const SolvilleToast(SolvilleToastKind.sunPassEnded),
-      );
-    } else {
-      _wasSunPassActiveLastTick = activeNow;
-    }
-
     final result = _engine.tick(
       _state,
       dt,
-      isSunPassActive: activeNow,
+      isSunPassActive: isSunPassActive,
     );
     _state = result.state;
     final hasEvents = result.events.isNotEmpty;
@@ -653,7 +637,7 @@ class SolvilleController extends ChangeNotifier {
 
   void _promptSunPassFor(String itemName, {SolvilleToast? toast}) {
     _showToast(
-      '☀️ $itemName is part of Sun Pass! Watch 1 ad for +24h (up to 48h) or unlock forever.',
+      '☀️ $itemName is part of the Full Game! Unlock everything forever for 0,49€.',
       toast: toast,
     );
     onRequestOpenSunPassModal?.call();
@@ -673,48 +657,8 @@ class SolvilleController extends ChangeNotifier {
     _state = next;
   }
 
-  /// Watches 1 rewarded ad to grant +24 hours of Sun Pass access (stackable up to 48h).
-  Future<bool> watchAdForSunPass() async {
-    notifyUserGestureForAudio();
-    final ref = nowUtc;
-    if (!_entitlements.canStackAnotherAd(ref)) {
-      _showToast(
-        '☀️ Sun Pass is already topped up to the 48-hour maximum!',
-        toast: const SolvilleToast(SolvilleToastKind.sunPassMaxed),
-      );
-      notifyListeners();
-      return false;
-    }
-    notifyListeners();
-    final res = await _monetization.showRewardedAd();
-    unawaited(_sound.ensureBgmActive());
-    if (!res.isSuccess) {
-      _showToast(
-        'Ad cancelled or unavailable right now.',
-        toast: const SolvilleToast(SolvilleToastKind.adCancelled),
-      );
-      notifyListeners();
-      return false;
-    }
-
-    final updatedRef = nowUtc;
-    _entitlements = _entitlements.grantRewardedAdPass(updatedRef);
-    _wasSunPassActiveLastTick = true;
-    await _saveRepo.saveEntitlementState(_entitlements);
-    unawaited(_sound.playForEvent(SimEventType.shopPurchase));
-    _showToast(
-      '☀️ Sun Pass unlocked! (${_entitlements.formatRemainingTime(updatedRef)} active)',
-      toast: SolvilleToast(
-        SolvilleToastKind.sunPassUnlocked,
-        duration: _entitlements.remainingAdPassDuration(updatedRef),
-      ),
-    );
-    notifyListeners();
-    return true;
-  }
-
   /// Activates the daily "Sunny Surge" (Sunshower 100% hydration + +25% Market Boost).
-  /// Free for Annual / Lifetime supporters; requires 1 rewarded ad for free players.
+  /// Included free every day once the Full Game is unlocked.
   Future<bool> activateSunnySurge() async {
     notifyUserGestureForAudio();
     if (!canClaimSunnySurgeToday) {
@@ -729,18 +673,9 @@ class SolvilleController extends ChangeNotifier {
       return false;
     }
 
-    if (!_entitlements.isPermanentSupporter) {
-      notifyListeners();
-      final adRes = await _monetization.showRewardedAd();
-      unawaited(_sound.ensureBgmActive());
-      if (!adRes.isSuccess) {
-        _showToast(
-          'Ad cancelled — Sunny Surge was not activated.',
-          toast: const SolvilleToast(SolvilleToastKind.adCancelledSurge),
-        );
-        notifyListeners();
-        return false;
-      }
+    if (!isSunPassActive) {
+      _promptSunPassFor('Sunny Surge');
+      return false;
     }
 
     final step = _engine.activateSunnySurge(_state);
@@ -750,32 +685,7 @@ class SolvilleController extends ChangeNotifier {
     return true;
   }
 
-  /// Purchases the 2,99€/year Annual Sun Pass subscription.
-  Future<bool> purchaseAnnualPass() async {
-    notifyUserGestureForAudio();
-    notifyListeners();
-    final res = await _monetization.purchaseAnnualPass();
-    if (!res.isSuccess) {
-      _showToast(
-        'Purchase cancelled.',
-        toast: const SolvilleToast(SolvilleToastKind.purchaseCancelled),
-      );
-      notifyListeners();
-      return false;
-    }
-    _entitlements = _entitlements.copyWith(hasAnnualPass: true);
-    _wasSunPassActiveLastTick = true;
-    await _saveRepo.saveEntitlementState(_entitlements);
-    unawaited(_sound.playForEvent(SimEventType.trophyUnlocked));
-    _showToast(
-      '🌻 Thank you! Annual Sun Pass (2,99€/yr) is now active!',
-      toast: const SolvilleToast(SolvilleToastKind.annualPassActivated),
-    );
-    notifyListeners();
-    return true;
-  }
-
-  /// Purchases the 4,99€ one-time Lifetime Cozy Edition.
+  /// Purchases the 0,49€ one-time Full Game / Lifetime Cozy Edition unlock.
   Future<bool> purchaseLifetimePass() async {
     notifyUserGestureForAudio();
     notifyListeners();
@@ -789,7 +699,6 @@ class SolvilleController extends ChangeNotifier {
       return false;
     }
     _entitlements = _entitlements.copyWith(hasLifetimePass: true);
-    _wasSunPassActiveLastTick = true;
     await _saveRepo.saveEntitlementState(_entitlements);
     unawaited(_sound.playForEvent(SimEventType.trophyUnlocked));
     _showToast(
@@ -800,21 +709,16 @@ class SolvilleController extends ChangeNotifier {
     return true;
   }
 
-  /// Restores previous Annual or Lifetime purchases from the platform store.
+  /// Restores previous Full Game purchases from the platform store.
   Future<void> restorePurchases() async {
     notifyUserGestureForAudio();
     notifyListeners();
     final restored = await _monetization.restorePurchases();
-    final hasAnnual = restored.contains(EntitlementState.annualPassProductId);
-    final hasLifetime = restored.contains(
-      EntitlementState.lifetimePassProductId,
-    );
-    if (hasAnnual || hasLifetime) {
-      _entitlements = _entitlements.copyWith(
-        hasAnnualPass: _entitlements.hasAnnualPass || hasAnnual,
-        hasLifetimePass: _entitlements.hasLifetimePass || hasLifetime,
-      );
-      _wasSunPassActiveLastTick = true;
+    final hasLifetime =
+        restored.contains(EntitlementState.lifetimePassProductId) ||
+        restored.contains('solville_sun_pass_yearly');
+    if (hasLifetime) {
+      _entitlements = _entitlements.copyWith(hasLifetimePass: true);
       await _saveRepo.saveEntitlementState(_entitlements);
       _showToast(
         '✅ Restored your Solville Sun Pass purchases!',
@@ -1012,20 +916,13 @@ class SolvilleController extends ChangeNotifier {
   }
 
   void _handleOwnedProductRestored(String productId) {
-    var updated = _entitlements;
-    if (productId == EntitlementState.annualPassProductId &&
-        !updated.hasAnnualPass) {
-      updated = updated.copyWith(hasAnnualPass: true);
-    } else if (productId == EntitlementState.lifetimePassProductId &&
-        !updated.hasLifetimePass) {
-      updated = updated.copyWith(hasLifetimePass: true);
-    } else {
-      return;
+    if ((productId == EntitlementState.lifetimePassProductId ||
+            productId == 'solville_sun_pass_yearly') &&
+        !_entitlements.hasLifetimePass) {
+      _entitlements = _entitlements.copyWith(hasLifetimePass: true);
+      unawaited(_saveRepo.saveEntitlementState(_entitlements));
+      notifyListeners();
     }
-    _entitlements = updated;
-    _wasSunPassActiveLastTick = true;
-    unawaited(_saveRepo.saveEntitlementState(_entitlements));
-    notifyListeners();
   }
 
   @override

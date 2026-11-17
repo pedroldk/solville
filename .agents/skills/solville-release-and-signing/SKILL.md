@@ -80,7 +80,7 @@ gh release list --limit 5
 
 ## 5. Desktop / Steam Paid Edition Build
 
-Use `FULL_EDITION=true` to unlock all Sun Pass crops/structures/tiers and disable mobile ads/IAP:
+Use `FULL_EDITION=true` to unlock all Sun Pass crops/structures/tiers and disable mobile IAP:
 
 ```powershell
 flutter build windows --release --dart-define=FULL_EDITION=true
@@ -88,9 +88,7 @@ flutter build windows --release --dart-define=FULL_EDITION=true
 
 ## 6. Monetization Identifiers Reference
 
-- **AdMob App ID (Android):** `android/app/build.gradle.kts` (`manifestPlaceholders["admobAppId"]`, overrideable via `ADMOB_APP_ID` env var). Currently defaults to `ca-app-pub-3113832650326844~3293995632`.
-- **AdMob Rewarded Ad Unit (Android Release):** `lib/data/services/monetization_bridge_io.dart` (`ca-app-pub-3113832650326844/3002351599`, overrideable via `--dart-define=ADMOB_REWARDED_AD_UNIT_ID=...`).
-- **AdMob iOS overrides:** Add iOS App ID in `ios/Runner/Info.plist` (`GADApplicationIdentifier`) and pass `--dart-define=ADMOB_IOS_REWARDED_AD_UNIT_ID=...` when shipping iOS.
-- **Play / StoreKit IAP Product IDs (`lib/domain/models/entitlement_state.dart`):**
-  - Annual Sun Pass subscription: `solville_sun_pass_yearly`
-  - Lifetime Cozy Edition one-time: `solville_lifetime_cozy`
+Solville is 100% ad-free (`google_mobile_ads` / AdMob removed).
+
+- **Play / StoreKit IAP Product ID (`lib/domain/models/entitlement_state.dart`):**
+  - Full Game / Lifetime Cozy Edition one-time (0,49€): `solville_lifetime_cozy`

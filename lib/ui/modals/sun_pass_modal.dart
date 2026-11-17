@@ -5,16 +5,13 @@ import 'package:flutter/services.dart';
 
 import '../../domain/models/entitlement_state.dart';
 import '../../l10n/app_localizations.dart';
-import '../../l10n/solville_l10n_extensions.dart';
 import '../theme/solville_theme.dart';
 import '../view_models/solville_controller.dart';
 import '../widgets/solville_dialog_shell.dart';
 
 /// Cozy "Solville Sun Pass" dialog allowing players to:
-/// 1. Watch 1 rewarded ad for +24h of full catalog access (stackable up to 48h)
-/// 2. Subscribe to the Annual Sun Pass for 2,99€ / year
-/// 3. Unlock the Lifetime Cozy Edition for 4,99€ one-time
-/// 4. Activate their daily "Sunny Surge" boost or restore store purchases
+/// 1. Unlock the Full Game forever for 0,49€ one-time (no ads, no subscriptions)
+/// 2. Activate their daily "Sunny Surge" boost once unlocked, or restore store purchases
 class SunPassModal extends StatelessWidget {
   const SunPassModal({super.key, required this.controller});
 
@@ -27,10 +24,7 @@ class SunPassModal extends StatelessWidget {
       builder: (context, _) {
         final l10n = AppLocalizations.of(context);
         final ent = controller.entitlements;
-        final now = controller.nowUtc;
         final isActive = controller.isSunPassActive;
-        final canStackAd = ent.canStackAnotherAd(now);
-        final remText = l10n.formatDuration(ent.remainingAdPassDuration(now));
         final busy = controller.isMonetizationBusy;
 
         return SolvilleDialogShell(
@@ -62,11 +56,7 @@ class SunPassModal extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
                 // Status Banner
-                _StatusBanner(
-                  entitlements: ent,
-                  isActive: isActive,
-                  remainingLabel: remText,
-                ),
+                _StatusBanner(entitlements: ent),
 
                 const SizedBox(height: 12),
 
@@ -166,58 +156,7 @@ class SunPassModal extends StatelessWidget {
 
                 const SizedBox(height: 14),
 
-                // Option 1: Watch Rewarded Ad (+24h, stackable up to 48h)
-                _OfferCard(
-                  emoji: '🎬',
-                  title: l10n.sunPassAdTitle,
-                  badgeText: l10n.sunPassAdBadge,
-                  badgeColor: const Color(0xFFE1F5FE),
-                  backgroundColor: const Color(0xFFFFFFFF),
-                  description: l10n.sunPassAdDesc,
-                  trailing: FilledButton.tonal(
-                    onPressed: (!busy && canStackAd)
-                        ? () => controller.watchAdForSunPass()
-                        : null,
-                    child: Text(
-                      ent.isPermanentSupporter
-                          ? l10n.sunPassUnlockedForever
-                          : (!canStackAd
-                                ? l10n.sunPassMaxed48h
-                                : (isActive
-                                      ? l10n.sunPassWatchAdTopUp
-                                      : l10n.sunPassWatchAd24h)),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                // Option 2: Annual Sun Pass (2,99€ / year)
-                _OfferCard(
-                  emoji: '🌻',
-                  title: l10n.sunPassAnnualTitle(l10n.entitlementAnnualPrice),
-                  badgeText: l10n.sunPassAnnualBadge,
-                  badgeColor: const Color(0xFFFFE082),
-                  backgroundColor: const Color(0xFFFFFDE7),
-                  description: l10n.sunPassAnnualDesc,
-                  trailing: FilledButton(
-                    onPressed: (!busy && !ent.isPermanentSupporter)
-                        ? () => _runWithParentalGate(
-                              context,
-                              controller.purchaseAnnualPass,
-                            )
-                        : null,
-                    child: Text(
-                      ent.hasAnnualPass || ent.hasLifetimePass
-                          ? l10n.sunPassActiveCheck
-                          : l10n.sunPassSubscribeBtn,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                // Option 3: Lifetime Cozy Edition (4,99€ one-time)
+                // One-Time Full Game Unlock (0,49€)
                 _OfferCard(
                   emoji: '👑',
                   title: l10n.sunPassLifetimeTitle(
@@ -228,14 +167,14 @@ class SunPassModal extends StatelessWidget {
                   backgroundColor: const Color(0xFFFFF8F9),
                   description: l10n.sunPassLifetimeDesc,
                   trailing: FilledButton(
-                    onPressed: (!busy && !ent.hasLifetimePass)
+                    onPressed: (!busy && !ent.isPermanentSupporter)
                         ? () => _runWithParentalGate(
                               context,
                               controller.purchaseLifetimePass,
                             )
                         : null,
                     child: Text(
-                      ent.hasLifetimePass
+                      ent.isPermanentSupporter
                           ? l10n.sunPassOwnedCheck
                           : l10n.sunPassBuyOnceBtn,
                     ),
@@ -259,7 +198,10 @@ class SunPassModal extends StatelessWidget {
                     builder: (context, constraints) {
                       final stackBtn = constraints.maxWidth < 380;
                       final surgeBtn = OutlinedButton(
-                        onPressed: (!busy && controller.canClaimSunnySurgeToday)
+                        onPressed:
+                            (!busy &&
+                                ent.isPermanentSupporter &&
+                                controller.canClaimSunnySurgeToday)
                             ? () => controller.activateSunnySurge()
                             : null,
                         child: Text(
@@ -267,7 +209,7 @@ class SunPassModal extends StatelessWidget {
                               ? l10n.sunPassActiveTodayCheck
                               : (ent.isPermanentSupporter
                                     ? l10n.sunPassClaimFreeSurge
-                                    : l10n.sunPassWatchAdSurge),
+                                    : l10n.shopSunPassBadge),
                         ),
                       );
                       final topRow = Row(
@@ -453,15 +395,9 @@ class _ParentalGateDialogState extends State<_ParentalGateDialog> {
 }
 
 class _StatusBanner extends StatelessWidget {
-  const _StatusBanner({
-    required this.entitlements,
-    required this.isActive,
-    required this.remainingLabel,
-  });
+  const _StatusBanner({required this.entitlements});
 
   final EntitlementState entitlements;
-  final bool isActive;
-  final String remainingLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -470,18 +406,10 @@ class _StatusBanner extends StatelessWidget {
     final String subtext;
     final Color bgColor;
 
-    if (entitlements.hasLifetimePass || entitlements.isFullEditionBuild) {
+    if (entitlements.isPermanentSupporter) {
       headline = l10n.sunPassStatusLifetimeHeadline;
       subtext = l10n.sunPassStatusLifetimeSubtext;
       bgColor = const Color(0xFFFFF3C4);
-    } else if (entitlements.hasAnnualPass) {
-      headline = l10n.sunPassStatusAnnualHeadline;
-      subtext = l10n.sunPassStatusAnnualSubtext;
-      bgColor = const Color(0xFFFFF3C4);
-    } else if (isActive) {
-      headline = l10n.sunPassStatusAdHeadline(remainingLabel);
-      subtext = l10n.sunPassStatusAdSubtext;
-      bgColor = const Color(0xFFE8F5E9);
     } else {
       headline = l10n.sunPassStatusStarterHeadline;
       subtext = l10n.sunPassStatusStarterSubtext;

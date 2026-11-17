@@ -3,7 +3,7 @@ name: solville-run-and-debug
 description: >-
   Use this skill when running Solville locally, executing tests or static analysis,
   or debugging Android, Windows, or Web issues (crashes, R8/ProGuard errors, audio/BGM,
-  AdMob, or ADB device logs).
+  IAP, or ADB device logs).
 ---
 
 # Solville Run & Debug Runbook
@@ -40,7 +40,7 @@ $adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
 - Physical phone tested on this workstation: Motorola Edge 60 Fusion (`ZY22MBP2FS`).
 - Local Android emulators may fail to boot on hosts without hardware acceleration (`x86_64 emulation currently requires hardware acceleration`). Prefer a USB-debugging physical phone.
 
-Run debug build on Android (automatically uses Google's test Rewarded Ad unit ID because `kDebugMode` is true):
+Run debug build on Android:
 
 ```powershell
 flutter run -d ZY22MBP2FS
@@ -62,7 +62,7 @@ flutter run -d windows
 flutter run -d chrome
 ```
 
-To test the paid Desktop/Steam edition with all Sun Pass content unlocked and ads/IAP disabled:
+To test the paid Desktop/Steam edition with all Sun Pass content unlocked and mobile IAP disabled:
 
 ```powershell
 flutter run -d windows --dart-define=FULL_EDITION=true
@@ -95,8 +95,6 @@ Verify active runtime PID:
 ## 4. Known Project Pitfalls
 
 1. **Release-only startup crashes (`WorkDatabase_Impl` / Room / Startup):**
-   `google_mobile_ads` brings in `androidx.work:work-runtime` + Room. R8 strips no-arg reflection constructors unless kept in `android/app/proguard-rules.pro` (`* extends androidx.room.RoomDatabase`, `androidx.work.impl.WorkDatabase_Impl`, `* extends androidx.startup.Initializer`). Always test `flutter build apk --release` (not just debug) after adding Android plugins or updating ProGuard rules.
+   Transitive AndroidX/Play dependencies can bring in Room or Startup initializers instantiated via reflection. R8 strips no-arg reflection constructors unless kept in `android/app/proguard-rules.pro` (`* extends androidx.room.RoomDatabase`, `androidx.work.impl.WorkDatabase_Impl`, `* extends androidx.startup.Initializer`). Always test `flutter build apk --release` (not just debug) after adding Android plugins or updating ProGuard rules.
 2. **Android BGM stops after tapping a tile:**
    In `lib/data/services/cozy_sound_service.dart`, `_sfxAudioContext` MUST keep `audioFocus: AndroidAudioFocus.none` while `_bgmAudioContext` uses `AndroidAudioFocus.gain`. Otherwise SFX players emit `AUDIOFOCUS_LOSS` and kill `_bgmPlayer`. Verify BGM playback on device by checking `AudioTrack` entries in `adb logcat`.
-3. **AdMob in Debug vs Release:**
-   `lib/data/services/monetization_bridge_io.dart` automatically selects `_androidTestRewardedId` (`ca-app-pub-3940256099942544/5224354917`) in `kDebugMode` and `_androidProdRewardedId` in release. Do not hardcode test IDs for release builds or fire live prod ads during debug testing.

@@ -29,6 +29,3 @@
 # Keep in_app_purchase_android Pigeon codec/registrar classes and Play Billing client callbacks.
 -keep class io.flutter.plugins.inapppurchase.** { *; }
 -keep class com.android.billingclient.api.** { *; }
-
-# Keep google_mobile_ads Flutter plugin classes and UMP consent wrappers.
--keep class io.flutter.plugins.googlemobileads.** { *; }

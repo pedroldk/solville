@@ -950,7 +950,7 @@ abstract class AppLocalizations {
   /// No description provided for @hudSunPassTooltip.
   ///
   /// In en, this message translates to:
-  /// **'Solville Sun Pass (24h–48h Ad Pass or 2,99€/yr)'**
+  /// **'Solville Sun Pass (0,49€ one-time Full Game unlock)'**
   String get hudSunPassTooltip;
 
   /// No description provided for @hudHomesteadTooltip.
@@ -1070,7 +1070,7 @@ abstract class AppLocalizations {
   /// No description provided for @entitlementLifetimePrice.
   ///
   /// In en, this message translates to:
-  /// **'4,99€'**
+  /// **'0,49€'**
   String get entitlementLifetimePrice;
 
   /// No description provided for @dockQueuedCount.
@@ -1561,7 +1561,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketSurgeFreeSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Watch 1 short ad (or unlock Sun Pass for free daily surges)!'**
+  /// **'Unlock the Full Game once for 0,49€ to claim free daily surges!'**
   String get marketSurgeFreeSubtitle;
 
   /// No description provided for @marketSurgeActiveBtn.
@@ -1765,7 +1765,7 @@ abstract class AppLocalizations {
   /// No description provided for @sunPassIncludedBody.
   ///
   /// In en, this message translates to:
-  /// **'• 🌽🪻🎃 Gourmet Crops: Golden Corn, Fragrant Lavender (+35% Bee speed) & Solville Pumpkin\n• 🍋🫙🐝🐄 Artisan & Ranch: Lemon Trees, Artisan Preserves Kettle, Wildflower Apiary, Sunny Cow Paddock, Solar Mist Tower (5×5) & Blossom Arch\n• 🏝️🛠️ Grand Expansions & Master Tools: Expand your isle up to 35×35 + Tier 2 Tool Upgrades\n• 💚 Cozy Promise: Your farm is never deleted if the ad timer ends—existing builds simply pause until you unlock again!'**
+  /// **'• 🌽🪻🎃 Gourmet Crops: Golden Corn, Fragrant Lavender (+35% Bee speed) & Solville Pumpkin\n• 🍋🫙🐝🐄 Artisan & Ranch: Lemon Trees, Artisan Preserves Kettle, Wildflower Apiary, Sunny Cow Paddock, Solar Mist Tower (5×5) & Blossom Arch\n• 🏝️🛠️ Grand Expansions & Master Tools: Expand your isle up to 35×35 + Tier 2 Tool Upgrades\n• 💚 Cozy Promise: Zero ads, zero subscriptions—one 0,49€ unlock keeps your full farm forever!'**
   String get sunPassIncludedBody;
 
   /// No description provided for @sunPassAdTitle.
@@ -1867,7 +1867,7 @@ abstract class AppLocalizations {
   /// No description provided for @sunPassBuyOnceBtn.
   ///
   /// In en, this message translates to:
-  /// **'Buy Once 4,99€'**
+  /// **'Buy Once 0,49€'**
   String get sunPassBuyOnceBtn;
 
   /// No description provided for @sunPassSurgeCardTitle.
@@ -1885,7 +1885,7 @@ abstract class AppLocalizations {
   /// No description provided for @sunPassSurgeFreeDesc.
   ///
   /// In en, this message translates to:
-  /// **'Watch 1 optional ad once per day to drench your farm & boost Market Stall payouts!'**
+  /// **'Included free every day once you unlock the Full Game for 0,49€!'**
   String get sunPassSurgeFreeDesc;
 
   /// No description provided for @sunPassActiveTodayCheck.
@@ -1957,7 +1957,7 @@ abstract class AppLocalizations {
   /// No description provided for @sunPassStatusStarterSubtext.
   ///
   /// In en, this message translates to:
-  /// **'Watch 1 short ad for 24h of full access (stackable to 48h), or unlock permanently below!'**
+  /// **'Unlock the entire Solville experience forever with a single 0,49€ purchase—no ads, no subscriptions!'**
   String get sunPassStatusStarterSubtext;
 
   /// No description provided for @trophyCabinetTitle.
@@ -2293,7 +2293,7 @@ abstract class AppLocalizations {
   /// No description provided for @toastPromptSunPass.
   ///
   /// In en, this message translates to:
-  /// **'☀️ {item} is part of Sun Pass! Watch 1 ad for +24h (up to 48h) or unlock forever.'**
+  /// **'☀️ {item} is part of the Full Game! Unlock everything forever for 0,49€.'**
   String toastPromptSunPass(String item);
 
   /// No description provided for @toastSunPassMaxed.

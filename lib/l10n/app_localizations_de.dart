@@ -473,7 +473,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get hudSunPassTooltip =>
-      'Solville Sonnenpass (24h–48h Werbepass oder 2,99€/Jahr)';
+      'Solville Sonnenpass (einmalige Vollversion für 0,49€)';
 
   @override
   String get hudHomesteadTooltip => 'Hof & Gemütliche Klangwelt';
@@ -544,7 +544,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get entitlementAnnualPrice => '2,99€ / Jahr';
 
   @override
-  String get entitlementLifetimePrice => '4,99€';
+  String get entitlementLifetimePrice => '0,49€';
 
   @override
   String dockQueuedCount(int count) {
@@ -897,7 +897,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get marketSurgeFreeSubtitle =>
-      '1 kurzen Clip ansehen (oder Sonnenpass für tägliche Boosts freischalten)!';
+      'Schalte einmalig die Vollversion für 0,49€ frei für kostenlose tägliche Sonnenwellen!';
 
   @override
   String get marketSurgeActiveBtn => 'Aktiv ✓';
@@ -1025,7 +1025,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get sunPassIncludedBody =>
-      '• 🌽🪻🎃 Edle Sorten: Goldener Mais, Duftender Lavendel (+35% Bienentempo) & Solville-Kürbis\n• 🍋🫙🐝🐄 Obst & Hof: Zitronenbäume, Einmachkessel, Wildblüten-Imkerei, Sonnenweide, Solar-Nebelturm (5×5) & Blütenbogen\n• 🏝️🛠️ Große Erweiterungen & Profi-Werkzeug: Insel bis 35×35 + Stufe-2-Upgrades\n• 💚 Gemütliches Versprechen: Dein Hof wird nie gelöscht — Bauten pausieren nur, bis du wieder freischaltest!';
+      '• 🌽🪻🎃 Edle Sorten: Goldener Mais, Duftender Lavendel (+35% Bienentempo) & Solville-Kürbis\n• 🍋🫙🐝🐄 Obst & Hof: Zitronenbäume, Einmachkessel, Wildblüten-Imkerei, Sonnenweide, Solar-Nebelturm (5×5) & Blütenbogen\n• 🏝️🛠️ Große Erweiterungen & Profi-Werkzeug: Insel bis 35×35 + Stufe-2-Upgrades\n• 💚 Gemütliches Versprechen: Keine Werbung, keine Abos — einmalig 0,49€ schaltet alles für immer frei!';
 
   @override
   String get sunPassAdTitle => '1 Kurzes Video ansehen • +24 Stunden';
@@ -1083,7 +1083,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get sunPassOwnedCheck => 'Im Besitz ✓';
 
   @override
-  String get sunPassBuyOnceBtn => 'Einmalig 4,99€';
+  String get sunPassBuyOnceBtn => 'Einmalig 0,49€';
 
   @override
   String get sunPassSurgeCardTitle =>
@@ -1095,7 +1095,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get sunPassSurgeFreeDesc =>
-      'Sieh 1 optionales Video am Tag, um deinen Hof zu wässern & Verkaufspreise zu erhöhen!';
+      'Jeden Tag kostenlos enthalten, sobald du die Vollversion für 0,49€ freischaltest!';
 
   @override
   String get sunPassActiveTodayCheck => 'Heute aktiv ✓';
@@ -1139,7 +1139,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get sunPassStatusStarterSubtext =>
-      'Sieh 1 kurzes Video für 24h Vollzugriff (bis 48h stapelbar) oder schalte unten dauerhaft frei!';
+      'Schalte ganz Solville für immer mit einem einmaligen Kauf von 0,49€ frei — ohne Werbung und ohne Abo!';
 
   @override
   String trophyCabinetTitle(int unlocked, int total) {
@@ -1381,7 +1381,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String toastPromptSunPass(String item) {
-    return '☀️ $item gehört zum Sonnenpass! Sieh 1 Video für +24h (bis 48h) oder schalte dauerhaft frei.';
+    return '☀️ $item gehört zur Vollversion! Schalte alles für einmalig 0,49€ frei.';
   }
 
   @override

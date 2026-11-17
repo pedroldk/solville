@@ -26,16 +26,11 @@ android {
 
     defaultConfig {
         applicationId = "pt.solal.solville"
-        // google_mobile_ads 9.2+ and shared_preferences_android 2.5+ require minSdk >= 24.
+        // shared_preferences_android 2.5+ requires minSdk >= 24.
         minSdk = maxOf(flutter.minSdkVersion, 24)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-
-        // Solville AdMob App ID (overrideable via ADMOB_APP_ID env var).
-        manifestPlaceholders["admobAppId"] =
-            System.getenv("ADMOB_APP_ID")?.takeIf { it.isNotBlank() }
-                ?: "ca-app-pub-3113832650326844~3293995632"
     }
 
     signingConfigs {

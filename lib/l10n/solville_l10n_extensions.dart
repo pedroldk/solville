@@ -310,29 +310,9 @@ extension SolvilleL10nX on AppLocalizations {
     _ => rawName,
   };
 
-  String formatDuration(Duration rem) {
-    if (rem <= Duration.zero) return entitlementExpired;
-    final totalMinutes = (rem.inSeconds / 60).ceil();
-    final hours = totalMinutes ~/ 60;
-    final minutes = totalMinutes % 60;
-    if (hours > 0) {
-      return entitlementTimeHoursMinutes(
-        hours,
-        minutes.toString().padLeft(2, '0'),
-      );
-    }
-    return entitlementTimeMinutes(minutes);
-  }
-
   String entitlementStatusPillText(EntitlementState ent, DateTime nowUtc) {
-    if (ent.hasLifetimePass || ent.isFullEditionBuild) {
+    if (ent.isPermanentSupporter) {
       return entitlementCozyEdition;
-    }
-    if (ent.hasAnnualPass) return entitlementSunPassVip;
-    if (ent.isSunPassActive(nowUtc)) {
-      return entitlementPassRemaining(
-        formatDuration(ent.remainingAdPassDuration(nowUtc)),
-      );
     }
     return entitlementSunPass;
   }
@@ -431,8 +411,6 @@ extension SolvilleL10nX on AppLocalizations {
         return toastWelcomeBack(toast.day ?? 1, toast.gridSize ?? 11);
       case SolvilleToastKind.welcomeNew:
         return toastWelcomeNew;
-      case SolvilleToastKind.sunPassEnded:
-        return toastSunPassEnded;
       case SolvilleToastKind.queuedUntill:
         return toastQueuedUntill(toast.x ?? 0, toast.y ?? 0);
       case SolvilleToastKind.sunPassRequiredSeed:
@@ -449,22 +427,10 @@ extension SolvilleL10nX on AppLocalizations {
         return toastPromptSunPass(
           upgradeName(toast.upgradeTrack!, toast.tier ?? 1),
         );
-      case SolvilleToastKind.sunPassMaxed:
-        return toastSunPassMaxed;
-      case SolvilleToastKind.adCancelled:
-        return toastAdCancelled;
-      case SolvilleToastKind.sunPassUnlocked:
-        return toastSunPassUnlocked(
-          formatDuration(toast.duration ?? Duration.zero),
-        );
       case SolvilleToastKind.sunnySurgeAlreadyActive:
         return toastSunnySurgeAlreadyActive(toast.day ?? 1);
-      case SolvilleToastKind.adCancelledSurge:
-        return toastAdCancelledSurge;
       case SolvilleToastKind.purchaseCancelled:
         return toastPurchaseCancelled;
-      case SolvilleToastKind.annualPassActivated:
-        return toastAnnualPassActivated;
       case SolvilleToastKind.lifetimePassActivated:
         return toastLifetimePassActivated;
       case SolvilleToastKind.purchasesRestored:

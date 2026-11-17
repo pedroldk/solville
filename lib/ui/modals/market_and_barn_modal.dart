@@ -252,14 +252,21 @@ class MarketAndBarnModal extends StatelessWidget {
                     final stackButton = constraints.maxWidth < 380;
                     final surgeBtn = FilledButton.tonal(
                       onPressed: controller.canClaimSunnySurgeToday
-                          ? () => controller.activateSunnySurge()
+                          ? () {
+                              if (controller.isSunPassActive) {
+                                controller.activateSunnySurge();
+                              } else {
+                                Navigator.of(context).pop();
+                                controller.openSunPassModal();
+                              }
+                            }
                           : null,
                       child: Text(
                         market.sunnySurgeActive
                             ? l10n.marketSurgeActiveBtn
-                            : (controller.entitlements.isPermanentSupporter
+                            : (controller.isSunPassActive
                                   ? l10n.marketSurgeFreeBtn
-                                  : l10n.marketSurgeWatchAdBtn),
+                                  : l10n.shopSunPassBadge),
                       ),
                     );
                     final infoRow = Row(
