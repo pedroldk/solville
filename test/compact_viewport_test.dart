@@ -45,6 +45,7 @@ void main() {
         'market': controller.onRequestOpenMarketModal,
         'homestead': controller.onRequestOpenHomesteadModal,
         'sunpass': controller.onRequestOpenSunPassModal,
+        'daystats': controller.onRequestOpenDayStatsModal,
       };
       for (final entry in openers.entries) {
         expect(entry.value, isNotNull, reason: '${entry.key} hook missing');

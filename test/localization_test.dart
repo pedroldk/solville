@@ -97,11 +97,6 @@ void main() {
 
         // 1. Default US English
         expect(find.text('Shop'), findsOneWidget);
-        expect(find.text('Lullaby'), findsNothing);
-
-        // Expand secondary controls and open Homestead modal
-        await tester.tap(find.byIcon(Icons.more_horiz_rounded));
-        await tester.pump();
         expect(find.text('Lullaby'), findsOneWidget);
 
         await tester.tap(find.text('Lullaby'));
@@ -284,9 +279,6 @@ void main() {
 
           await tester.pumpWidget(SolvilleApp(controller: controller));
           await tester.pump(const Duration(milliseconds: 50));
-
-          await tester.tap(find.text('1/10'));
-          await tester.pump();
 
           expect(find.text(questHeader), findsOneWidget);
           expect(find.text(sweepLabel), findsOneWidget);

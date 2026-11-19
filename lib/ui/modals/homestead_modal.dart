@@ -5,7 +5,9 @@ import '../../l10n/app_localizations.dart';
 import '../../l10n/solville_l10n_extensions.dart';
 import '../theme/solville_theme.dart';
 import '../view_models/solville_controller.dart';
+import '../widgets/solville_buttons.dart';
 import '../widgets/solville_dialog_shell.dart';
+import '../widgets/solville_icons.dart';
 
 /// Cozy Soundscape & Sunlit Homestead modal (opened from the top Audio button
 /// or by tapping the Farmhouse in the 2.5D isometric diorama).
@@ -26,6 +28,10 @@ class HomesteadAndAudioModal extends StatelessWidget {
 
         return SolvilleDialogShell(
           emoji: '🏡',
+          leadingIcon: const SolvilleIcon(
+            kind: SolvilleIconKind.farmhouse,
+            size: 22,
+          ),
           title: l10n.homesteadTitle,
           maxWidth: 580,
           maxHeight: 620,
@@ -35,144 +41,130 @@ class HomesteadAndAudioModal extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
             children: <Widget>[
               // 1. Soothing Background Soundscape Card
-              Material(
+              SolvilleMenuCard(
                 color: SolvilleTheme.warmCream,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  side: const BorderSide(color: Color(0x44795548), width: 1.4),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Row(
-                        children: <Widget>[
-                          const Text('🎵', style: TextStyle(fontSize: 18)),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              l10n.homesteadSoundscapeHeading,
-                              style: const TextStyle(
-                                color: SolvilleTheme.timberDark,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        l10n.adaptiveSoundscapeSubtitle(isMobile: isMobile),
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: <Widget>[
-                          for (final track in BgmTrack.values)
-                            ChoiceChip(
-                              selected: controller.bgmTrack == track,
-                              selectedColor: const Color(0xFFFFE082),
-                              backgroundColor: SolvilleTheme.parchment,
-                              label: Text(
-                                l10n.bgmTrackLabel(track),
-                                style: const TextStyle(
-                                  color: SolvilleTheme.timberDark,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 12.5,
-                                ),
-                              ),
-                              onSelected: (_) => controller.setBgmTrack(track),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: <Widget>[
-                          const Icon(
-                            Icons.music_note_rounded,
+                radius: 18,
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        const SolvilleIconMedallion(
+                          size: 32,
+                          child: SolvilleIcon(
+                            kind: SolvilleIconKind.musicLullaby,
                             size: 18,
-                            color: SolvilleTheme.timberDark,
-                          ),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              l10n.homesteadAmbienceVolume,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: SolvilleTheme.timberDark,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Slider(
-                              value: controller.bgmVolume,
-                              min: 0.0,
-                              max: 1.0,
-                              activeColor: SolvilleTheme.terracotta,
-                              onChanged: controller.setBgmVolume,
-                            ),
-                          ),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(minWidth: 42),
-                            child: Text(
-                              '$pctVol%',
-                              textAlign: TextAlign.end,
-                              style: const TextStyle(
-                                color: SolvilleTheme.timberDark,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 12.5,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SwitchListTile.adaptive(
-                        contentPadding: EdgeInsets.zero,
-                        dense: true,
-                        activeTrackColor: SolvilleTheme.meadowGreen,
-                        title: Text(
-                          l10n.homesteadSfxTitle,
-                          style: const TextStyle(
-                            color: SolvilleTheme.timberDark,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 13,
                           ),
                         ),
-                        subtitle: Text(
-                          l10n.homesteadSfxSubtitle,
-                          style: const TextStyle(fontSize: 11.5),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            l10n.homesteadSoundscapeHeading,
+                            style: const TextStyle(
+                              color: SolvilleTheme.timberDark,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 15,
+                            ),
+                          ),
                         ),
-                        value: controller.sfxEnabled,
-                        onChanged: (_) => controller.toggleSfx(),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      l10n.adaptiveSoundscapeSubtitle(isMobile: isMobile),
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: Colors.black87,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: <Widget>[
+                        for (final track in BgmTrack.values)
+                          SolvilleChip(
+                            selected: controller.bgmTrack == track,
+                            label: l10n.bgmTrackLabel(track),
+                            fontSize: 12.5,
+                            onTap: () => controller.setBgmTrack(track),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: <Widget>[
+                        const Icon(
+                          Icons.music_note_rounded,
+                          size: 18,
+                          color: SolvilleTheme.timberDark,
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            l10n.homesteadAmbienceVolume,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: SolvilleTheme.timberDark,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Slider(
+                            value: controller.bgmVolume,
+                            min: 0.0,
+                            max: 1.0,
+                            activeColor: SolvilleTheme.terracotta,
+                            onChanged: controller.setBgmVolume,
+                          ),
+                        ),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(minWidth: 42),
+                          child: Text(
+                            '$pctVol%',
+                            textAlign: TextAlign.end,
+                            style: const TextStyle(
+                              color: SolvilleTheme.timberDark,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      activeTrackColor: SolvilleTheme.meadowGreen,
+                      title: Text(
+                        l10n.homesteadSfxTitle,
+                        style: const TextStyle(
+                          color: SolvilleTheme.timberDark,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                        ),
+                      ),
+                      subtitle: Text(
+                        l10n.homesteadSfxSubtitle,
+                        style: const TextStyle(fontSize: 11.5),
+                      ),
+                      value: controller.sfxEnabled,
+                      onChanged: (_) => controller.toggleSfx(),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 14),
 
               // 2. Homestead Farm Journal Summary
-              Container(
+              SolvilleMenuCard(
+                color: const Color(0xFFFFF8E1),
+                radius: 18,
                 padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF8E1),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: const Color(0x44795548),
-                    width: 1.4,
-                  ),
-                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -216,30 +208,19 @@ class HomesteadAndAudioModal extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 8,
-                      alignment: WrapAlignment.end,
-                      children: <Widget>[
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            controller.restToNextMorning();
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: SolvilleButton(
+                        tone: SolvilleButtonTone.emerald,
+                        icon: Icons.save_rounded,
+                        label: l10n.homesteadSaveFarm,
+                        onPressed: () async {
+                          await controller.saveNow();
+                          if (context.mounted) {
                             Navigator.of(context).pop();
-                          },
-                          icon: const Icon(Icons.wb_twilight_rounded),
-                          label: Text(l10n.homesteadRestNextMorning),
-                        ),
-                        FilledButton.icon(
-                          onPressed: () async {
-                            await controller.saveNow();
-                            if (context.mounted) {
-                              Navigator.of(context).pop();
-                            }
-                          },
-                          icon: const Icon(Icons.save_rounded),
-                          label: Text(l10n.homesteadSaveFarm),
-                        ),
-                      ],
+                          }
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -247,72 +228,50 @@ class HomesteadAndAudioModal extends StatelessWidget {
               const SizedBox(height: 14),
 
               // 3. Language Selector Card
-              Material(
+              SolvilleMenuCard(
                 color: SolvilleTheme.warmCream,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  side: const BorderSide(color: Color(0x44795548), width: 1.4),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        l10n.homesteadLanguageHeading,
-                        style: const TextStyle(
-                          color: SolvilleTheme.timberDark,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 15,
-                        ),
+                radius: 18,
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      l10n.homesteadLanguageHeading,
+                      style: const TextStyle(
+                        color: SolvilleTheme.timberDark,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        l10n.homesteadLanguageSubtitle,
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          color: Colors.black87,
-                        ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.homesteadLanguageSubtitle,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: Colors.black87,
                       ),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: <Widget>[
-                          ChoiceChip(
-                            selected: controller.appLocale == null,
-                            selectedColor: const Color(0xFFFFE082),
-                            backgroundColor: SolvilleTheme.parchment,
-                            label: Text(
-                              l10n.languageSystem,
-                              style: const TextStyle(
-                                color: SolvilleTheme.timberDark,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 12,
-                              ),
-                            ),
-                            onSelected: (_) => controller.setAppLocale(null),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: <Widget>[
+                        SolvilleChip(
+                          selected: controller.appLocale == null,
+                          label: l10n.languageSystem,
+                          fontSize: 12,
+                          onTap: () => controller.setAppLocale(null),
+                        ),
+                        for (final loc in SolvilleLocaleHelper.selectableLocales)
+                          SolvilleChip(
+                            selected: controller.appLocale == loc,
+                            label: _localeLabel(l10n, loc),
+                            fontSize: 12,
+                            onTap: () => controller.setAppLocale(loc),
                           ),
-                          for (final loc in SolvilleLocaleHelper.selectableLocales)
-                            ChoiceChip(
-                              selected: controller.appLocale == loc,
-                              selectedColor: const Color(0xFFFFE082),
-                              backgroundColor: SolvilleTheme.parchment,
-                              label: Text(
-                                _localeLabel(l10n, loc),
-                                style: const TextStyle(
-                                  color: SolvilleTheme.timberDark,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              onSelected: (_) => controller.setAppLocale(loc),
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -344,10 +303,9 @@ class _JournalBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
+      decoration: SolvilleTheme.recessedSlotDecoration(
+        radius: 11,
         color: SolvilleTheme.parchment,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0x33795548)),
       ),
       child: Text(
         label,

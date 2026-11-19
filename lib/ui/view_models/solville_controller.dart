@@ -82,6 +82,9 @@ class SolvilleController extends ChangeNotifier {
   String spotlightHarvestLabel = '👇 Harvest 🍅';
   String spotlightSellLabel = '👇 Sell at Stall 🏪';
   String spotlightPlantLabel = '👇 Tap 3× Plant 🌱';
+  String spotlightStepDigLabel = '👇 1/3: Tap to Dig ⛏️';
+  String spotlightStepPlantLabel = '👇 2/3: Tap to Plant 🌱';
+  String spotlightStepWaterLabel = '👇 3/3: Tap to Water 💧';
   String landmarkHomesteadLabel = '🏡 Homestead';
   String landmarkRefillLabel = '🪣 Refill';
   String landmarkBarnLabel = '🏠 Barn';
@@ -90,6 +93,9 @@ class SolvilleController extends ChangeNotifier {
     required String spotlightHarvest,
     required String spotlightSell,
     required String spotlightPlant,
+    String? spotlightStepDig,
+    String? spotlightStepPlant,
+    String? spotlightStepWater,
     required String landmarkHomestead,
     required String landmarkRefill,
     required String landmarkBarn,
@@ -97,6 +103,13 @@ class SolvilleController extends ChangeNotifier {
     spotlightHarvestLabel = spotlightHarvest;
     spotlightSellLabel = spotlightSell;
     spotlightPlantLabel = spotlightPlant;
+    if (spotlightStepDig != null) spotlightStepDigLabel = spotlightStepDig;
+    if (spotlightStepPlant != null) {
+      spotlightStepPlantLabel = spotlightStepPlant;
+    }
+    if (spotlightStepWater != null) {
+      spotlightStepWaterLabel = spotlightStepWater;
+    }
     landmarkHomesteadLabel = landmarkHomestead;
     landmarkRefillLabel = landmarkRefill;
     landmarkBarnLabel = landmarkBarn;
@@ -125,6 +138,19 @@ class SolvilleController extends ChangeNotifier {
   double _autoSaveAccumulator = 0.0;
   double _steamCallbackAccumulator = 0.0;
 
+  int _dayStartLifetimeCoins = 0;
+  int _dayStartCratesHarvested = 0;
+  int _dayStartWeedsCleared = 0;
+
+  int _lastDayCoinsEarned = 0;
+  int get lastDayCoinsEarned => _lastDayCoinsEarned;
+
+  int _lastDayCratesHarvested = 0;
+  int get lastDayCratesHarvested => _lastDayCratesHarvested;
+
+  int _lastDayWeedsCleared = 0;
+  int get lastDayWeedsCleared => _lastDayWeedsCleared;
+
   /// Callback hook so the Flame world spawns particles & floating popups.
   void Function(SimEvent event)? onVisualSimEvent;
 
@@ -138,6 +164,8 @@ class SolvilleController extends ChangeNotifier {
   VoidCallback? onRequestOpenMarketModal;
   VoidCallback? onRequestOpenHomesteadModal;
   VoidCallback? onRequestOpenSunPassModal;
+  VoidCallback? onRequestOpenDayStatsModal;
+  VoidCallback? onTutorialReplayed;
 
   Future<void> initialize() async {
     _achievements.initialize();
@@ -174,7 +202,17 @@ class SolvilleController extends ChangeNotifier {
         _achievements.unlockTrophyById(trophyId);
       }
     }
+    _syncDayStartBaselines();
     notifyListeners();
+  }
+
+  void _syncDayStartBaselines() {
+    _dayStartLifetimeCoins = _state.lifetimeCoinsEarned;
+    _dayStartCratesHarvested = _state.totalCratesHarvested;
+    _dayStartWeedsCleared = _state.weedsClearedCount;
+    _lastDayCoinsEarned = 0;
+    _lastDayCratesHarvested = 0;
+    _lastDayWeedsCleared = 0;
   }
 
   Future<void> setAppLocale(Locale? locale) async {
@@ -637,7 +675,7 @@ class SolvilleController extends ChangeNotifier {
 
   void _promptSunPassFor(String itemName, {SolvilleToast? toast}) {
     _showToast(
-      '☀️ $itemName is part of the Full Game! Unlock everything forever for 0,49€.',
+      '☀️ $itemName is part of the Cozy Version! Unlock everything forever with a one-time purchase.',
       toast: toast,
     );
     onRequestOpenSunPassModal?.call();
@@ -685,7 +723,7 @@ class SolvilleController extends ChangeNotifier {
     return true;
   }
 
-  /// Purchases the 0,49€ one-time Full Game / Lifetime Cozy Edition unlock.
+  /// Purchases the one-time Full Game / Lifetime Cozy Edition unlock.
   Future<bool> purchaseLifetimePass() async {
     notifyUserGestureForAudio();
     notifyListeners();
@@ -721,7 +759,7 @@ class SolvilleController extends ChangeNotifier {
       _entitlements = _entitlements.copyWith(hasLifetimePass: true);
       await _saveRepo.saveEntitlementState(_entitlements);
       _showToast(
-        '✅ Restored your Solville Sun Pass purchases!',
+        '✅ Restored your Solville Cozy Version purchase!',
         toast: const SolvilleToast(SolvilleToastKind.purchasesRestored),
       );
     } else {
@@ -814,6 +852,7 @@ class SolvilleController extends ChangeNotifier {
   Future<void> resetNewFarm() async {
     await _saveRepo.clearSave();
     _state = _engine.createNewGame();
+    _syncDayStartBaselines();
     _inspectedTile = null;
     _showToast(
       '🌱 Started a fresh sunny farm in Solville!',
@@ -826,6 +865,38 @@ class SolvilleController extends ChangeNotifier {
 
   void requestCenterCamera() {
     onRequestCenterCamera?.call();
+  }
+
+  /// Restarts the 3-step visual tutorial without wiping the current farm save.
+  Future<void> replayTutorial() async {
+    notifyUserGestureForAudio();
+    _inspectedTile = null;
+    _paintSweepMode = false;
+    final result = _engine.replayTutorial(_state);
+    _applyStep(result, haptic: true, save: true);
+    final target =
+        _findFirstMatchingTile((t) => t.crop != null && t.crop!.isRipe) ??
+        const GridPos(4, 3);
+    onRequestFocusTile?.call(target);
+    onTutorialReplayed?.call();
+    notifyListeners();
+  }
+
+  /// Focuses the Stone Well and queues a refill when the watering can isn't full.
+  void refillOrFocusWell() {
+    notifyUserGestureForAudio();
+    _inspectedTile = FarmSimulationEngine.wellPos;
+    onRequestFocusTile?.call(FarmSimulationEngine.wellPos);
+    if (_state.farmer.waterCharges < _state.maxWaterCharges &&
+        !_state.actionQueue.any((a) => a.kind == ActionKind.refillWater)) {
+      final result = _engine.enqueueTileTap(
+        _state,
+        FarmSimulationEngine.wellPos,
+      );
+      _applyStep(result, haptic: true);
+    } else {
+      notifyListeners();
+    }
   }
 
   void clearInspectedTile() {
@@ -874,6 +945,7 @@ class SolvilleController extends ChangeNotifier {
         SolvilleToastKind.simmeringPreserves,
         SolvilleToastKind.queuedUntill,
         SolvilleToastKind.harvestCratesFirst,
+        SolvilleToastKind.newDay,
       };
 
   void _dispatchEvents(List<SimEvent> events) {
@@ -888,6 +960,25 @@ class SolvilleController extends ChangeNotifier {
       if (event.type == SimEventType.trophyUnlocked && event.trophyId != null) {
         _achievements.unlockTrophyById(event.trophyId!);
         unawaited(_saveRepo.saveGame(_state));
+      }
+
+      if (event.type == SimEventType.newDay) {
+        _lastDayCoinsEarned =
+            (_state.lifetimeCoinsEarned - _dayStartLifetimeCoins).clamp(
+              0,
+              999999,
+            );
+        _lastDayCratesHarvested =
+            (_state.totalCratesHarvested - _dayStartCratesHarvested).clamp(
+              0,
+              999999,
+            );
+        _lastDayWeedsCleared = (_state.weedsClearedCount - _dayStartWeedsCleared)
+            .clamp(0, 999999);
+        _dayStartLifetimeCoins = _state.lifetimeCoinsEarned;
+        _dayStartCratesHarvested = _state.totalCratesHarvested;
+        _dayStartWeedsCleared = _state.weedsClearedCount;
+        onRequestOpenDayStatsModal?.call();
       }
 
       final kind = event.toast?.kind;

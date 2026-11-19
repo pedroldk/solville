@@ -12,30 +12,37 @@ import '../../domain/models/solville_toast.dart';
 import '../../domain/models/tile_state.dart';
 import '../../domain/simulation/farm_simulation_engine.dart';
 import '../../ui/view_models/solville_controller.dart';
+import '../painters/atmosphere_painter.dart';
 import '../painters/canvas_draw_helpers.dart';
 import '../painters/characters_and_fx_painter.dart';
 import '../painters/iso_prism_painter.dart';
 import '../painters/landmarks_and_structures_painter.dart';
+import '../painters/painterly_cache.dart';
 import '../solville_game.dart';
 
 /// Depth-sorted Painter's-algorithm renderer for the entire 2.5D Solville island.
 ///
 /// Optimized for zero closure/list allocations per frame by traversing isometric
-/// diagonals directly and interleaving dynamic entities in-place.
+/// diagonals directly, blitting cached 2× painterly terrain tiles, and
+/// interleaving dynamic entities, elastic pop animations, and atmospheric lighting.
 class IsometricDioramaWorldComponent extends Component
     with HasGameReference<SolvilleGame> {
   IsometricDioramaWorldComponent({
     required this.controller,
     required this.iso,
-  }) {
-    _prismPainter = IsoPrismPainter(iso);
+    AtmospherePainter? atmospherePainter,
+  }) : _atmospherePainter = atmospherePainter ?? AtmospherePainter() {
+    _painterlyCache = PainterlyCache(iso);
+    _prismPainter = IsoPrismPainter(iso, cache: _painterlyCache);
     _structuresPainter = LandmarksAndStructuresPainter(iso);
     _fxPainter = CharactersAndFxPainter(iso);
   }
 
   final SolvilleController controller;
   final IsoProjection iso;
+  final AtmospherePainter _atmospherePainter;
 
+  late final PainterlyCache _painterlyCache;
   late final IsoPrismPainter _prismPainter;
   late final LandmarksAndStructuresPainter _structuresPainter;
   late final CharactersAndFxPainter _fxPainter;
@@ -44,16 +51,26 @@ class IsometricDioramaWorldComponent extends Component
   final List<FloatingVfx> _vfx = <FloatingVfx>[];
   final Map<GridPos, List<({int step, ActionKind kind})>> _queueStepsByPos =
       <GridPos, List<({int step, ActionKind kind})>>{};
+  final Map<GridPos, double> _tilePopTimes = <GridPos, double>{};
+  final List<GridPos> _expiredPops = <GridPos>[];
+  final List<bool> _villagersDrawn = List<bool>.filled(5, false);
   final Paint _ghostBadgePaint = Paint();
+  final Paint _ghostBorderPaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.8;
+
   List<GridPos> _cachedGridPos = const <GridPos>[];
   int _cachedGridSize = -1;
+  double _stepDustCooldown = 0.0;
+
+  static const double _popDuration = 0.34;
 
   late final List<StrollingVillager> _villagers = <StrollingVillager>[
     StrollingVillager(
       name: 'Baker Mateo',
       variant: 0,
       gx: 1.5,
-      speed: 0.72,
+      speed: 0.42,
       tunicColor: const Color(0xFF26A69A),
       hairColor: const Color(0xFF4E342E),
     ),
@@ -61,7 +78,7 @@ class IsometricDioramaWorldComponent extends Component
       name: 'Chef Clara',
       variant: 1,
       gx: 8.2,
-      speed: -0.66,
+      speed: -0.38,
       tunicColor: const Color(0xFFAB47BC),
       hairColor: const Color(0xFFFFB300),
     ),
@@ -69,7 +86,7 @@ class IsometricDioramaWorldComponent extends Component
       name: 'Florist Mina',
       variant: 2,
       gx: 4.5,
-      speed: 0.60,
+      speed: 0.35,
       tunicColor: const Color(0xFFEC407A),
       hairColor: const Color(0xFF3E2723),
     ),
@@ -77,7 +94,7 @@ class IsometricDioramaWorldComponent extends Component
       name: 'Grandpa Leo',
       variant: 3,
       gx: 9.4,
-      speed: -0.52,
+      speed: -0.30,
       tunicColor: const Color(0xFF8D6E63),
       hairColor: const Color(0xFFECEFF1),
     ),
@@ -85,7 +102,7 @@ class IsometricDioramaWorldComponent extends Component
       name: 'Mayor Sunny',
       variant: 4,
       gx: 2.8,
-      speed: 0.78,
+      speed: 0.45,
       tunicColor: const Color(0xFFFFA726),
       hairColor: const Color(0xFF5D4037),
     ),
@@ -94,8 +111,24 @@ class IsometricDioramaWorldComponent extends Component
   double _animTime = 0.0;
   double get animTime => _animTime;
 
+  @override
+  void onRemove() {
+    _painterlyCache.dispose();
+    super.onRemove();
+  }
+
   void handleSimEvent(SimEvent event) {
     _fxPainter.spawnForSimEvent(_vfx, event, _rng);
+    if (event.tile != null &&
+        (event.type == SimEventType.dig ||
+            event.type == SimEventType.plant ||
+            event.type == SimEventType.water ||
+            event.type == SimEventType.compost ||
+            event.type == SimEventType.harvest ||
+            event.type == SimEventType.goldenHarvest)) {
+      _tilePopTimes[event.tile!] = _popDuration;
+    }
+
     if ((event.type == SimEventType.coinsEarned ||
             event.type == SimEventType.expressOrderFulfilled) &&
         event.tile == FarmSimulationEngine.marketStallPos) {
@@ -112,8 +145,8 @@ class IsometricDioramaWorldComponent extends Component
         }
       }
       if (closest != null) {
-        closest.heartTimer = 2.0;
-        closest.pauseTimer = math.max(closest.pauseTimer, 1.1);
+        closest.heartTimer = 3.0;
+        closest.pauseTimer = math.max(closest.pauseTimer, 2.0);
         if (event.toast?.kind == SolvilleToastKind.soldCrate &&
             event.toast?.product != null) {
           closest.purchaseBubbleText =
@@ -131,11 +164,12 @@ class IsometricDioramaWorldComponent extends Component
     if (controller.isPaused) return;
     _animTime += dt;
 
-    final maxGx = (controller.state.gridSize - 1).toDouble();
-    final market = controller.state.market;
+    final state = controller.state;
+    final maxGx = (state.gridSize - 1).toDouble();
+    final market = state.market;
     final hasStallGoods = market.stallCrates.isNotEmpty;
     final activeCount = market.isRushActive ? 5 : 3;
-    final speedMult = market.isRushActive ? 1.35 : 1.0;
+    final speedMult = market.isRushActive ? 1.15 : 1.0;
 
     for (var i = 0; i < activeCount; i++) {
       final v = _villagers[i];
@@ -155,7 +189,7 @@ class IsometricDioramaWorldComponent extends Component
       if (hasStallGoods &&
           (prevGx - stallX).sign != (v.gx - stallX).sign &&
           (v.gx - stallX).abs() < 0.6) {
-        v.pauseTimer = market.isRushActive ? 0.9 : 1.5;
+        v.pauseTimer = market.isRushActive ? 1.8 : 2.6;
       }
       if (v.gx > maxGx) {
         v.gx = maxGx;
@@ -166,15 +200,46 @@ class IsometricDioramaWorldComponent extends Component
       }
     }
 
+    // Subtle footstep meadow dust puffs behind Sol while walking
+    if (state.farmer.activePath.isNotEmpty) {
+      _stepDustCooldown -= dt;
+      if (_stepDustCooldown <= 0.0) {
+        _stepDustCooldown = 0.18;
+        final fw = iso.gridToWorld(state.farmer.x, state.farmer.y);
+        _fxPainter.spawnFootstepDust(_vfx, fw.x, fw.y, _rng);
+      }
+    } else {
+      _stepDustCooldown = 0.0;
+    }
+
+    // Elastic tile pop-bounce decay
+    if (_tilePopTimes.isNotEmpty) {
+      _expiredPops.clear();
+      _tilePopTimes.updateAll((pos, rem) {
+        final next = rem - dt;
+        if (next <= 0.0) _expiredPops.add(pos);
+        return next;
+      });
+      for (var i = 0; i < _expiredPops.length; i++) {
+        _tilePopTimes.remove(_expiredPops[i]);
+      }
+    }
+
+    // Update particle physics (gravity, drag, spin)
     for (var i = _vfx.length - 1; i >= 0; i--) {
       final p = _vfx[i];
       p.life -= dt;
       if (p.life <= 0) {
         _vfx.removeAt(i);
       } else {
+        p.vy += p.ay * dt;
         p.x += p.vx * dt;
         p.y += p.vy * dt;
+        p.angle += p.angularVelocity * dt;
       }
+    }
+    if (_vfx.length > 180) {
+      _vfx.removeRange(0, _vfx.length - 180);
     }
   }
 
@@ -195,7 +260,7 @@ class IsometricDioramaWorldComponent extends Component
     final totalBarn = state.totalBarnCrates;
     final booms = state.market.boomProducts;
 
-    final visibleRect = game.camera.visibleWorldRect.inflate(220.0);
+    final visibleRect = game.camera.visibleWorldRect.inflate(230.0);
     final minVisX = visibleRect.left;
     final maxVisX = visibleRect.right;
     final minVisY = visibleRect.top;
@@ -203,10 +268,17 @@ class IsometricDioramaWorldComponent extends Component
     final halfTileW = iso.tileWidth * 0.5;
     final halfTileH = iso.tileHeight * 0.5;
 
-    // Pass 0: Soft drifting sky clouds behind floating island
-    _fxPainter.drawSkyClouds(canvas, size, state.dayProgress, _animTime);
+    // Pass 0: Multi-layer parallax cumulus clouds behind floating island
+    _atmospherePainter.drawParallaxClouds(
+      canvas,
+      iso,
+      size,
+      state.dayProgress,
+      state.weather,
+      _animTime,
+    );
 
-    // Pass 0.5: Floating island drop shadow
+    // Pass 0.5: Feathered multi-layered floating island drop shadow
     _prismPainter.drawIslandDropShadow(canvas, size, state.dayProgress);
 
     final previewRadius = hovered != null
@@ -214,7 +286,7 @@ class IsometricDioramaWorldComponent extends Component
         : 0;
     final maxSum = (size - 1) * 2;
 
-    // Pass 1: Isometric terrain prisms back-to-front (with primitive frustum culling)
+    // Pass 1: Isometric painterly terrain prisms & sculpted sky-island cliffs
     for (var sum = 0; sum <= maxSum; sum++) {
       final cy = sum * halfTileH;
       if (cy < minVisY || cy > maxVisY) continue;
@@ -242,21 +314,33 @@ class IsometricDioramaWorldComponent extends Component
           canvas,
           pos: pos,
           tile: tile,
+          tiles: tiles,
           gridSize: size,
           isHovered: isHovered,
           isInSprinklerPreview: inSprinklerPreview,
           animTime: _animTime,
+          dayProgress: state.dayProgress,
           hoverValid: hoverValid,
         );
       }
     }
 
-    // Pass 1.5: A* stepping-stone route dots on ground
+    // Pass 1.2: Soft drifting cloud shadows sweeping across sunlit island
+    _atmospherePainter.drawCloudShadows(
+      canvas,
+      iso,
+      size,
+      state.dayProgress,
+      state.weather,
+      _animTime,
+    );
+
+    // Pass 1.5: Glowing A* stepping-stone route dots on ground
     _fxPainter.drawActivePathDots(canvas, state.farmer, _animTime);
 
-    // Pass 2: Depth-sorted 2.5D entities in diagonal order (zero closure allocations)
+    // Pass 2: Depth-sorted 2.5D entities in diagonal order
     final activeVillagerCount = state.market.isRushActive ? 5 : 3;
-    final villagersDrawn = List<bool>.filled(activeVillagerCount, false);
+    _villagersDrawn.fillRange(0, activeVillagerCount, false);
     final farmer = state.farmer;
     final farmerDepth = farmer.x + farmer.y + 0.08;
     var farmerDrawn = false;
@@ -268,7 +352,7 @@ class IsometricDioramaWorldComponent extends Component
         var bestId = -1;
         var bestDepth = double.infinity;
         for (var i = 0; i < activeVillagerCount; i++) {
-          if (villagersDrawn[i]) continue;
+          if (_villagersDrawn[i]) continue;
           final d = _villagers[i].gx + 0.05;
           if (d <= maxBandDepth && d < bestDepth) {
             bestDepth = d;
@@ -291,7 +375,7 @@ class IsometricDioramaWorldComponent extends Component
             dayProgress: state.dayProgress,
           );
         } else {
-          villagersDrawn[bestId] = true;
+          _villagersDrawn[bestId] = true;
           final boomHighlight = booms.isNotEmpty
               ? booms[bestId % booms.length]
               : null;
@@ -307,7 +391,6 @@ class IsometricDioramaWorldComponent extends Component
     }
 
     for (var sum = 0; sum <= maxSum; sum++) {
-      // Draw any character strictly behind this diagonal
       drawDynamicInBand(sum.toDouble() - 0.0001);
 
       final cy = sum * halfTileH;
@@ -326,6 +409,11 @@ class IsometricDioramaWorldComponent extends Component
             if (cx < minVisX || cx > maxVisX) continue;
             final pos = _cachedGridPos[y * size + x];
             final showMeters = pos == hovered || pos == inspected;
+            final popRem = _tilePopTimes[pos];
+            final popScale = popRem != null
+                ? 1.0 + math.sin((popRem / _popDuration) * math.pi) * 0.22
+                : 1.0;
+
             _structuresPainter.drawTileContents(
               canvas,
               pos: pos,
@@ -334,8 +422,10 @@ class IsometricDioramaWorldComponent extends Component
               totalBarnCrates: totalBarn,
               dayProgress: state.dayProgress,
               animTime: _animTime,
+              weather: state.weather,
               isSunPassActive: sunPassActive,
               showDetailedMeters: showMeters,
+              popScale: popScale,
               homesteadLabel: controller.landmarkHomesteadLabel,
               refillLabel: controller.landmarkRefillLabel,
               barnLabel: controller.landmarkBarnLabel,
@@ -344,14 +434,21 @@ class IsometricDioramaWorldComponent extends Component
         }
       }
 
-      // Draw characters residing within diagonal band `[sum, sum + 1)`
       drawDynamicInBand(sum + 0.9999);
     }
 
-    // Ensure any character beyond maxSum is drawn
     drawDynamicInBand(double.infinity);
 
-    // Pass 3: Action Queue numbered badges with action icons
+    // Pass 2.5: Additive warm lantern, window & hearth light pools at dusk
+    _atmospherePainter.drawDuskLightPools(
+      canvas,
+      iso,
+      state,
+      _animTime,
+      visibleRect: visibleRect,
+    );
+
+    // Pass 3: Action Queue numbered badges with crisp vector action icons
     if (state.actionQueue.isNotEmpty) {
       _queueStepsByPos.clear();
       for (var i = 0; i < state.actionQueue.length; i++) {
@@ -394,9 +491,11 @@ class IsometricDioramaWorldComponent extends Component
       }
     }
 
-    // Pass 3.4: Zero-text 3-Step Visual Onboarding Spotlight
+    // Pass 3.4: Zero-text 3-Step Visual Onboarding Spotlight & Contextual Guidance
     if (state.onboardingStep < 3) {
       _drawOnboardingCue(canvas, state);
+    } else {
+      _drawContextualGuidanceCue(canvas, state);
     }
 
     // Pass 3.5: Ghost placement preview on hovered tile in Seed / Build mode
@@ -406,7 +505,7 @@ class IsometricDioramaWorldComponent extends Component
       _drawGhostPreview(canvas, state, hovered);
     }
 
-    // Pass 4: Butterflies / twilight fireflies / rain & floating coin popups
+    // Pass 4: Butterflies / blossom petals / twilight fireflies / rain & VFX
     _fxPainter.drawAmbientButterfliesFirefliesAndRain(
       canvas,
       gridSize: size,
@@ -445,26 +544,113 @@ class IsometricDioramaWorldComponent extends Component
         _animTime,
       );
     } else if (state.onboardingStep == 2) {
-      GridPos target = const GridPos(6, 3);
-      for (var y = 1; y < state.gridSize; y++) {
-        for (var x = 0; x < state.gridSize; x++) {
-          final p = GridPos(x, y);
-          final t = state.tileAt(p);
-          if (t.structure == StructureType.none &&
-              t.crop == null &&
-              (t.ground == GroundType.weeds || t.ground == GroundType.soil)) {
-            target = p;
-            x = state.gridSize;
-            y = state.gridSize;
+      GridPos? target;
+      for (final action in state.actionQueue) {
+        if (action.kind == ActionKind.dig ||
+            action.kind == ActionKind.plant ||
+            action.kind == ActionKind.water) {
+          target = action.target;
+          break;
+        }
+      }
+      if (target == null) {
+        const starterWeeds = GridPos(5, 4);
+        if (state.inBounds(starterWeeds)) {
+          final starterTile = state.tileAt(starterWeeds);
+          if (starterTile.structure == StructureType.none &&
+              starterTile.landmark == LandmarkKind.none &&
+              starterTile.crop == null &&
+              (starterTile.ground == GroundType.weeds ||
+                  starterTile.ground == GroundType.soil)) {
+            target = starterWeeds;
           }
         }
       }
+      if (target == null) {
+        for (var y = 1; y < state.gridSize; y++) {
+          for (var x = 0; x < state.gridSize; x++) {
+            final p = GridPos(x, y);
+            final t = state.tileAt(p);
+            if (t.structure == StructureType.none &&
+                t.crop == null &&
+                (t.ground == GroundType.weeds ||
+                    t.ground == GroundType.soil)) {
+              target = p;
+              x = state.gridSize;
+              y = state.gridSize;
+            }
+          }
+        }
+      }
+      final resolvedTarget = target ?? const GridPos(6, 3);
+      final t = state.tileAt(resolvedTarget);
+      final hasDigQueued = state.actionQueue.any(
+        (a) => a.target == resolvedTarget && a.kind == ActionKind.dig,
+      );
+      final hasPlantQueued = state.actionQueue.any(
+        (a) => a.target == resolvedTarget && a.kind == ActionKind.plant,
+      );
+      final String stepLabel;
+      if (t.ground != GroundType.soil && !hasDigQueued) {
+        stepLabel = controller.spotlightStepDigLabel;
+      } else if (t.crop == null && !hasPlantQueued) {
+        stepLabel = controller.spotlightStepPlantLabel;
+      } else {
+        stepLabel = controller.spotlightStepWaterLabel;
+      }
       _fxPainter.drawOnboardingSpotlight(
         canvas,
-        target,
-        controller.spotlightPlantLabel,
+        resolvedTarget,
+        stepLabel,
         _animTime,
       );
+    }
+  }
+
+  void _drawContextualGuidanceCue(Canvas canvas, GameState state) {
+    if (state.farmer.carriedCrates.length >= state.maxCarryCrates &&
+        !state.actionQueue.any(
+          (a) =>
+              a.kind == ActionKind.sellAtStall ||
+              a.kind == ActionKind.storeInBarn,
+        )) {
+      _fxPainter.drawOnboardingSpotlight(
+        canvas,
+        FarmSimulationEngine.marketStallPos,
+        controller.spotlightSellLabel,
+        _animTime,
+      );
+      return;
+    }
+
+    if (state.farmer.waterCharges <= 0 &&
+        !state.actionQueue.any((a) => a.kind == ActionKind.refillWater)) {
+      _fxPainter.drawOnboardingSpotlight(
+        canvas,
+        FarmSimulationEngine.wellPos,
+        controller.landmarkRefillLabel,
+        _animTime,
+      );
+      return;
+    }
+
+    if (state.claimedQuestsCount < 3 &&
+        state.farmer.waterCharges > 0 &&
+        !state.actionQueue.any((a) => a.kind == ActionKind.water)) {
+      for (var y = 1; y < state.gridSize; y++) {
+        for (var x = 0; x < state.gridSize; x++) {
+          final p = GridPos(x, y);
+          if (state.tileAt(p).isThirstyPlot) {
+            _fxPainter.drawOnboardingSpotlight(
+              canvas,
+              p,
+              controller.spotlightStepWaterLabel,
+              _animTime,
+            );
+            return;
+          }
+        }
+      }
     }
   }
 
@@ -503,12 +689,16 @@ class IsometricDioramaWorldComponent extends Component
     if (emoji == null) return;
 
     final center = iso.tileCenterToWorld(hovered);
-    final bob = math.sin(_animTime * 5.0) * 2.5;
+    final bob = math.sin(_animTime * 2.8) * 2.0;
     final badgeCenter = Offset(center.x, center.y - 18.0 + bob);
     _ghostBadgePaint.color = valid
-        ? const Color(0xBBFFFDF6)
-        : const Color(0xBBFFCDD2);
-    canvas.drawCircle(badgeCenter, 14.0, _ghostBadgePaint);
+        ? const Color(0xDCFFFDF6)
+        : const Color(0xDCFFCDD2);
+    _ghostBorderPaint.color = valid
+        ? const Color(0xFFFFB300)
+        : const Color(0xFFE53935);
+    canvas.drawCircle(badgeCenter, 14.5, _ghostBadgePaint);
+    canvas.drawCircle(badgeCenter, 14.5, _ghostBorderPaint);
     CanvasDrawHelpers.drawCenteredText(
       canvas,
       emoji,

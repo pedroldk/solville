@@ -938,19 +938,19 @@ abstract class AppLocalizations {
   /// No description provided for @hudPassShort.
   ///
   /// In en, this message translates to:
-  /// **'Pass'**
+  /// **'Cozy'**
   String get hudPassShort;
 
   /// No description provided for @hudPassShortActive.
   ///
   /// In en, this message translates to:
-  /// **'Pass ✓'**
+  /// **'Cozy ✓'**
   String get hudPassShortActive;
 
   /// No description provided for @hudSunPassTooltip.
   ///
   /// In en, this message translates to:
-  /// **'Solville Sun Pass (0,49€ one-time Full Game unlock)'**
+  /// **'Solville Cozy Version (one-time Full Game unlock)'**
   String get hudSunPassTooltip;
 
   /// No description provided for @hudHomesteadTooltip.
@@ -1025,22 +1025,10 @@ abstract class AppLocalizations {
   /// **'Cozy Edition'**
   String get entitlementCozyEdition;
 
-  /// No description provided for @entitlementSunPassVip.
-  ///
-  /// In en, this message translates to:
-  /// **'Sun Pass VIP'**
-  String get entitlementSunPassVip;
-
-  /// No description provided for @entitlementPassRemaining.
-  ///
-  /// In en, this message translates to:
-  /// **'Pass {time}'**
-  String entitlementPassRemaining(String time);
-
   /// No description provided for @entitlementSunPass.
   ///
   /// In en, this message translates to:
-  /// **'Sun Pass'**
+  /// **'Cozy'**
   String get entitlementSunPass;
 
   /// No description provided for @entitlementExpired.
@@ -1060,18 +1048,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{minutes}m'**
   String entitlementTimeMinutes(int minutes);
-
-  /// No description provided for @entitlementAnnualPrice.
-  ///
-  /// In en, this message translates to:
-  /// **'2,99€ / year'**
-  String get entitlementAnnualPrice;
-
-  /// No description provided for @entitlementLifetimePrice.
-  ///
-  /// In en, this message translates to:
-  /// **'0,49€'**
-  String get entitlementLifetimePrice;
 
   /// No description provided for @dockQueuedCount.
   ///
@@ -1136,13 +1112,13 @@ abstract class AppLocalizations {
   /// No description provided for @dockSeedLockedLabel.
   ///
   /// In en, this message translates to:
-  /// **'{emoji} {name} (☀️ Pass)'**
+  /// **'{emoji} {name} (☀️ Cozy)'**
   String dockSeedLockedLabel(String emoji, String name);
 
   /// No description provided for @dockExpandIsleLocked.
   ///
   /// In en, this message translates to:
-  /// **'🏝️ Expand Isle {fromSize}×{fromSize}→{toSize}×{toSize} (☀️ Sun Pass)'**
+  /// **'🏝️ Expand Isle {fromSize}×{fromSize}→{toSize}×{toSize} (☀️ Cozy)'**
   String dockExpandIsleLocked(int fromSize, int toSize);
 
   /// No description provided for @dockExpandIsle.
@@ -1154,13 +1130,13 @@ abstract class AppLocalizations {
   /// No description provided for @dockBuildLockedLabel.
   ///
   /// In en, this message translates to:
-  /// **'{emoji} {name} (☀️ Pass)'**
+  /// **'{emoji} {name} (☀️ Cozy)'**
   String dockBuildLockedLabel(String emoji, String name);
 
   /// No description provided for @inspectorSunPassPaused.
   ///
   /// In en, this message translates to:
-  /// **'{summary} • ☀️ Sun Pass Paused'**
+  /// **'{summary} • ☀️ Cozy Paused'**
   String inspectorSunPassPaused(String summary);
 
   /// No description provided for @inspectorUnlockBtn.
@@ -1555,13 +1531,13 @@ abstract class AppLocalizations {
   /// No description provided for @marketSurgeSupporterSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Included free with your Sun Pass!'**
+  /// **'Included free with your Cozy Version!'**
   String get marketSurgeSupporterSubtitle;
 
   /// No description provided for @marketSurgeFreeSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Unlock the Full Game once for 0,49€ to claim free daily surges!'**
+  /// **'Unlock the Full Game once to claim free daily surges!'**
   String get marketSurgeFreeSubtitle;
 
   /// No description provided for @marketSurgeActiveBtn.
@@ -1657,13 +1633,13 @@ abstract class AppLocalizations {
   /// No description provided for @shopSunPassBadge.
   ///
   /// In en, this message translates to:
-  /// **'☀️ Sun Pass'**
+  /// **'☀️ Cozy'**
   String get shopSunPassBadge;
 
   /// No description provided for @shopItemSunPass.
   ///
   /// In en, this message translates to:
-  /// **'{name} • ☀️ Sun Pass'**
+  /// **'{name} • ☀️ Cozy'**
   String shopItemSunPass(String name);
 
   /// No description provided for @shopBuyCost.
@@ -1681,7 +1657,7 @@ abstract class AppLocalizations {
   /// No description provided for @shopSeedBaseCrateSunPass.
   ///
   /// In en, this message translates to:
-  /// **'{name} • Base Crate {value}☀️ • ☀️ Sun Pass'**
+  /// **'{name} • Base Crate {value}☀️ • ☀️ Cozy'**
   String shopSeedBaseCrateSunPass(String name, int value);
 
   /// No description provided for @shopSeedSubtitle.
@@ -1729,7 +1705,7 @@ abstract class AppLocalizations {
   /// No description provided for @shopBuildItemTitleSunPass.
   ///
   /// In en, this message translates to:
-  /// **'{name} ({cost}☀️ each • ☀️ Sun Pass)'**
+  /// **'{name} ({cost}☀️ each • ☀️ Cozy)'**
   String shopBuildItemTitleSunPass(String name, int cost);
 
   /// No description provided for @shopPlaceOnFarm.
@@ -1741,7 +1717,7 @@ abstract class AppLocalizations {
   /// No description provided for @sunPassTitle.
   ///
   /// In en, this message translates to:
-  /// **'Solville Sun Pass'**
+  /// **'Solville Cozy Version'**
   String get sunPassTitle;
 
   /// No description provided for @sunPassBadgeActive.
@@ -1759,74 +1735,14 @@ abstract class AppLocalizations {
   /// No description provided for @sunPassIncludedHeading.
   ///
   /// In en, this message translates to:
-  /// **'✨ Everything Included in Sun Pass:'**
+  /// **'✨ Everything Included in Cozy Version:'**
   String get sunPassIncludedHeading;
 
   /// No description provided for @sunPassIncludedBody.
   ///
   /// In en, this message translates to:
-  /// **'• 🌽🪻🎃 Gourmet Crops: Golden Corn, Fragrant Lavender (+35% Bee speed) & Solville Pumpkin\n• 🍋🫙🐝🐄 Artisan & Ranch: Lemon Trees, Artisan Preserves Kettle, Wildflower Apiary, Sunny Cow Paddock, Solar Mist Tower (5×5) & Blossom Arch\n• 🏝️🛠️ Grand Expansions & Master Tools: Expand your isle up to 35×35 + Tier 2 Tool Upgrades\n• 💚 Cozy Promise: Zero ads, zero subscriptions—one 0,49€ unlock keeps your full farm forever!'**
+  /// **'• 🌽🪻🎃 Gourmet Crops: Golden Corn, Fragrant Lavender (+35% Bee speed) & Solville Pumpkin\n• 🍋🫙🐝🐄 Artisan & Ranch: Lemon Trees, Artisan Preserves Kettle, Wildflower Apiary, Sunny Cow Paddock, Solar Mist Tower (5×5) & Blossom Arch\n• 🏝️🛠️ Grand Expansions & Master Tools: Expand your isle up to 35×35 + Tier 2 Tool Upgrades\n• 💚 Cozy Promise: Zero subscriptions—a single one-time unlock keeps your full farm forever!'**
   String get sunPassIncludedBody;
-
-  /// No description provided for @sunPassAdTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Watch 1 Short Ad • +24 Hours Unlock'**
-  String get sunPassAdTitle;
-
-  /// No description provided for @sunPassAdBadge.
-  ///
-  /// In en, this message translates to:
-  /// **'FREE • STACK UP TO 48H'**
-  String get sunPassAdBadge;
-
-  /// No description provided for @sunPassAdDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Unlock the entire Solville catalog for 24 hours. Watch 2 ads back-to-back to stack up to 48 hours of uninterrupted play!'**
-  String get sunPassAdDesc;
-
-  /// No description provided for @sunPassUnlockedForever.
-  ///
-  /// In en, this message translates to:
-  /// **'Unlocked Forever'**
-  String get sunPassUnlockedForever;
-
-  /// No description provided for @sunPassMaxed48h.
-  ///
-  /// In en, this message translates to:
-  /// **'Maxed (48h)'**
-  String get sunPassMaxed48h;
-
-  /// No description provided for @sunPassWatchAdTopUp.
-  ///
-  /// In en, this message translates to:
-  /// **'Watch Ad (+24h Top-Up)'**
-  String get sunPassWatchAdTopUp;
-
-  /// No description provided for @sunPassWatchAd24h.
-  ///
-  /// In en, this message translates to:
-  /// **'Watch Ad (+24h)'**
-  String get sunPassWatchAd24h;
-
-  /// No description provided for @sunPassAnnualTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Annual Sun Pass • {price}'**
-  String sunPassAnnualTitle(String price);
-
-  /// No description provided for @sunPassAnnualBadge.
-  ///
-  /// In en, this message translates to:
-  /// **'MOST POPULAR • ~0,25€/MO'**
-  String get sunPassAnnualBadge;
-
-  /// No description provided for @sunPassAnnualDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Full year of ad-free access to all crops, animals & island expansions + Free 1-tap Daily Sunny Surge (+25% Market Boost & instant Sunshower)!'**
-  String get sunPassAnnualDesc;
 
   /// No description provided for @sunPassActiveCheck.
   ///
@@ -1834,17 +1750,11 @@ abstract class AppLocalizations {
   /// **'Active ✓'**
   String get sunPassActiveCheck;
 
-  /// No description provided for @sunPassSubscribeBtn.
-  ///
-  /// In en, this message translates to:
-  /// **'Subscribe 2,99€/yr'**
-  String get sunPassSubscribeBtn;
-
   /// No description provided for @sunPassLifetimeTitle.
   ///
   /// In en, this message translates to:
-  /// **'Lifetime Cozy Edition • {price}'**
-  String sunPassLifetimeTitle(String price);
+  /// **'Lifetime Cozy Edition'**
+  String get sunPassLifetimeTitle;
 
   /// No description provided for @sunPassLifetimeBadge.
   ///
@@ -1855,7 +1765,7 @@ abstract class AppLocalizations {
   /// No description provided for @sunPassLifetimeDesc.
   ///
   /// In en, this message translates to:
-  /// **'No subscriptions, no timers, no ads—ever. Own all of Solville and daily Sunny Surge boosts forever with a single purchase.'**
+  /// **'No subscriptions, no timers—ever. Own all of Solville forever with a single purchase.'**
   String get sunPassLifetimeDesc;
 
   /// No description provided for @sunPassOwnedCheck.
@@ -1867,7 +1777,7 @@ abstract class AppLocalizations {
   /// No description provided for @sunPassBuyOnceBtn.
   ///
   /// In en, this message translates to:
-  /// **'Buy Once 0,49€'**
+  /// **'Buy Once'**
   String get sunPassBuyOnceBtn;
 
   /// No description provided for @sunPassSurgeCardTitle.
@@ -1879,13 +1789,13 @@ abstract class AppLocalizations {
   /// No description provided for @sunPassSurgeSupporterDesc.
   ///
   /// In en, this message translates to:
-  /// **'Included free every day with your supporter pass!'**
+  /// **'Included free every day with your Cozy Version!'**
   String get sunPassSurgeSupporterDesc;
 
   /// No description provided for @sunPassSurgeFreeDesc.
   ///
   /// In en, this message translates to:
-  /// **'Included free every day once you unlock the Full Game for 0,49€!'**
+  /// **'Included free every day once you unlock the Full Game!'**
   String get sunPassSurgeFreeDesc;
 
   /// No description provided for @sunPassActiveTodayCheck.
@@ -1899,12 +1809,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Claim Free Surge'**
   String get sunPassClaimFreeSurge;
-
-  /// No description provided for @sunPassWatchAdSurge.
-  ///
-  /// In en, this message translates to:
-  /// **'Watch Ad (Surge)'**
-  String get sunPassWatchAdSurge;
 
   /// No description provided for @sunPassRestorePurchases.
   ///
@@ -1921,32 +1825,8 @@ abstract class AppLocalizations {
   /// No description provided for @sunPassStatusLifetimeSubtext.
   ///
   /// In en, this message translates to:
-  /// **'All crops, animals, expansions, and free daily Sunny Surges are yours forever!'**
+  /// **'All crops, animals, artisan goods, and island expansions are yours forever!'**
   String get sunPassStatusLifetimeSubtext;
-
-  /// No description provided for @sunPassStatusAnnualHeadline.
-  ///
-  /// In en, this message translates to:
-  /// **'🌻 Annual Sun Pass Active (2,99€ / year)'**
-  String get sunPassStatusAnnualHeadline;
-
-  /// No description provided for @sunPassStatusAnnualSubtext.
-  ///
-  /// In en, this message translates to:
-  /// **'All Sun Pass content and free daily Sunny Surges are unlocked!'**
-  String get sunPassStatusAnnualSubtext;
-
-  /// No description provided for @sunPassStatusAdHeadline.
-  ///
-  /// In en, this message translates to:
-  /// **'☀️ Ad Pass Active — {remaining} remaining'**
-  String sunPassStatusAdHeadline(String remaining);
-
-  /// No description provided for @sunPassStatusAdSubtext.
-  ///
-  /// In en, this message translates to:
-  /// **'All crops, builds, and upgrades are unlocked! You can stack up to 48 hours max.'**
-  String get sunPassStatusAdSubtext;
 
   /// No description provided for @sunPassStatusStarterHeadline.
   ///
@@ -1957,7 +1837,7 @@ abstract class AppLocalizations {
   /// No description provided for @sunPassStatusStarterSubtext.
   ///
   /// In en, this message translates to:
-  /// **'Unlock the entire Solville experience forever with a single 0,49€ purchase—no ads, no subscriptions!'**
+  /// **'Unlock the entire Solville experience forever with a single one-time purchase—no subscriptions!'**
   String get sunPassStatusStarterSubtext;
 
   /// No description provided for @trophyCabinetTitle.
@@ -2266,12 +2146,6 @@ abstract class AppLocalizations {
   /// **'Welcome to Solville! Tap plots 1–3x to combo-queue Dig → Sow → Water!'**
   String get toastWelcomeNew;
 
-  /// No description provided for @toastSunPassEnded.
-  ///
-  /// In en, this message translates to:
-  /// **'☀️ Your Sun Pass timer ended! Watch 1 ad for +24h anytime.'**
-  String get toastSunPassEnded;
-
   /// No description provided for @toastQueuedUntill.
   ///
   /// In en, this message translates to:
@@ -2293,26 +2167,8 @@ abstract class AppLocalizations {
   /// No description provided for @toastPromptSunPass.
   ///
   /// In en, this message translates to:
-  /// **'☀️ {item} is part of the Full Game! Unlock everything forever for 0,49€.'**
+  /// **'☀️ {item} is part of the Cozy Version! Unlock everything forever with a one-time purchase.'**
   String toastPromptSunPass(String item);
-
-  /// No description provided for @toastSunPassMaxed.
-  ///
-  /// In en, this message translates to:
-  /// **'☀️ Sun Pass is already topped up to the 48-hour maximum!'**
-  String get toastSunPassMaxed;
-
-  /// No description provided for @toastAdCancelled.
-  ///
-  /// In en, this message translates to:
-  /// **'Ad cancelled or unavailable right now.'**
-  String get toastAdCancelled;
-
-  /// No description provided for @toastSunPassUnlocked.
-  ///
-  /// In en, this message translates to:
-  /// **'☀️ Sun Pass unlocked! ({remaining} active)'**
-  String toastSunPassUnlocked(String remaining);
 
   /// No description provided for @toastSunnySurgeAlreadyActive.
   ///
@@ -2320,23 +2176,11 @@ abstract class AppLocalizations {
   /// **'🌦️ Sunny Surge is already active for Day {day}!'**
   String toastSunnySurgeAlreadyActive(int day);
 
-  /// No description provided for @toastAdCancelledSurge.
-  ///
-  /// In en, this message translates to:
-  /// **'Ad cancelled — Sunny Surge was not activated.'**
-  String get toastAdCancelledSurge;
-
   /// No description provided for @toastPurchaseCancelled.
   ///
   /// In en, this message translates to:
   /// **'Purchase cancelled.'**
   String get toastPurchaseCancelled;
-
-  /// No description provided for @toastAnnualPassActivated.
-  ///
-  /// In en, this message translates to:
-  /// **'🌻 Thank you! Annual Sun Pass (2,99€/yr) is now active!'**
-  String get toastAnnualPassActivated;
 
   /// No description provided for @toastLifetimePassActivated.
   ///
@@ -2347,7 +2191,7 @@ abstract class AppLocalizations {
   /// No description provided for @toastPurchasesRestored.
   ///
   /// In en, this message translates to:
-  /// **'✅ Restored your Solville Sun Pass purchases!'**
+  /// **'✅ Restored your Solville Cozy Version purchase!'**
   String get toastPurchasesRestored;
 
   /// No description provided for @toastNoPreviousPurchases.
@@ -3030,7 +2874,7 @@ abstract class AppLocalizations {
   /// No description provided for @inspectorTapSunPass.
   ///
   /// In en, this message translates to:
-  /// **'Tap: Unlock via Sun Pass ☀️'**
+  /// **'Tap: Unlock Cozy Version ☀️'**
   String get inspectorTapSunPass;
 
   /// No description provided for @inspectorTapRefill.
@@ -3206,6 +3050,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tap to interact'**
   String get inspectorTapInteract;
+
+  /// No description provided for @spotlightStepDig.
+  ///
+  /// In en, this message translates to:
+  /// **'👇 1/3: Tap to Dig ⛏️'**
+  String get spotlightStepDig;
+
+  /// No description provided for @spotlightStepPlant.
+  ///
+  /// In en, this message translates to:
+  /// **'👇 2/3: Tap to Plant 🌱'**
+  String get spotlightStepPlant;
+
+  /// No description provided for @spotlightStepWater.
+  ///
+  /// In en, this message translates to:
+  /// **'👇 3/3: Tap to Water 💧'**
+  String get spotlightStepWater;
+
+  /// No description provided for @tutorialMayorBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'🌻 Mayor Sunny\'s Guide'**
+  String get tutorialMayorBadge;
+
+  /// No description provided for @tutorialShowMeBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'👇 Show Me'**
+  String get tutorialShowMeBtn;
+
+  /// No description provided for @helpReplayTutorial.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay Tutorial'**
+  String get helpReplayTutorial;
+
+  /// No description provided for @toastTutorialComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'🎉 Tutorial complete! Your full farm & village quests are ready!'**
+  String get toastTutorialComplete;
+
+  /// No description provided for @toastTutorialReplayed.
+  ///
+  /// In en, this message translates to:
+  /// **'🎓 Tutorial restarted! Follow Mayor Sunny\'s glowing steps.'**
+  String get toastTutorialReplayed;
 }
 
 class _AppLocalizationsDelegate

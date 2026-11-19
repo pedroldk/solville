@@ -1,11 +1,15 @@
 import 'dart:convert';
 
+import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:solville/data/repositories/save_game_repository.dart';
 import 'package:solville/data/services/cozy_sound_service.dart';
 import 'package:solville/data/services/monetization_service.dart';
+import 'package:solville/data/services/sound_source_stub.dart'
+    if (dart.library.io) 'package:solville/data/services/sound_source_io.dart';
 import 'package:solville/domain/models/catalog.dart';
 import 'package:solville/domain/models/entitlement_state.dart';
 import 'package:solville/domain/models/game_state.dart';
@@ -251,5 +255,96 @@ void main() {
       await tester.pump();
       controller.dispose();
     });
+  });
+
+  group('CozySoundService cross-platform resilience', () {
+    test('AudioContext instances pass debug assertions and preserve Android focus', () {
+      final bgmCtx = CozySoundService.bgmAudioContextForTest;
+      final sfxCtx = CozySoundService.sfxAudioContextForTest;
+
+      expect(bgmCtx.android.audioFocus, equals(AndroidAudioFocus.gain));
+      expect(sfxCtx.android.audioFocus, equals(AndroidAudioFocus.none));
+      expect(bgmCtx.iOS.category, equals(AVAudioSessionCategory.ambient));
+      expect(sfxCtx.iOS.category, equals(AVAudioSessionCategory.ambient));
+      expect(bgmCtx.iOS.options, isEmpty);
+      expect(sfxCtx.iOS.options, isEmpty);
+    });
+
+    test(
+      'Windows desktop stays playing on inactive focus loss and pauses on hidden/detached',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+        final sound = CozySoundService(silentPlatformOutput: true);
+        try {
+          sound.initialize();
+          await sound.applyBgmSettings();
+          expect(sound.isBgmPlaying, isTrue);
+
+          sound.didChangeAppLifecycleState(AppLifecycleState.inactive);
+          await Future<void>.delayed(Duration.zero);
+          expect(
+            sound.isBgmPlaying,
+            isTrue,
+            reason: 'Desktop unfocused window (inactive) should keep playing',
+          );
+
+          for (final state in const <AppLifecycleState>[
+            AppLifecycleState.hidden,
+            AppLifecycleState.detached,
+          ]) {
+            await sound.applyBgmSettings();
+            sound.didChangeAppLifecycleState(state);
+            await Future<void>.delayed(Duration.zero);
+            expect(
+              sound.isBgmPlaying,
+              isFalse,
+              reason: '$state should pause desktop BGM',
+            );
+          }
+
+          sound.didChangeAppLifecycleState(AppLifecycleState.resumed);
+          await Future<void>.delayed(Duration.zero);
+          expect(sound.isBgmPlaying, isTrue);
+        } finally {
+          await sound.dispose();
+          debugDefaultTargetPlatformOverride = null;
+        }
+      },
+    );
+
+    test(
+      'Overlapping track switches, volume updates, and ensureBgmActive stay playing',
+      () async {
+        final sound = CozySoundService(silentPlatformOutput: true);
+        try {
+          sound.initialize();
+          await Future.wait(<Future<void>>[
+            sound.applyBgmSettings(track: BgmTrack.sunnyLullaby, volume: 0.25),
+            sound.applyBgmSettings(track: BgmTrack.morningMeadow),
+            sound.applyBgmSettings(volume: 0.45),
+            sound.ensureBgmActive(),
+            sound.applyBgmSettings(track: BgmTrack.cozyRain, volume: 0.62),
+          ]);
+
+          expect(sound.isBgmPlaying, isTrue);
+          expect(sound.bgmTrack, equals(BgmTrack.cozyRain));
+          expect(sound.bgmVolume, closeTo(0.62, 1e-9));
+        } finally {
+          await sound.dispose();
+        }
+      },
+    );
+
+    test(
+      'resolvePlatformAudioSource returns WAV BytesSource under FLUTTER_TEST',
+      () async {
+        final sound = CozySoundService(silentPlatformOutput: true);
+        final wav = sound.synthesizeTrackWav(BgmTrack.sunnyLullaby);
+        final source = await resolvePlatformAudioSource('bgm_sunnyLullaby', wav);
+        expect(source, isA<BytesSource>());
+        expect((source as BytesSource).mimeType, equals('audio/wav'));
+        await sound.dispose();
+      },
+    );
   });
 }

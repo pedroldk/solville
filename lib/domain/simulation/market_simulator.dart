@@ -59,7 +59,7 @@ abstract final class MarketSimulator {
       trends: trends,
       stallCrates: existingStallCrates,
       pricing: pricing,
-      saleCooldown: 3.0,
+      saleCooldown: 5.0,
       dailyRequest: VillageRequest(
         villagerName: villager,
         product: reqProduct,
@@ -67,7 +67,7 @@ abstract final class MarketSimulator {
         deliveredCount: 0,
         bonusReward: bonus,
       ),
-      expressSpawnCooldown: 18.0,
+      expressSpawnCooldown: 35.0,
     );
   }
 
@@ -89,7 +89,7 @@ abstract final class MarketSimulator {
         current.dayProgress >= 0.48 &&
         current.dayProgress <= 0.52 &&
         market.expressOrder == null) {
-      rushRemaining = 24.0;
+      rushRemaining = 45.0;
       events.add(
         const SimEvent(
           type: SimEventType.villageRushStarted,
@@ -106,13 +106,13 @@ abstract final class MarketSimulator {
       final rem = express.remainingSeconds - dt;
       express = rem <= 0.0 ? null : express.copyWith(remainingSeconds: rem);
       if (express == null) {
-        spawnCd = 30.0;
+        spawnCd = 55.0;
       }
     } else if (current.totalCratesHarvested >= 1) {
       spawnCd -= dt;
       if (spawnCd <= 0.0) {
         express = _spawnExpressOrder(current, rng);
-        spawnCd = 32.0;
+        spawnCd = 60.0;
       }
     }
 
@@ -128,7 +128,7 @@ abstract final class MarketSimulator {
           : current.copyWith(market: market);
     }
 
-    final rushSpeedFactor = market.isRushActive ? 1.65 : 1.0;
+    final rushSpeedFactor = market.isRushActive ? 1.35 : 1.0;
     final nextCooldown = market.saleCooldown - dt * rushSpeedFactor;
     if (nextCooldown > 0.0) {
       return current.copyWith(
@@ -214,7 +214,7 @@ abstract final class MarketSimulator {
           ),
         );
         express = null;
-        spawnCd = 34.0;
+        spawnCd = 65.0;
       }
     }
 
@@ -233,7 +233,7 @@ abstract final class MarketSimulator {
       ),
     );
 
-    final baseInterval = 3.2 * market.pricing.saleIntervalFactor;
+    final baseInterval = 5.5 * market.pricing.saleIntervalFactor;
     return current.copyWith(
       coins: current.coins + earnedCoins,
       lifetimeCoinsEarned: current.lifetimeCoinsEarned + earnedCoins,
@@ -286,8 +286,8 @@ abstract final class MarketSimulator {
       product: product,
       requiredCount: reqCount,
       deliveredCount: 0,
-      remainingSeconds: 65.0,
-      totalSeconds: 65.0,
+      remainingSeconds: 140.0,
+      totalSeconds: 140.0,
       bonusCoins: bonus,
       bonusTrialSeed: trialGift,
     );

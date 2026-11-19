@@ -5,11 +5,13 @@ import '../../l10n/app_localizations.dart';
 import '../../l10n/solville_l10n_extensions.dart';
 import '../theme/solville_theme.dart';
 import '../view_models/solville_controller.dart';
+import '../widgets/solville_buttons.dart';
+import '../widgets/solville_icons.dart';
 import '../widgets/solville_pill_button.dart';
 
-/// Adaptive top HUD displaying Coins, Water charges, Stacked Crates, Day/Sun
-/// progress, Hot Market Boom ticker, Soothing Soundscape selector, and modals.
-class TopStatusBar extends StatefulWidget {
+/// Adaptive centered top HUD displaying Market, Shop, Quest pin, Trophies,
+/// Soundscape, Cozy Version / Sun Pass, SFX mute, and Help controls.
+class TopStatusBar extends StatelessWidget {
   const TopStatusBar({
     super.key,
     required this.controller,
@@ -34,93 +36,109 @@ class TopStatusBar extends StatefulWidget {
   final bool isJournalExpanded;
 
   @override
-  State<TopStatusBar> createState() => _TopStatusBarState();
-}
-
-class _TopStatusBarState extends State<TopStatusBar> {
-  bool _menuExpanded = false;
-
-  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final controller = widget.controller;
     final state = controller.state;
     final booms = state.market.boomProducts;
     final boomEmojis = booms.map(SolvilleCatalog.productEmoji).join(' ');
-    final weatherLabel = l10n.weatherLabel(state.weather);
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final mediaSize = MediaQuery.sizeOf(context);
         final isMobile =
             constraints.maxWidth < 860 || mediaSize.shortestSide < 600;
+        final ultraNarrow = constraints.maxWidth <= 380;
         final compact = constraints.maxWidth < 920 || isMobile;
 
-        final statChildren = <Widget>[
-          _StatChip(
-            emoji: '☀️',
-            label: '${state.coins}',
-            tooltip: l10n.hudSolsTooltip,
-            highlight: const Color(0xFFFFF3C4),
-            compact: isMobile,
-          ),
-          _StatChip(
-            emoji: '🪣',
-            label: '${state.farmer.waterCharges}/${state.maxWaterCharges}',
-            tooltip: l10n.hudWaterTooltip,
-            highlight: const Color(0xFFE1F5FE),
-            compact: isMobile,
-          ),
-          _StatChip(
-            emoji: '📦',
-            label: '${state.farmer.carriedCrates.length}/${state.maxCarryCrates}',
-            tooltip: l10n.hudCratesTooltip,
-            highlight: const Color(0xFFFFECB3),
-            compact: isMobile,
-          ),
-          _DayWeatherChip(
-            day: state.day,
-            progress: state.dayProgress,
-            weatherLabel: compact
-                ? weatherLabel.split(' ').first
-                : weatherLabel,
-            onNextMorning: controller.restToNextMorning,
-            compact: isMobile,
-          ),
-        ];
-
-        final pillPadding = isMobile
-            ? const EdgeInsets.symmetric(horizontal: 8, vertical: 5)
-            : const EdgeInsets.symmetric(horizontal: 10, vertical: 6);
-        final pillRadius = isMobile ? 11.0 : 14.0;
-        final pillFontSize = isMobile ? 11.0 : 12.5;
-        final pillEmojiSize = isMobile ? 12.5 : 14.0;
+        final pillPadding = ultraNarrow
+            ? const EdgeInsets.symmetric(horizontal: 5.5, vertical: 4.5)
+            : (isMobile
+                  ? const EdgeInsets.symmetric(horizontal: 8, vertical: 5)
+                  : const EdgeInsets.symmetric(horizontal: 10, vertical: 6));
+        final pillRadius = ultraNarrow ? 10.0 : (isMobile ? 11.0 : 14.0);
+        final pillFontSize = ultraNarrow ? 10.5 : (isMobile ? 11.0 : 12.5);
+        final pillEmojiSize = ultraNarrow ? 11.5 : (isMobile ? 12.5 : 14.0);
 
         final hasDailyReq =
             state.market.dailyRequest != null &&
             !state.market.dailyRequest!.isCompleted;
         final activeQuest = state.activeQuest;
         final questProg = state.activeQuestProgress;
+        final dimSecondary = state.isOnboardingActive;
 
-        final primaryActions = <Widget>[
+        final iconSize = ultraNarrow ? 13.0 : (isMobile ? 14.5 : 16.0);
+        final bgmIconKind = switch (controller.bgmTrack) {
+          BgmTrack.sunnyLullaby => SolvilleIconKind.musicLullaby,
+          BgmTrack.morningMeadow => SolvilleIconKind.musicMeadow,
+          BgmTrack.cozyRain => SolvilleIconKind.musicRain,
+          BgmTrack.off => SolvilleIconKind.musicOff,
+        };
+
+        final menuItems = <Widget>[
           SolvillePillButton(
-            emoji: '📈',
-            label: isMobile ? boomEmojis : l10n.hudMarketCompact(boomEmojis),
-            highlighted: state.market.isRushActive,
-            badgeEmoji: state.market.expressOrder != null
-                ? '⚡'
-                : (hasDailyReq ? '💌' : null),
-            backgroundColor: state.market.isRushActive
-                ? const Color(0xFFFFE082)
-                : const Color(0xFFFFF8E1),
+            emoji: '☀️',
+            leadingIcon: SolvilleIcon(
+              kind: SolvilleIconKind.sunCoin,
+              size: iconSize,
+            ),
+            label: '${state.coins}',
+            tooltip: l10n.hudSolsTooltip,
+            isMeter: true,
+            backgroundColor: const Color(0xFFFFF8E1),
             padding: pillPadding,
             borderRadius: pillRadius,
             fontSize: pillFontSize,
             emojiSize: pillEmojiSize,
-            onTap: widget.onOpenMarket,
+            onTap: onOpenShop,
+          ),
+          SolvillePillButton(
+            emoji: '💧',
+            leadingIcon: SolvilleIcon(
+              kind: SolvilleIconKind.waterCan,
+              size: iconSize,
+            ),
+            label: '${state.farmer.waterCharges}/${state.maxWaterCharges}',
+            tooltip: l10n.hudWaterTooltip,
+            isMeter: true,
+            highlighted: state.farmer.waterCharges == 0,
+            backgroundColor: state.farmer.waterCharges == 0
+                ? const Color(0xFFFFE082)
+                : const Color(0xFFE1F5FE),
+            padding: pillPadding,
+            borderRadius: pillRadius,
+            fontSize: pillFontSize,
+            emojiSize: pillEmojiSize,
+            onTap: controller.refillOrFocusWell,
+          ),
+          _focusWrap(
+            SolvillePillButton(
+              emoji: '📈',
+              leadingIcon: SolvilleIcon(
+                kind: SolvilleIconKind.marketChart,
+                size: iconSize,
+              ),
+              label: isMobile ? boomEmojis : l10n.hudMarketCompact(boomEmojis),
+              highlighted: state.market.isRushActive,
+              badgeEmoji: state.market.expressOrder != null
+                  ? '⚡'
+                  : (hasDailyReq ? '💌' : null),
+              backgroundColor: state.market.isRushActive
+                  ? const Color(0xFFFFE082)
+                  : const Color(0xFFFFF8E1),
+              padding: pillPadding,
+              borderRadius: pillRadius,
+              fontSize: pillFontSize,
+              emojiSize: pillEmojiSize,
+              onTap: onOpenMarket,
+            ),
+            dim: dimSecondary,
           ),
           SolvillePillButton(
             emoji: '🛒',
+            leadingIcon: SolvilleIcon(
+              kind: SolvilleIconKind.shopBasket,
+              size: iconSize,
+            ),
             label: l10n.hudShop,
             highlighted: state.shouldSpotlightGloves,
             badgeEmoji: state.shouldSpotlightGloves ? '🧤' : null,
@@ -131,9 +149,9 @@ class _TopStatusBarState extends State<TopStatusBar> {
             borderRadius: pillRadius,
             fontSize: pillFontSize,
             emojiSize: pillEmojiSize,
-            onTap: widget.onOpenShop,
+            onTap: onOpenShop,
           ),
-          if (activeQuest != null && widget.onToggleJournal != null)
+          if (activeQuest != null && onToggleJournal != null)
             questProg.isReadyToClaim
                 ? SolvillePillButton(
                     emoji: '✨',
@@ -147,52 +165,49 @@ class _TopStatusBarState extends State<TopStatusBar> {
                     fontSize: pillFontSize,
                     emojiSize: pillEmojiSize,
                     onTap: () => controller.claimOrFocusActiveQuest(
-                      onOpenShop: (_) => widget.onOpenShop(),
-                      onOpenMarket: widget.onOpenMarket,
+                      onOpenShop: (_) => onOpenShop(),
+                      onOpenMarket: onOpenMarket,
                     ),
                   )
                 : SolvillePillButton(
                     emoji: activeQuest.emoji,
                     label:
                         '${activeQuest.stepNumber}/${SolvilleCatalog.quests.length}',
-                    highlighted: widget.isJournalExpanded,
-                    backgroundColor: widget.isJournalExpanded
+                    highlighted: isJournalExpanded || state.isOnboardingActive,
+                    backgroundColor:
+                        (isJournalExpanded || state.isOnboardingActive)
                         ? const Color(0xFFFFECB3)
                         : const Color(0xFFFFF8E1),
                     padding: pillPadding,
                     borderRadius: pillRadius,
                     fontSize: pillFontSize,
                     emojiSize: pillEmojiSize,
-                    onTap: widget.onToggleJournal!,
+                    onTap: onToggleJournal!,
                   ),
-          _CompactHudIconButton(
-            tooltip: _menuExpanded ? l10n.hudHideExtra : l10n.hudShowExtra,
-            icon: _menuExpanded
-                ? Icons.chevron_left_rounded
-                : Icons.more_horiz_rounded,
-            backgroundColor: _menuExpanded
-                ? const Color(0xFFFFECB3)
-                : SolvilleTheme.warmCream,
-            onTap: () => setState(() {
-              _menuExpanded = !_menuExpanded;
-            }),
-          ),
-        ];
-
-        final secondaryUtilities = <Widget>[
-          SolvillePillButton(
-            emoji: '🏆',
-            label:
-                '${state.unlockedTrophies.length}/${SolvilleCatalog.trophies.length}',
-            backgroundColor: const Color(0xFFFFECB3),
-            padding: pillPadding,
-            borderRadius: pillRadius,
-            fontSize: pillFontSize,
-            emojiSize: pillEmojiSize,
-            onTap: widget.onOpenTrophies,
+          _focusWrap(
+            SolvillePillButton(
+              emoji: '🏆',
+              leadingIcon: SolvilleIcon(
+                kind: SolvilleIconKind.trophy,
+                size: iconSize,
+              ),
+              label:
+                  '${state.unlockedTrophies.length}/${SolvilleCatalog.trophies.length}',
+              backgroundColor: const Color(0xFFFFECB3),
+              padding: pillPadding,
+              borderRadius: pillRadius,
+              fontSize: pillFontSize,
+              emojiSize: pillEmojiSize,
+              onTap: onOpenTrophies,
+            ),
+            dim: dimSecondary,
           ),
           SolvillePillButton(
             emoji: controller.bgmTrack.shortEmoji,
+            leadingIcon: SolvilleIcon(
+              kind: bgmIconKind,
+              size: iconSize,
+            ),
             label: l10n.bgmTrackShortTitle(
               controller.bgmTrack,
               compact: compact,
@@ -204,151 +219,110 @@ class _TopStatusBarState extends State<TopStatusBar> {
             borderRadius: pillRadius,
             fontSize: pillFontSize,
             emojiSize: pillEmojiSize,
-            onTap: widget.onOpenAudio,
+            onTap: onOpenAudio,
           ),
           if (!controller.entitlements.isFullEditionBuild &&
-              widget.onOpenSunPass != null)
-            SolvillePillButton(
-              emoji: controller.entitlements.isPermanentSupporter ? '👑' : '☀️',
-              label: compact
-                  ? (controller.isSunPassActive
-                        ? l10n.hudPassShortActive
-                        : l10n.hudPassShort)
-                  : l10n.entitlementStatusPillText(
-                      controller.entitlements,
-                      controller.nowUtc,
-                    ),
-              tooltip: l10n.hudSunPassTooltip,
-              backgroundColor: controller.isSunPassActive
-                  ? const Color(0xFFFFE082)
-                  : const Color(0xFFFFF3E0),
-              padding: pillPadding,
-              borderRadius: pillRadius,
-              fontSize: pillFontSize,
-              emojiSize: pillEmojiSize,
-              onTap: widget.onOpenSunPass!,
+              onOpenSunPass != null)
+            _focusWrap(
+              SolvillePillButton(
+                emoji: controller.entitlements.isPermanentSupporter
+                    ? '👑'
+                    : '☀️',
+                leadingIcon: SolvilleIcon(
+                  kind: controller.entitlements.isPermanentSupporter
+                      ? SolvilleIconKind.crown
+                      : SolvilleIconKind.sunCoin,
+                  size: iconSize,
+                ),
+                label: compact
+                    ? (controller.isSunPassActive
+                          ? l10n.hudPassShortActive
+                          : l10n.hudPassShort)
+                    : l10n.entitlementStatusPillText(
+                        controller.entitlements,
+                        controller.nowUtc,
+                      ),
+                tooltip: l10n.hudSunPassTooltip,
+                backgroundColor: controller.isSunPassActive
+                    ? const Color(0xFFFFE082)
+                    : const Color(0xFFFFF3E0),
+                padding: pillPadding,
+                borderRadius: pillRadius,
+                fontSize: pillFontSize,
+                emojiSize: pillEmojiSize,
+                onTap: onOpenSunPass!,
+              ),
+              dim: dimSecondary,
             ),
-          _CompactHudIconButton(
+          SolvilleIconButton(
             tooltip: controller.sfxEnabled
                 ? l10n.hudMuteSfx
                 : l10n.hudEnableSfx,
+            tone: SolvilleButtonTone.cream,
+            size: ultraNarrow ? 30 : 34,
+            iconSize: ultraNarrow ? 15 : 17,
             icon: controller.sfxEnabled
                 ? Icons.volume_up_rounded
                 : Icons.volume_off_rounded,
-            onTap: controller.toggleSfx,
+            onPressed: controller.toggleSfx,
           ),
-          _CompactHudIconButton(
+          SolvilleIconButton(
             tooltip: l10n.hudHelpTooltip,
+            tone: SolvilleButtonTone.cream,
+            size: ultraNarrow ? 30 : 34,
+            iconSize: ultraNarrow ? 15 : 17,
             icon: Icons.help_outline_rounded,
-            onTap: widget.onOpenHelp,
+            onPressed: onOpenHelp,
           ),
         ];
 
         return Padding(
           padding: EdgeInsets.fromLTRB(
-            isMobile ? 8 : 10,
+            ultraNarrow ? 4 : (isMobile ? 8 : 10),
             isMobile ? 4 : 8,
-            isMobile ? 8 : 10,
+            ultraNarrow ? 4 : (isMobile ? 8 : 10),
             isMobile ? 2 : 6,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              SizedBox(
-                width: double.infinity,
-                child: Wrap(
-                  spacing: isMobile ? 6 : 8,
-                  runSpacing: isMobile ? 4 : 8,
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: <Widget>[
-                    // Top-Left cluster: Sols, Water, Carried Crates, Day
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isMobile ? 7 : 12,
-                        vertical: isMobile ? 4 : 7,
-                      ),
-                      decoration: SolvilleTheme.panelDecoration(
-                        radius: isMobile ? 16 : 22,
-                      ),
-                      child: isMobile
-                          ? SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: _withHorizontalSpacing(
-                                  statChildren,
-                                  5,
-                                ),
-                              ),
-                            )
-                          : Wrap(
-                              spacing: 12,
-                              runSpacing: 6,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              children: statChildren,
-                            ),
-                    ),
-
-                    // Top-Right cluster: Market, Shop, Pass, and overflow menu
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isMobile ? 6 : 8,
-                        vertical: isMobile ? 4 : 6,
-                      ),
-                      decoration: SolvilleTheme.panelDecoration(
-                        radius: isMobile ? 16 : 22,
-                      ),
-                      child: isMobile
-                          ? SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: _withHorizontalSpacing(
-                                  primaryActions,
-                                  4,
-                                ),
-                              ),
-                            )
-                          : Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              children: primaryActions,
-                            ),
-                    ),
-                  ],
-                ),
+          child: Align(
+            alignment: Alignment.center,
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: ultraNarrow ? 4 : (isMobile ? 6 : 8),
+                vertical: isMobile ? 4 : 6,
               ),
-              if (_menuExpanded)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 4,
-                      ),
-                      decoration: SolvilleTheme.panelDecoration(radius: 14),
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: _withHorizontalSpacing(
-                            secondaryUtilities,
-                            5,
-                          ),
+              decoration: SolvilleTheme.hudBarDecoration(
+                radius: isMobile ? 16 : 22,
+              ),
+              child: isMobile
+                  ? SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: _withHorizontalSpacing(
+                          menuItems,
+                          ultraNarrow ? 2.5 : 4,
                         ),
                       ),
+                    )
+                  : Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: menuItems,
                     ),
-                  ),
-                ),
-            ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  Widget _focusWrap(Widget child, {required bool dim}) {
+    return AnimatedOpacity(
+      opacity: dim ? 0.55 : 1.0,
+      duration: const Duration(milliseconds: 220),
+      child: child,
     );
   }
 
@@ -361,172 +335,5 @@ class _TopStatusBarState extends State<TopStatusBar> {
       result.add(children[i]);
     }
     return result;
-  }
-}
-
-class _CompactHudIconButton extends StatelessWidget {
-  const _CompactHudIconButton({
-    required this.tooltip,
-    required this.icon,
-    required this.onTap,
-    this.backgroundColor = SolvilleTheme.parchment,
-  });
-
-  final String tooltip;
-  final IconData icon;
-  final VoidCallback onTap;
-  final Color backgroundColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(11),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(11),
-          onTap: onTap,
-          child: Container(
-            width: 34,
-            height: 34,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(11),
-              border: Border.all(
-                color: SolvilleTheme.timberBorder,
-                width: 1.3,
-              ),
-            ),
-            child: Icon(icon, color: SolvilleTheme.timberDark, size: 17),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StatChip extends StatelessWidget {
-  const _StatChip({
-    required this.emoji,
-    required this.label,
-    required this.tooltip,
-    required this.highlight,
-    this.compact = false,
-  });
-
-  final String emoji;
-  final String label;
-  final String tooltip;
-  final Color highlight;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? 6 : 9,
-          vertical: compact ? 2 : 4,
-        ),
-        decoration: BoxDecoration(
-          color: highlight,
-          borderRadius: BorderRadius.circular(compact ? 10 : 14),
-          border: Border.all(color: const Color(0x33795548)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Text(emoji, style: TextStyle(fontSize: compact ? 12.5 : 15)),
-            SizedBox(width: compact ? 3.5 : 5),
-            Text(
-              label,
-              style: TextStyle(
-                color: SolvilleTheme.timberDark,
-                fontWeight: FontWeight.w800,
-                fontSize: compact ? 11.5 : 13.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DayWeatherChip extends StatelessWidget {
-  const _DayWeatherChip({
-    required this.day,
-    required this.progress,
-    required this.weatherLabel,
-    required this.onNextMorning,
-    this.compact = false,
-  });
-
-  final int day;
-  final double progress;
-  final String weatherLabel;
-  final VoidCallback onNextMorning;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        SizedBox(
-          width: compact ? 14 : 18,
-          height: compact ? 14 : 18,
-          child: CircularProgressIndicator(
-            value: progress.clamp(0.0, 1.0),
-            strokeWidth: compact ? 2.2 : 3,
-            backgroundColor: const Color(0x33795548),
-            valueColor: const AlwaysStoppedAnimation<Color>(
-              SolvilleTheme.sunGold,
-            ),
-          ),
-        ),
-        SizedBox(width: compact ? 5 : 7),
-        Text(
-          compact
-              ? l10n.hudDayWeatherCompact(day, weatherLabel)
-              : l10n.hudDayWeatherFull(day, weatherLabel),
-          style: TextStyle(
-            color: SolvilleTheme.timberDark,
-            fontWeight: FontWeight.w700,
-            fontSize: compact ? 11 : 12.5,
-          ),
-        ),
-        SizedBox(width: compact ? 5 : 6),
-        Tooltip(
-          message: l10n.hudNextMorningTooltip,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(compact ? 10 : 12),
-            onTap: onNextMorning,
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: compact ? 8 : 9,
-                vertical: compact ? 4 : 5,
-              ),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFE0B2),
-                borderRadius: BorderRadius.circular(compact ? 10 : 12),
-                border: Border.all(color: SolvilleTheme.timberBorder),
-              ),
-              child: Text(
-                compact ? l10n.hudNextCompact : l10n.hudNextFull,
-                style: TextStyle(
-                  color: SolvilleTheme.timberDark,
-                  fontSize: compact ? 10.5 : 11.5,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
   }
 }

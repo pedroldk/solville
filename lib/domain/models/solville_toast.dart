@@ -53,6 +53,8 @@ enum SolvilleToastKind {
   goldenHarvest,
   villageRushStarted,
   questRewardClaimed,
+  tutorialComplete,
+  tutorialReplayed,
 }
 
 /// Structured toast payload carrying parameters for localized formatting.

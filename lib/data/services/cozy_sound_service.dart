@@ -3,11 +3,21 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart'
+    show
+        TargetPlatform,
+        debugPrint,
+        defaultTargetPlatform,
+        kDebugMode,
+        kIsWeb,
+        visibleForTesting;
 import 'package:flutter/widgets.dart'
     show AppLifecycleState, WidgetsBinding, WidgetsBindingObserver;
 
 import '../../domain/models/catalog.dart';
 import '../../domain/models/game_state.dart';
+import 'sound_source_stub.dart'
+    if (dart.library.io) 'sound_source_io.dart';
 
 /// Pure-Dart procedural PCM WAV audio engine for Solville:
 /// 1. Tactile cozy one-shot SFX (dig, plant, water, harvest, coins, trophies)
@@ -40,11 +50,31 @@ class CozySoundService with WidgetsBindingObserver {
   bool _observerAttached = false;
   bool _disposed = false;
   bool _bgmPlaying = false;
+  bool _bgmPausedByLifecycle = false;
+  bool _bgmSourceLoaded = false;
   BgmTrack? _loadedBgmTrack;
-  int _bgmOpId = 0;
+  Future<void>? _bgmSyncTask;
+  bool _bgmSyncDirty = false;
 
   /// Whether background ambience is currently active/playing.
   bool get isBgmPlaying => _bgmPlaying;
+
+  bool get _wantsBgmPlaying =>
+      !_disposed &&
+      !_bgmPausedByLifecycle &&
+      bgmTrack != BgmTrack.off &&
+      bgmVolume > 0.01;
+
+  static bool get _supportsAudioContext =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+
+  static bool get _isDesktopPlatform =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.macOS ||
+          defaultTargetPlatform == TargetPlatform.linux);
 
   final List<AudioPlayer> _sfxPool = <AudioPlayer>[];
   int _creatingSfxPlayers = 0;
@@ -61,12 +91,7 @@ class CozySoundService with WidgetsBindingObserver {
       usageType: AndroidUsageType.game,
       audioFocus: AndroidAudioFocus.gain,
     ),
-    iOS: AudioContextIOS(
-      category: AVAudioSessionCategory.ambient,
-      options: const <AVAudioSessionOptions>{
-        AVAudioSessionOptions.mixWithOthers,
-      },
-    ),
+    iOS: AudioContextIOS(category: AVAudioSessionCategory.ambient),
   );
 
   static final AudioContext _sfxAudioContext = AudioContext(
@@ -78,13 +103,14 @@ class CozySoundService with WidgetsBindingObserver {
       // Crucial on Android: never steal audio focus from the looping BGM player.
       audioFocus: AndroidAudioFocus.none,
     ),
-    iOS: AudioContextIOS(
-      category: AVAudioSessionCategory.ambient,
-      options: const <AVAudioSessionOptions>{
-        AVAudioSessionOptions.mixWithOthers,
-      },
-    ),
+    iOS: AudioContextIOS(category: AVAudioSessionCategory.ambient),
   );
+
+  @visibleForTesting
+  static AudioContext get bgmAudioContextForTest => _bgmAudioContext;
+
+  @visibleForTesting
+  static AudioContext get sfxAudioContextForTest => _sfxAudioContext;
 
   // Static process-wide caches so WAV synthesis happens at most once per track/SFX.
   static final Map<SimEventType, Uint8List> _cachedSfx =
@@ -198,8 +224,11 @@ class CozySoundService with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (_disposed) return;
     switch (state) {
-      case AppLifecycleState.paused:
       case AppLifecycleState.inactive:
+        if (!_isDesktopPlatform) {
+          unawaited(pauseBgm());
+        }
+      case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
       case AppLifecycleState.detached:
         unawaited(pauseBgm());
@@ -217,7 +246,10 @@ class CozySoundService with WidgetsBindingObserver {
     AudioPlayer? player;
     try {
       player = AudioPlayer();
-      await player.setAudioContext(_bgmAudioContext);
+      player.positionUpdater = null;
+      if (_supportsAudioContext) {
+        await player.setAudioContext(_bgmAudioContext);
+      }
       await player.setReleaseMode(ReleaseMode.loop);
       if (_disposed) {
         await player.dispose();
@@ -226,9 +258,7 @@ class CozySoundService with WidgetsBindingObserver {
       await _bgmStateSub?.cancel();
       _bgmStateSub = player.onPlayerStateChanged.listen(
         (state) {
-          if (state == PlayerState.paused ||
-              state == PlayerState.stopped ||
-              state == PlayerState.completed) {
+          if (state == PlayerState.paused || state == PlayerState.stopped) {
             _bgmPlaying = false;
           } else if (state == PlayerState.playing) {
             _bgmPlaying = true;
@@ -240,7 +270,10 @@ class CozySoundService with WidgetsBindingObserver {
       );
       _bgmPlayer = player;
       return player;
-    } catch (_) {
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('CozySoundService BGM player init failed: $error');
+      }
       try {
         await player?.dispose();
       } catch (_) {}
@@ -253,6 +286,7 @@ class CozySoundService with WidgetsBindingObserver {
   Future<void> _resetBrokenBgmPlayer() async {
     _bgmPlaying = false;
     _loadedBgmTrack = null;
+    _bgmSourceLoaded = false;
     await _bgmStateSub?.cancel();
     _bgmStateSub = null;
     final oldPlayer = _bgmPlayer;
@@ -272,74 +306,133 @@ class CozySoundService with WidgetsBindingObserver {
     if (volume != null && !volume.isNaN && !volume.isInfinite) {
       bgmVolume = volume.clamp(0.0, 1.0);
     }
-
-    final opId = ++_bgmOpId;
-
-    if (bgmTrack == BgmTrack.off || bgmVolume <= 0.01) {
-      _bgmPlaying = false;
-      if (!silentPlatformOutput) {
-        try {
-          await _bgmPlayer?.stop();
-        } catch (_) {}
-      }
-      return;
-    }
+    _bgmPausedByLifecycle = false;
 
     if (silentPlatformOutput) {
-      _loadedBgmTrack = bgmTrack;
-      _bgmPlaying = true;
+      _bgmPlaying = _wantsBgmPlaying;
+      if (_bgmPlaying) {
+        _loadedBgmTrack = bgmTrack;
+        _bgmSourceLoaded = true;
+      } else {
+        _bgmSourceLoaded = false;
+      }
       return;
     }
 
-    try {
-      final player = await _ensureBgmPlayer();
-      if (_disposed || opId != _bgmOpId || player == null) return;
-
-      await player.setReleaseMode(ReleaseMode.loop);
-      if (_disposed || opId != _bgmOpId) return;
-
-      await player.setVolume(bgmVolume);
-      if (_disposed || opId != _bgmOpId) return;
-
-      if (!_bgmPlaying || _loadedBgmTrack != bgmTrack) {
-        final targetTrack = bgmTrack;
-        final bytes = _getOrBuildBgmWav(targetTrack);
-        _loadedBgmTrack = targetTrack;
-        _bgmPlaying = true;
-        await player.play(BytesSource(bytes), volume: bgmVolume);
-        if (_disposed || opId != _bgmOpId) {
-          _bgmPlaying = false;
-          await player.pause();
-        }
-      }
-    } catch (_) {
-      // Browser autoplay restriction before first gesture, headless test, or
-      // audio output device switch; reset broken player & retry via [ensureBgmActive].
-      await _resetBrokenBgmPlayer();
-    }
+    return _scheduleBgmSync();
   }
 
   /// Pauses looping BGM cleanly when the app moves to the background.
   Future<void> pauseBgm() async {
-    ++_bgmOpId;
+    _bgmPausedByLifecycle = true;
     _bgmPlaying = false;
     if (silentPlatformOutput || _disposed) return;
-    try {
-      await _bgmPlayer?.pause();
-    } catch (_) {}
     for (final p in List<AudioPlayer>.from(_sfxPool)) {
       try {
         await p.stop();
       } catch (_) {}
     }
+    return _scheduleBgmSync();
   }
 
   /// Called on user interaction (or app resume) so background ambience starts
   /// or recovers seamlessly after interruptions (e.g. rewarded ads).
   Future<void> ensureBgmActive() async {
     if (_disposed) return;
-    if (bgmTrack != BgmTrack.off && !_bgmPlaying && bgmVolume > 0.01) {
-      await applyBgmSettings();
+    _bgmPausedByLifecycle = false;
+    if (bgmTrack == BgmTrack.off || bgmVolume <= 0.01) return;
+    if (silentPlatformOutput) {
+      _loadedBgmTrack = bgmTrack;
+      _bgmSourceLoaded = true;
+      _bgmPlaying = true;
+      return;
+    }
+    if (!_bgmPlaying || _bgmSyncTask != null) {
+      await _scheduleBgmSync();
+    }
+  }
+
+  Future<void> _scheduleBgmSync() {
+    _bgmSyncDirty = true;
+    return _bgmSyncTask ??= _drainBgmSync();
+  }
+
+  Future<void> _drainBgmSync() async {
+    try {
+      while (_bgmSyncDirty && !_disposed) {
+        _bgmSyncDirty = false;
+        await _syncBgmOnce();
+      }
+    } finally {
+      _bgmSyncTask = null;
+      if (_bgmSyncDirty && !_disposed) {
+        unawaited(_scheduleBgmSync());
+      }
+    }
+  }
+
+  Future<void> _syncBgmOnce() async {
+    if (_disposed) return;
+
+    if (bgmTrack == BgmTrack.off || bgmVolume <= 0.01) {
+      _bgmPlaying = false;
+      _bgmSourceLoaded = false;
+      try {
+        await _bgmPlayer?.stop();
+      } catch (_) {}
+      return;
+    }
+
+    if (_bgmPausedByLifecycle) {
+      _bgmPlaying = false;
+      try {
+        await _bgmPlayer?.pause();
+      } catch (_) {}
+      return;
+    }
+
+    final targetTrack = bgmTrack;
+    final targetVolume = bgmVolume;
+    try {
+      final player = await _ensureBgmPlayer();
+      if (_disposed || player == null || !_wantsBgmPlaying) return;
+
+      await player.setReleaseMode(ReleaseMode.loop);
+      await player.setVolume(targetVolume);
+      if (_disposed || !_wantsBgmPlaying || bgmTrack != targetTrack) return;
+
+      if (_bgmPlaying &&
+          _loadedBgmTrack == targetTrack &&
+          _bgmSourceLoaded &&
+          player.state == PlayerState.playing) {
+        return;
+      } else if (!_bgmPlaying &&
+          _loadedBgmTrack == targetTrack &&
+          _bgmSourceLoaded &&
+          player.state == PlayerState.paused) {
+        await player.resume();
+        if (_disposed) return;
+        _bgmPlaying = player.state == PlayerState.playing;
+      } else {
+        final bytes = _getOrBuildBgmWav(targetTrack);
+        final source = await resolvePlatformAudioSource(
+          'bgm_${targetTrack.name}',
+          bytes,
+        );
+        if (_disposed || !_wantsBgmPlaying || bgmTrack != targetTrack) return;
+        await player.play(source, volume: bgmVolume);
+        if (_disposed) return;
+        _loadedBgmTrack = targetTrack;
+        _bgmSourceLoaded = true;
+        _bgmPlaying = player.state == PlayerState.playing;
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('CozySoundService BGM sync failed ($targetTrack): $error');
+      }
+      // Browser autoplay restriction before first gesture, headless test, or
+      // audio output device switch; reset broken player & retry via [ensureBgmActive].
+      await _resetBrokenBgmPlayer();
     }
   }
 
@@ -348,7 +441,7 @@ class CozySoundService with WidgetsBindingObserver {
     initialize();
     final bytes = _cachedSfx[type];
     if (bytes == null) return;
-    await _playSfxBytes(bytes);
+    await _playSfxBytes('sfx_${type.name}', bytes);
   }
 
   /// Plays an ascending pentatonic chime matching the active harvest combo streak.
@@ -357,17 +450,20 @@ class CozySoundService with WidgetsBindingObserver {
     initialize();
     if (_cachedComboSfx.isEmpty) return;
     final idx = (streak - 1).clamp(0, _cachedComboSfx.length - 1);
-    await _playSfxBytes(_cachedComboSfx[idx]);
+    await _playSfxBytes('sfx_combo_$idx', _cachedComboSfx[idx]);
   }
 
-  Future<void> _playSfxBytes(Uint8List bytes) async {
+  Future<void> _playSfxBytes(String cacheKey, Uint8List bytes) async {
     AudioPlayer? player;
     try {
       if (_sfxPool.length + _creatingSfxPlayers < _maxSfxPoolSize) {
         _creatingSfxPlayers++;
         try {
           final p = AudioPlayer();
-          await p.setAudioContext(_sfxAudioContext);
+          p.positionUpdater = null;
+          if (_supportsAudioContext) {
+            await p.setAudioContext(_sfxAudioContext);
+          }
           await p.setReleaseMode(ReleaseMode.stop);
           if (_disposed) {
             await p.dispose();
@@ -386,12 +482,17 @@ class CozySoundService with WidgetsBindingObserver {
         _poolCursor = (_poolCursor + 1) % _sfxPool.length;
       }
 
+      final source = await resolvePlatformAudioSource(cacheKey, bytes);
+      if (_disposed) return;
       if (player.state == PlayerState.playing) {
         await player.stop();
       }
       if (_disposed) return;
-      await player.play(BytesSource(bytes), volume: 0.42);
-    } catch (_) {
+      await player.play(source, volume: 0.42);
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('CozySoundService SFX playback failed ($cacheKey): $error');
+      }
       // If a pooled native player failed (e.g. audio device route change),
       // evict and dispose it so the next SFX recreates a healthy slot.
       if (player != null) {
@@ -405,8 +506,9 @@ class CozySoundService with WidgetsBindingObserver {
 
   Future<void> dispose() async {
     _disposed = true;
-    ++_bgmOpId;
+    _bgmSyncDirty = false;
     _bgmPlaying = false;
+    _bgmSourceLoaded = false;
     if (_observerAttached) {
       try {
         WidgetsBinding.instance.removeObserver(this);

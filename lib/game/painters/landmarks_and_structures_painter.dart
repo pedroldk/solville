@@ -9,37 +9,39 @@ import '../../domain/models/game_state.dart';
 import '../../domain/models/grid_pos.dart';
 import '../../domain/models/market_state.dart';
 import '../../domain/models/tile_state.dart';
+import 'animals_painter.dart';
+import 'buildings_painter.dart';
 import 'canvas_draw_helpers.dart';
 import 'crops_painter.dart';
 
-/// Renders 2.5D farm landmarks, sprinklers, orchard trees, artisan kettles,
-/// animal pens, wooden crates, and Action Queue markers.
-///
-/// Reuses [Paint] and [Path] instances to keep the 60fps render pass free of
-/// transient allocations.
+/// Depth-aware coordinator rendering 2.5D Mediterranean buildings, landmarks,
+/// orchard trees, artisan kettles, animal pens, crops, wooden crates, bee
+/// synergy links, and crisp vector Action Queue markers.
 class LandmarksAndStructuresPainter {
   LandmarksAndStructuresPainter(
     this.iso, {
     this.cropsPainter = const CropsPainter(),
-  });
+    BuildingsPainter? buildingsPainter,
+    AnimalsPainter? animalsPainter,
+  }) : _buildingsPainter = buildingsPainter ?? BuildingsPainter(),
+       _animalsPainter = animalsPainter ?? AnimalsPainter();
 
   final IsoProjection iso;
   final CropsPainter cropsPainter;
+  final BuildingsPainter _buildingsPainter;
+  final AnimalsPainter _animalsPainter;
 
   final Paint _fillPaint = Paint();
-  final Paint _strokePaint = Paint()..style = PaintingStyle.stroke;
-  final Path _pathA = Path();
-  final Path _pathB = Path();
+  final Paint _strokePaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round
+    ..strokeJoin = StrokeJoin.round;
+  final Path _arcPath = Path();
 
-  static const TextStyle _queueBadgeTextStyle = TextStyle(
+  static const TextStyle _queueNumTextStyle = TextStyle(
     color: Color(0xFF3E2723),
-    fontSize: 10.5,
-    fontWeight: FontWeight.w800,
-  );
-  static const TextStyle _recipeTextStyle = TextStyle(
-    color: Color(0xFF3E2723),
-    fontSize: 10.5,
-    fontWeight: FontWeight.w800,
+    fontSize: 10.0,
+    fontWeight: FontWeight.w900,
   );
 
   void drawTileContents(
@@ -50,48 +52,60 @@ class LandmarksAndStructuresPainter {
     required int totalBarnCrates,
     required double dayProgress,
     required double animTime,
+    WeatherType weather = WeatherType.sunny,
     bool isSunPassActive = true,
     bool showDetailedMeters = false,
+    double popScale = 1.0,
     String homesteadLabel = '🏡 Homestead',
     String refillLabel = '🪣 Refill',
     String barnLabel = '🏠 Barn',
   }) {
+    final warmRainGlow = weather == WeatherType.gentleRain;
     final center = iso.tileCenterToWorld(pos);
     final cx = center.x;
     final cy = center.y;
 
-    // Scenic cypress bushes & fence posts along the northern village lane
+    // Scenic cypress trees & terracotta flower planters along northern village lane
     if (pos.y == 0 && tile.structure == StructureType.none) {
-      _drawLaneScenery(canvas, cx, cy, pos, animTime);
+      _buildingsPainter.drawLaneScenery(canvas, cx, cy, pos, animTime);
     }
 
-    if (tile.structure != StructureType.none) {
+    if (tile.structure != StructureType.none &&
+        tile.structure != StructureType.cowPaddock &&
+        tile.structure != StructureType.flowerArch) {
       _drawStructureShadow(canvas, cx, cy, tile.structure, dayProgress);
     }
 
     switch (tile.structure) {
       case StructureType.farmhouse:
-        _drawFarmhouse(canvas, cx, cy, dayProgress, animTime);
+        _buildingsPainter.drawFarmhouse(
+          canvas,
+          cx,
+          cy,
+          dayProgress,
+          animTime,
+          warmGlowActive: warmRainGlow,
+        );
         if (showDetailedMeters) {
           CanvasDrawHelpers.drawFloatingStatusPill(
             canvas,
             cx,
-            cy - 72,
+            cy - 74,
             homesteadLabel,
           );
         }
       case StructureType.well:
-        _drawStoneWell(canvas, cx, cy, animTime);
+        _buildingsPainter.drawStoneWell(canvas, cx, cy, animTime);
         if (showDetailedMeters) {
           CanvasDrawHelpers.drawFloatingStatusPill(
             canvas,
             cx,
-            cy - 58,
+            cy - 60,
             refillLabel,
           );
         }
       case StructureType.barn:
-        _drawBarn(
+        _buildingsPainter.drawBarn(
           canvas,
           cx,
           cy,
@@ -102,12 +116,18 @@ class LandmarksAndStructuresPainter {
           CanvasDrawHelpers.drawFloatingStatusPill(
             canvas,
             cx,
-            cy - 66,
+            cy - 70,
             barnLabel,
           );
         }
       case StructureType.marketStall:
-        _drawMarketStall(canvas, cx, cy, market.stallCrates, animTime);
+        _buildingsPainter.drawMarketStall(
+          canvas,
+          cx,
+          cy,
+          market.stallCrates,
+          animTime,
+        );
         if (showDetailedMeters) {
           CanvasDrawHelpers.drawActionCircleBadge(
             canvas,
@@ -116,7 +136,7 @@ class LandmarksAndStructuresPainter {
             radius: 11.5,
           );
           if (market.expressOrder != null) {
-            _drawExpressOrderBubble(
+            _buildingsPainter.drawExpressOrderBubble(
               canvas,
               cx + 22,
               cy - 54,
@@ -125,25 +145,27 @@ class LandmarksAndStructuresPainter {
           }
         } else if (market.expressOrder != null) {
           final pulse = 0.5 + 0.5 * math.sin(animTime * 4.5);
-          _fillPaint.color = const Color(0x44FFD54F);
+          _fillPaint.color = const Color(0x4DFFD54F);
           canvas.drawCircle(
             Offset(cx + 22, cy - 48),
-            7.5 + pulse * 1.5,
+            7.8 + pulse * 1.6,
             _fillPaint,
           );
           _fillPaint.color = const Color(0xFFFFCA28);
-          canvas.drawCircle(
+          CanvasDrawHelpers.drawStar4(
+            canvas,
             Offset(cx + 22, cy - 48),
-            3.8 + pulse * 0.5,
+            5.5 + pulse * 0.8,
             _fillPaint,
+            rotation: animTime * 0.9,
           );
         }
       case StructureType.sprinklerRotary:
-        _drawRotarySprinkler(canvas, cx, cy, animTime);
+        _buildingsPainter.drawRotarySprinkler(canvas, cx, cy, animTime);
       case StructureType.sprinklerSolar:
-        _drawSolarSprinkler(canvas, cx, cy, animTime);
+        _buildingsPainter.drawSolarSprinkler(canvas, cx, cy, animTime);
       case StructureType.lemonTree:
-        _drawLemonTree(
+        _buildingsPainter.drawLemonTree(
           canvas,
           cx,
           cy,
@@ -153,7 +175,7 @@ class LandmarksAndStructuresPainter {
           showDetailedMeters: showDetailedMeters,
         );
       case StructureType.artisanPress:
-        _drawArtisanPress(
+        _buildingsPainter.drawArtisanPress(
           canvas,
           cx,
           cy,
@@ -163,7 +185,7 @@ class LandmarksAndStructuresPainter {
           showDetailedMeters: showDetailedMeters,
         );
       case StructureType.henhouse:
-        _drawHenhouse(
+        _animalsPainter.drawHenhouse(
           canvas,
           cx,
           cy,
@@ -172,7 +194,7 @@ class LandmarksAndStructuresPainter {
           showDetailedMeters: showDetailedMeters,
         );
       case StructureType.beehive:
-        _drawBeehive(
+        _animalsPainter.drawBeehive(
           canvas,
           cx,
           cy,
@@ -181,7 +203,7 @@ class LandmarksAndStructuresPainter {
           showDetailedMeters: showDetailedMeters,
         );
       case StructureType.cowPaddock:
-        _drawCowPaddock(
+        _animalsPainter.drawCowPaddock(
           canvas,
           cx,
           cy,
@@ -190,9 +212,16 @@ class LandmarksAndStructuresPainter {
           showDetailedMeters: showDetailedMeters,
         );
       case StructureType.lantern:
-        _drawSolarLantern(canvas, cx, cy, dayProgress, animTime);
+        _buildingsPainter.drawSolarLantern(
+          canvas,
+          cx,
+          cy,
+          dayProgress,
+          animTime,
+          warmGlowActive: warmRainGlow,
+        );
       case StructureType.flowerArch:
-        _drawFlowerArch(canvas, cx, cy, animTime);
+        _buildingsPainter.drawFlowerArch(canvas, cx, cy, animTime);
       case StructureType.none:
         break;
     }
@@ -203,7 +232,7 @@ class LandmarksAndStructuresPainter {
       final pulse = 0.8 + 0.2 * math.sin(animTime * 3.5);
       CanvasDrawHelpers.drawActionCircleBadge(
         canvas,
-        Offset(cx, cy - 42),
+        Offset(cx, cy - 44),
         '🔒',
         background: Color.fromRGBO(255, 248, 225, 0.92 * pulse),
         border: const Color(0xFFFFB300),
@@ -212,7 +241,7 @@ class LandmarksAndStructuresPainter {
     }
 
     if (tile.landmark != LandmarkKind.none) {
-      _drawExpansionLandmark(
+      _buildingsPainter.drawExpansionLandmark(
         canvas,
         cx,
         cy,
@@ -232,16 +261,17 @@ class LandmarksAndStructuresPainter {
         tile.moisture,
         animTime,
         showDetailedMeters: showDetailedMeters,
+        popScale: popScale,
       );
     }
 
     if (tile.droppedCrate != null) {
-      final crateBob = math.sin(animTime * 4.5 + pos.x) * 2.0;
+      final crateBob = math.sin(animTime * 2.6 + pos.x) * 2.0;
       CanvasDrawHelpers.drawWoodenCrate(
         canvas,
         Offset(cx + 10, cy + 4 + crateBob * 0.3),
         tile.droppedCrate!,
-        scale: 0.95,
+        scale: 0.96,
       );
     }
   }
@@ -253,27 +283,35 @@ class LandmarksAndStructuresPainter {
     StructureType structure,
     double dayProgress,
   ) {
-    final sunOffsetX = (dayProgress - 0.45) * 8.0;
+    final sunOffsetX = (dayProgress - 0.45) * 10.0;
     final (double w, double h, double dy) = switch (structure) {
-      StructureType.farmhouse => (68.0, 30.0, 6.0),
-      StructureType.barn => (66.0, 28.0, 6.0),
-      StructureType.marketStall => (60.0, 25.0, 5.0),
-      StructureType.cowPaddock => (64.0, 28.0, 5.0),
-      StructureType.well ||
-      StructureType.henhouse ||
-      StructureType.flowerArch => (44.0, 20.0, 4.0),
-      StructureType.lemonTree || StructureType.artisanPress => (40.0, 18.0, 4.0),
-      StructureType.beehive => (32.0, 14.0, 3.0),
+      StructureType.farmhouse => (72.0, 32.0, 6.0),
+      StructureType.barn => (70.0, 30.0, 6.0),
+      StructureType.marketStall => (64.0, 27.0, 5.0),
+      StructureType.well || StructureType.henhouse => (46.0, 21.0, 4.0),
+      StructureType.lemonTree || StructureType.artisanPress => (42.0, 19.0, 4.0),
+      StructureType.beehive => (34.0, 15.0, 3.0),
       StructureType.sprinklerRotary ||
       StructureType.sprinklerSolar ||
       StructureType.lantern => (24.0, 11.0, 3.0),
+      StructureType.cowPaddock ||
+      StructureType.flowerArch ||
       StructureType.none => (0.0, 0.0, 0.0),
     };
     if (w <= 0) return;
-    _fillPaint.color = const Color(0x24000000);
+    _fillPaint.color = const Color(0x161A0E0C);
     canvas.drawOval(
       Rect.fromCenter(
-        center: Offset(cx + sunOffsetX, cy + dy),
+        center: Offset(cx + sunOffsetX * 1.35, cy + dy + 2.0),
+        width: w * 1.12,
+        height: h * 1.12,
+      ),
+      _fillPaint,
+    );
+    _fillPaint.color = const Color(0x221A0E0C);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(cx + sunOffsetX * 0.7, cy + dy),
         width: w,
         height: h,
       ),
@@ -289,60 +327,52 @@ class LandmarksAndStructuresPainter {
   ) {
     if (entries.isEmpty) return;
     final center = iso.tileCenterToWorld(pos);
-    final bob = math.sin(animTime * 4.5 + pos.x) * 3.0;
-    final label = entries
-        .map((e) => '${e.step}${_actionEmojiFor(e.kind)}')
-        .join(' ');
+    final bob = math.sin(animTime * 2.8 + pos.x) * 2.8;
     final badgeCenter = Offset(center.x, center.y - 34.0 + bob);
 
     _strokePaint
       ..color = const Color(0xCCFFF8E1)
-      ..strokeWidth = 2.0
-      ..strokeCap = StrokeCap.butt;
+      ..strokeWidth = 2.0;
     canvas.drawLine(
       Offset(center.x, center.y - 8),
       Offset(badgeCenter.dx, badgeCenter.dy + 10),
       _strokePaint,
     );
 
-    final badgeWidth = (entries.length * 26.0 + 10.0).clamp(32.0, 110.0);
+    const itemWidth = 24.0;
+    final badgeWidth = (entries.length * itemWidth + 10.0).clamp(32.0, 118.0);
     final rrect = RRect.fromRectAndRadius(
       Rect.fromCenter(center: badgeCenter, width: badgeWidth, height: 22),
       const Radius.circular(11),
     );
-    _fillPaint.color = const Color(0x44000000);
+    _fillPaint.color = const Color(0x40261412);
     canvas.drawRRect(rrect.shift(const Offset(0, 2)), _fillPaint);
-    _fillPaint.color = const Color(0xFFFFCA28);
+    _fillPaint.color = const Color(0xFFFFD54F);
     canvas.drawRRect(rrect, _fillPaint);
     _strokePaint
       ..color = const Color(0xFF5D4037)
-      ..strokeWidth = 2.0;
+      ..strokeWidth = 1.8;
     canvas.drawRRect(rrect, _strokePaint);
 
-    CanvasDrawHelpers.drawCenteredText(
-      canvas,
-      label,
-      badgeCenter,
-      _queueBadgeTextStyle,
-    );
+    final startX =
+        badgeCenter.dx - ((entries.length - 1) * itemWidth) * 0.5;
+    for (var i = 0; i < entries.length && i < 4; i++) {
+      final e = entries[i];
+      final ix = startX + i * itemWidth;
+      CanvasDrawHelpers.drawCenteredText(
+        canvas,
+        '${e.step}',
+        Offset(ix - 5.5, badgeCenter.dy),
+        _queueNumTextStyle,
+      );
+      CanvasDrawHelpers.drawCanvasActionIcon(
+        canvas,
+        e.kind,
+        Offset(ix + 5.5, badgeCenter.dy),
+        11.0,
+      );
+    }
   }
-
-  String _actionEmojiFor(ActionKind kind) => switch (kind) {
-    ActionKind.dig => '⛏️',
-    ActionKind.plant => '🌱',
-    ActionKind.water => '💧',
-    ActionKind.refillWater => '💧',
-    ActionKind.compost => '✨',
-    ActionKind.harvest || ActionKind.pickupCrate => '📦',
-    ActionKind.sellAtStall => '🪙',
-    ActionKind.storeInBarn => '🏠',
-    ActionKind.tendAnimal => '🌾',
-    ActionKind.loadArtisan => '🫙',
-    ActionKind.placeBuild => '🔨',
-    ActionKind.removeStructure => '🌿',
-    ActionKind.claimLandmark => '🗺️',
-    ActionKind.smart => '•',
-  };
 
   /// Draws the floating `[🌿]` quick-untill badge on the inspected tile.
   void drawInspectedActionPill(
@@ -356,13 +386,14 @@ class LandmarksAndStructuresPainter {
       canvas,
       Offset(center.x + 26, center.y - 34 + bob),
       '🌿',
-      background: const Color(0xF6FFEBEE),
+      background: const Color(0xF6E8F5E9),
       border: const Color(0xFF66BB6A),
       radius: 13.0,
     );
   }
 
-  /// Draws golden dashed synergy rays from a hovered Beehive to nearby blooms.
+  /// Draws smooth arched golden bee synergy rays with traveling pollen sparkles
+  /// from a hovered Beehive to nearby blooms.
   void drawBeeSynergyLinks(
     Canvas canvas,
     GameState state,
@@ -371,15 +402,10 @@ class LandmarksAndStructuresPainter {
     double animTime,
   ) {
     final origin = iso.tileCenterToWorld(hivePos);
+    final pulse = 0.55 + 0.25 * math.sin(animTime * 4.5);
     _strokePaint
-      ..color = Color.fromRGBO(
-        255,
-        193,
-        7,
-        0.55 + 0.25 * math.sin(animTime * 4.5),
-      )
-      ..strokeWidth = 2.2
-      ..strokeCap = StrokeCap.round;
+      ..color = Color.fromRGBO(255, 193, 7, pulse)
+      ..strokeWidth = 2.0;
 
     for (var dy = -2; dy <= 2; dy++) {
       for (var dx = -2; dx <= 2; dx++) {
@@ -393,11 +419,25 @@ class LandmarksAndStructuresPainter {
             nTile.structure == StructureType.lemonTree;
         if (!boostsBee) continue;
         final target = iso.tileCenterToWorld(np);
-        canvas.drawLine(
-          Offset(origin.x, origin.y - 16),
-          Offset(target.x, target.y - 10),
-          _strokePaint,
+        final p0 = Offset(origin.x, origin.y - 16);
+        final p2 = Offset(target.x, target.y - 10);
+        final mid = Offset(
+          (p0.dx + p2.dx) * 0.5,
+          math.min(p0.dy, p2.dy) - 16.0,
         );
+        _arcPath
+          ..reset()
+          ..moveTo(p0.dx, p0.dy)
+          ..quadraticBezierTo(mid.dx, mid.dy, p2.dx, p2.dy);
+        canvas.drawPath(_arcPath, _strokePaint);
+
+        // Animated pollen mote gliding along the synergy arc
+        final t = (animTime * 0.8 + (dx + dy) * 0.17) % 1.0;
+        final omt = 1.0 - t;
+        final px = omt * omt * p0.dx + 2 * omt * t * mid.dx + t * t * p2.dx;
+        final py = omt * omt * p0.dy + 2 * omt * t * mid.dy + t * t * p2.dy;
+        _fillPaint.color = const Color(0xFFFFEE58);
+        canvas.drawCircle(Offset(px, py), 2.4, _fillPaint);
       }
     }
     if (bonus > 0.01) {
@@ -408,918 +448,6 @@ class LandmarksAndStructuresPainter {
         origin.y - 54,
         '🐝+$pct%',
       );
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Village Lane Scenery & Landmarks
-  // ---------------------------------------------------------------------------
-
-  void _drawLaneScenery(
-    Canvas canvas,
-    double cx,
-    double cy,
-    GridPos pos,
-    double animTime,
-  ) {
-    if (pos.x.isEven && pos.x != 4 && pos.x != 6) {
-      final sway = math.sin(animTime * 1.8 + pos.x) * 1.5;
-      _fillPaint.color = const Color(0x28000000);
-      canvas.drawOval(
-        Rect.fromCenter(center: Offset(cx + 14, cy - 11), width: 18, height: 9),
-        _fillPaint,
-      );
-      _pathA
-        ..reset()
-        ..moveTo(cx + 7, cy - 11)
-        ..quadraticBezierTo(cx + 14 + sway, cy - 38, cx + 14 + sway, cy - 40)
-        ..quadraticBezierTo(cx + 21 + sway, cy - 24, cx + 21, cy - 11)
-        ..close();
-      _fillPaint.color = const Color(0xFF2E7D32);
-      canvas.drawPath(_pathA, _fillPaint);
-    }
-  }
-
-  void _drawFarmhouse(
-    Canvas canvas,
-    double cx,
-    double cy,
-    double dayProgress,
-    double animTime,
-  ) {
-    _fillPaint.color = const Color(0x33000000);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy + 4), width: 76, height: 36),
-      _fillPaint,
-    );
-
-    _pathA
-      ..reset()
-      ..moveTo(cx - 30, cy - 4)
-      ..lineTo(cx, cy + 12)
-      ..lineTo(cx, cy - 26)
-      ..lineTo(cx - 30, cy - 42)
-      ..close();
-    _fillPaint.color = const Color(0xFFFFF3E0);
-    canvas.drawPath(_pathA, _fillPaint);
-
-    _pathB
-      ..reset()
-      ..moveTo(cx, cy + 12)
-      ..lineTo(cx + 30, cy - 4)
-      ..lineTo(cx + 30, cy - 42)
-      ..lineTo(cx, cy - 26)
-      ..close();
-    _fillPaint.color = const Color(0xFFFFE0B2);
-    canvas.drawPath(_pathB, _fillPaint);
-
-    final door = RRect.fromRectAndCorners(
-      Rect.fromLTWH(cx + 9, cy - 18, 11, 20),
-      topLeft: const Radius.circular(6),
-      topRight: const Radius.circular(6),
-    );
-    _fillPaint.color = const Color(0xFF795548);
-    canvas.drawRRect(door, _fillPaint);
-
-    final isEvening = dayProgress > 0.60;
-    if (isEvening) {
-      _fillPaint.color = const Color(0x38FFD54F);
-      canvas.drawCircle(Offset(cx - 15, cy - 18), 16, _fillPaint);
-    }
-    _fillPaint.color = isEvening
-        ? const Color(0xFFFFD54F)
-        : const Color(0xFF81D4FA);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(
-          center: Offset(cx - 15, cy - 18),
-          width: 11,
-          height: 11,
-        ),
-        const Radius.circular(3),
-      ),
-      _fillPaint,
-    );
-
-    _fillPaint.color = const Color(0xFFA1887F);
-    canvas.drawRect(Rect.fromLTWH(cx - 20, cy - 64, 9, 18), _fillPaint);
-
-    final puffPhase = (animTime * 0.7) % 1.0;
-    _fillPaint.color = Color.fromRGBO(255, 255, 255, (1.0 - puffPhase) * 0.65);
-    canvas.drawCircle(
-      Offset(cx - 15 + puffPhase * 6, cy - 68 - puffPhase * 16),
-      4.5 * (1.0 - puffPhase * 0.4),
-      _fillPaint,
-    );
-
-    _pathA
-      ..reset()
-      ..moveTo(cx - 35, cy - 39)
-      ..lineTo(cx, cy - 22)
-      ..lineTo(cx, cy - 56)
-      ..close();
-    _fillPaint.color = const Color(0xFFD84315);
-    canvas.drawPath(_pathA, _fillPaint);
-
-    _pathB
-      ..reset()
-      ..moveTo(cx, cy - 22)
-      ..lineTo(cx + 35, cy - 39)
-      ..lineTo(cx, cy - 56)
-      ..close();
-    _fillPaint.color = const Color(0xFFBF360C);
-    canvas.drawPath(_pathB, _fillPaint);
-  }
-
-  void _drawStoneWell(Canvas canvas, double cx, double cy, double animTime) {
-    _fillPaint.color = const Color(0x33000000);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy + 4), width: 52, height: 26),
-      _fillPaint,
-    );
-
-    final body = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: Offset(cx, cy - 4), width: 42, height: 22),
-      const Radius.circular(10),
-    );
-    _fillPaint.color = const Color(0xFF90A4AE);
-    canvas.drawRRect(body, _fillPaint);
-    _fillPaint.color = const Color(0xFFB0BEC5);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy - 13), width: 42, height: 18),
-      _fillPaint,
-    );
-
-    final shimmer = (math.sin(animTime * 3.2) + 1.0) * 0.5;
-    _fillPaint.color = Color.lerp(
-      const Color(0xFF0288D1),
-      const Color(0xFF4FC3F7),
-      shimmer,
-    )!;
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy - 13), width: 30, height: 12),
-      _fillPaint,
-    );
-    final ripplePhase = (animTime * 0.85) % 1.0;
-    _strokePaint
-      ..color = Color.fromRGBO(255, 255, 255, (1.0 - ripplePhase) * 0.45)
-      ..strokeWidth = 1.2;
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: Offset(cx, cy - 13),
-        width: 10.0 + ripplePhase * 16.0,
-        height: 4.0 + ripplePhase * 6.5,
-      ),
-      _strokePaint,
-    );
-
-    _strokePaint
-      ..color = const Color(0xFF6D4C41)
-      ..strokeWidth = 3.5
-      ..strokeCap = StrokeCap.butt;
-    canvas.drawLine(
-      Offset(cx - 15, cy - 14),
-      Offset(cx - 15, cy - 40),
-      _strokePaint,
-    );
-    canvas.drawLine(
-      Offset(cx + 15, cy - 14),
-      Offset(cx + 15, cy - 40),
-      _strokePaint,
-    );
-
-    _pathA
-      ..reset()
-      ..moveTo(cx - 24, cy - 36)
-      ..lineTo(cx, cy - 50)
-      ..lineTo(cx + 24, cy - 36)
-      ..close();
-    _fillPaint.color = const Color(0xFF8D6E63);
-    canvas.drawPath(_pathA, _fillPaint);
-  }
-
-  void _drawBarn(
-    Canvas canvas,
-    double cx,
-    double cy,
-    int totalBarnCrates, {
-    bool showDetailedMeters = false,
-  }) {
-    _fillPaint.color = const Color(0x33000000);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy + 5), width: 74, height: 34),
-      _fillPaint,
-    );
-
-    _pathA
-      ..reset()
-      ..moveTo(cx - 28, cy - 3)
-      ..lineTo(cx, cy + 12)
-      ..lineTo(cx, cy - 26)
-      ..lineTo(cx - 28, cy - 40)
-      ..close();
-    _fillPaint.color = const Color(0xFFC62828);
-    canvas.drawPath(_pathA, _fillPaint);
-
-    _pathB
-      ..reset()
-      ..moveTo(cx, cy + 12)
-      ..lineTo(cx + 28, cy - 3)
-      ..lineTo(cx + 28, cy - 40)
-      ..lineTo(cx, cy - 26)
-      ..close();
-    _fillPaint.color = const Color(0xFFA31D1D);
-    canvas.drawPath(_pathB, _fillPaint);
-
-    _strokePaint
-      ..color = const Color(0xFFFFF8E1)
-      ..strokeWidth = 2.0
-      ..strokeCap = StrokeCap.butt;
-    canvas.drawRect(Rect.fromLTWH(cx + 6, cy - 20, 16, 22), _strokePaint);
-    _strokePaint.strokeWidth = 2.4;
-    canvas.drawLine(
-      Offset(cx + 6, cy - 20),
-      Offset(cx + 22, cy + 2),
-      _strokePaint,
-    );
-    canvas.drawLine(
-      Offset(cx + 22, cy - 20),
-      Offset(cx + 6, cy + 2),
-      _strokePaint,
-    );
-
-    _pathA
-      ..reset()
-      ..moveTo(cx - 33, cy - 38)
-      ..lineTo(cx, cy - 58)
-      ..lineTo(cx + 33, cy - 38)
-      ..lineTo(cx, cy - 23)
-      ..close();
-    _fillPaint.color = const Color(0xFF5D4037);
-    canvas.drawPath(_pathA, _fillPaint);
-
-    if (totalBarnCrates > 0) {
-      final stackCount = math.min(2, totalBarnCrates);
-      for (var i = 0; i < stackCount; i++) {
-        CanvasDrawHelpers.drawWoodenCrate(
-          canvas,
-          Offset(cx - 18 + i * 12.0, cy + 8),
-          ProductId.tomato,
-          scale: 0.58,
-        );
-      }
-      if (showDetailedMeters) {
-        CanvasDrawHelpers.drawFloatingStatusPill(
-          canvas,
-          cx,
-          cy - 66,
-          '📦 $totalBarnCrates',
-        );
-      }
-    }
-  }
-
-  void _drawMarketStall(
-    Canvas canvas,
-    double cx,
-    double cy,
-    List<ProductId> stallCrates,
-    double animTime,
-  ) {
-    _fillPaint.color = const Color(0x33000000);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy + 5), width: 78, height: 34),
-      _fillPaint,
-    );
-
-    final counter = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: Offset(cx, cy - 4), width: 58, height: 22),
-      const Radius.circular(6),
-    );
-    _fillPaint.color = const Color(0xFFA1693A);
-    canvas.drawRRect(counter, _fillPaint);
-    _strokePaint
-      ..color = const Color(0xFF5D4037)
-      ..strokeWidth = 2.0
-      ..strokeCap = StrokeCap.butt;
-    canvas.drawRRect(counter, _strokePaint);
-
-    for (var i = 0; i < stallCrates.length && i < 6; i++) {
-      final row = i ~/ 3;
-      final col = i % 3;
-      CanvasDrawHelpers.drawWoodenCrate(
-        canvas,
-        Offset(cx - 16 + col * 16.0, cy - 14 - row * 9.0),
-        stallCrates[i],
-        scale: 0.66,
-      );
-    }
-
-    _strokePaint
-      ..color = const Color(0xFF6D4C41)
-      ..strokeWidth = 3.2;
-    canvas.drawLine(
-      Offset(cx - 25, cy - 12),
-      Offset(cx - 25, cy - 44),
-      _strokePaint,
-    );
-    canvas.drawLine(
-      Offset(cx + 25, cy - 12),
-      Offset(cx + 25, cy - 44),
-      _strokePaint,
-    );
-
-    const stripeCount = 5;
-    const totalW = 60.0;
-    const stripeW = totalW / stripeCount;
-    for (var i = 0; i < stripeCount; i++) {
-      final sx = cx - totalW * 0.5 + i * stripeW;
-      _fillPaint.color = i.isEven
-          ? const Color(0xFFE53935)
-          : const Color(0xFFFFF8E1);
-      canvas.drawRRect(
-        RRect.fromRectAndCorners(
-          Rect.fromLTWH(sx, cy - 52, stripeW + 0.5, 15),
-          bottomLeft: const Radius.circular(4),
-          bottomRight: const Radius.circular(4),
-        ),
-        _fillPaint,
-      );
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Orchard Lemon Tree, Artisan Kettle, Automation & Animals
-  // ---------------------------------------------------------------------------
-
-  void _drawLemonTree(
-    Canvas canvas,
-    double cx,
-    double cy,
-    GridPos pos,
-    TileState tile,
-    double time, {
-    bool showDetailedMeters = false,
-  }) {
-    final sway = math.sin(time * 2.1 + pos.x) * 2.4;
-    _fillPaint.color = const Color(0x33000000);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy + 4), width: 46, height: 22),
-      _fillPaint,
-    );
-    _strokePaint
-      ..color = const Color(0xFFD84315)
-      ..strokeWidth = 2.6
-      ..strokeCap = StrokeCap.butt;
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy + 1), width: 32, height: 15),
-      _strokePaint,
-    );
-    _strokePaint
-      ..color = const Color(0xFF6D4C41)
-      ..strokeWidth = 6.0
-      ..strokeCap = StrokeCap.round;
-    canvas.drawLine(
-      Offset(cx, cy + 1),
-      Offset(cx + sway * 0.25, cy - 22),
-      _strokePaint,
-    );
-
-    _fillPaint.color = const Color(0xFF388E3C);
-    canvas.drawCircle(Offset(cx - 9 + sway, cy - 28), 13.5, _fillPaint);
-    _fillPaint.color = const Color(0xFF2E7D32);
-    canvas.drawCircle(Offset(cx + 9 + sway, cy - 27), 13.5, _fillPaint);
-    _fillPaint.color = const Color(0xFF43A047);
-    canvas.drawCircle(Offset(cx + sway, cy - 35), 15.5, _fillPaint);
-
-    if (tile.producerCrates > 0 || tile.producerProgress > 0.45) {
-      final r = tile.producerCrates > 0 ? 3.8 : 2.6;
-      _fillPaint.color = const Color(0xFFFFEE58);
-      canvas.drawCircle(Offset(cx - 8 + sway, cy - 28), r, _fillPaint);
-      canvas.drawCircle(Offset(cx + 7 + sway, cy - 30), r, _fillPaint);
-      canvas.drawCircle(Offset(cx + 1 + sway, cy - 39), r, _fillPaint);
-      canvas.drawCircle(Offset(cx + 9 + sway, cy - 22), r, _fillPaint);
-    }
-
-    if (tile.producerCrates > 0) {
-      if (showDetailedMeters) {
-        CanvasDrawHelpers.drawFloatingStatusPill(
-          canvas,
-          cx,
-          cy - 58,
-          '🍋 ${tile.producerCrates}',
-        );
-      } else {
-        final bob = math.sin(time * 4.2 + pos.x).abs() * 2.5;
-        _fillPaint.color = const Color(0x44FFD54F);
-        canvas.drawCircle(Offset(cx, cy - 48 - bob), 8.5, _fillPaint);
-        _fillPaint.color = const Color(0xEEFFEE58);
-        canvas.drawCircle(Offset(cx, cy - 48 - bob), 3.8, _fillPaint);
-      }
-    }
-  }
-
-  void _drawExpressOrderBubble(
-    Canvas canvas,
-    double x,
-    double y,
-    ExpressOrder order,
-  ) {
-    final pill = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: Offset(x, y), width: 48, height: 26),
-      const Radius.circular(13),
-    );
-    _fillPaint.color = const Color(0xF6FFF8E1);
-    canvas.drawRRect(pill, _fillPaint);
-    _strokePaint
-      ..color = const Color(0xFFFF6F00)
-      ..strokeWidth = 2.0
-      ..strokeCap = StrokeCap.butt;
-    canvas.drawRRect(pill, _strokePaint);
-    CanvasDrawHelpers.drawProgressArc(
-      canvas,
-      Offset(x - 14, y),
-      8.0,
-      order.progressFraction,
-      const Color(0xFFFF6F00),
-      trackColor: const Color(0x33FF6F00),
-      strokeWidth: 2.5,
-    );
-    CanvasDrawHelpers.drawCenteredText(
-      canvas,
-      '${SolvilleCatalog.productEmoji(order.product)}${order.deliveredCount}/${order.requiredCount}',
-      Offset(x + 7, y),
-      _recipeTextStyle,
-    );
-  }
-
-  void _drawExpansionLandmark(
-    Canvas canvas,
-    double cx,
-    double cy,
-    TileState tile,
-    double time, {
-    bool showDetailedMeters = false,
-  }) {
-    final bob = math.sin(time * 3.5) * 2.5;
-    switch (tile.landmark) {
-      case LandmarkKind.treasureCache:
-        final chest = RRect.fromRectAndRadius(
-          Rect.fromCenter(center: Offset(cx, cy - 8), width: 26, height: 18),
-          const Radius.circular(5),
-        );
-        _fillPaint.color = const Color(0xFF8D6E63);
-        canvas.drawRRect(chest, _fillPaint);
-        _fillPaint.color = const Color(0xFFFFCA28);
-        canvas.drawRect(Rect.fromLTWH(cx - 13, cy - 11, 26, 4), _fillPaint);
-        if (showDetailedMeters) {
-          CanvasDrawHelpers.drawFloatingStatusPill(
-            canvas,
-            cx,
-            cy - 30 + bob,
-            '💎',
-          );
-        } else if (!tile.landmarkClaimed) {
-          _fillPaint.color = const Color(0xEEFFEE58);
-          canvas.drawCircle(Offset(cx, cy - 26 + bob), 3.2, _fillPaint);
-        }
-      case LandmarkKind.wildflowerShrine:
-        _fillPaint.color = const Color(0xFF8D6E63);
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromCenter(center: Offset(cx, cy - 11), width: 14, height: 24),
-            const Radius.circular(4),
-          ),
-          _fillPaint,
-        );
-        _fillPaint.color = const Color(0xFFF48FB1);
-        canvas.drawCircle(Offset(cx, cy - 24), 9, _fillPaint);
-        if (showDetailedMeters) {
-          CanvasDrawHelpers.drawFloatingStatusPill(
-            canvas,
-            cx,
-            cy - 42 + bob,
-            '🌸',
-          );
-        } else if (!tile.landmarkClaimed) {
-          _fillPaint.color = const Color(0xEEFFEE58);
-          canvas.drawCircle(Offset(cx, cy - 38 + bob), 3.2, _fillPaint);
-        }
-      case LandmarkKind.oasisFountain:
-        _fillPaint.color = const Color(0xFFB0BEC5);
-        canvas.drawOval(
-          Rect.fromCenter(center: Offset(cx, cy - 3), width: 42, height: 22),
-          _fillPaint,
-        );
-        _fillPaint.color = const Color(0xFF29B6F6);
-        canvas.drawOval(
-          Rect.fromCenter(center: Offset(cx, cy - 5), width: 32, height: 15),
-          _fillPaint,
-        );
-        _fillPaint.color = const Color(0xFFECEFF1);
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromCenter(center: Offset(cx, cy - 15), width: 10, height: 16),
-            const Radius.circular(4),
-          ),
-          _fillPaint,
-        );
-        if (showDetailedMeters) {
-          CanvasDrawHelpers.drawFloatingStatusPill(
-            canvas,
-            cx,
-            cy - 36 + bob,
-            tile.landmarkClaimed ? '💧' : '✨💧',
-          );
-        } else if (!tile.landmarkClaimed) {
-          _fillPaint.color = const Color(0xEEFFEE58);
-          canvas.drawCircle(Offset(cx, cy - 32 + bob), 3.2, _fillPaint);
-        }
-      case LandmarkKind.none:
-        break;
-    }
-  }
-
-  void _drawArtisanPress(
-    Canvas canvas,
-    double cx,
-    double cy,
-    TileState tile,
-    double time, {
-    bool isSunPassActive = true,
-    bool showDetailedMeters = false,
-  }) {
-    _fillPaint.color = const Color(0x36000000);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy + 4), width: 52, height: 24),
-      _fillPaint,
-    );
-
-    final hearth = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: Offset(cx, cy - 4), width: 38, height: 18),
-      const Radius.circular(7),
-    );
-    _fillPaint.color = const Color(0xFF8D6E63);
-    canvas.drawRRect(hearth, _fillPaint);
-
-    if (tile.producerActive) {
-      final glow = (math.sin(time * 6.0) + 1.0) * 0.5;
-      _fillPaint.color = const Color(0xCCFF7043);
-      canvas.drawCircle(Offset(cx, cy + 1), 6.0 + glow * 2.0, _fillPaint);
-    }
-
-    final kettle = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: Offset(cx, cy - 17), width: 30, height: 20),
-      const Radius.circular(9),
-    );
-    _fillPaint.color = const Color(0xFFD87A3B);
-    canvas.drawRRect(kettle, _fillPaint);
-    _fillPaint.color = tile.producerActive
-        ? const Color(0xFFC2185B)
-        : const Color(0xFF5D4037);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy - 25), width: 26, height: 10),
-      _fillPaint,
-    );
-
-    if (tile.producerActive) {
-      for (var s = 0; s < 2; s++) {
-        final phase = ((time * 0.9 + s * 0.5) % 1.0);
-        _fillPaint.color = Color.fromRGBO(255, 248, 225, (1.0 - phase) * 0.75);
-        canvas.drawCircle(
-          Offset(cx - 4 + s * 8.0, cy - 30 - phase * 18.0),
-          3.6 * (1.0 - phase * 0.35),
-          _fillPaint,
-        );
-      }
-      CanvasDrawHelpers.drawProgressArc(
-        canvas,
-        Offset(cx, cy - 42),
-        9.0,
-        tile.producerProgress,
-        const Color(0xFFFF7043),
-        trackColor: const Color(0x66FFF8E1),
-        strokeWidth: 3.0,
-      );
-    } else if (showDetailedMeters &&
-        tile.producerCrates == 0 &&
-        isSunPassActive) {
-      final pill = RRect.fromRectAndRadius(
-        Rect.fromCenter(center: Offset(cx, cy - 44), width: 42, height: 19),
-        const Radius.circular(9),
-      );
-      _fillPaint.color = const Color(0xEEFFFDF6);
-      canvas.drawRRect(pill, _fillPaint);
-      _strokePaint
-        ..color = const Color(0xFFBCAAA4)
-        ..strokeWidth = 1.4
-        ..strokeCap = StrokeCap.butt;
-      canvas.drawRRect(pill, _strokePaint);
-      CanvasDrawHelpers.drawCenteredText(
-        canvas,
-        tile.kettleRecipe.formulaEmoji,
-        Offset(cx, cy - 44),
-        _recipeTextStyle,
-      );
-    }
-
-    if (tile.producerCrates > 0) {
-      CanvasDrawHelpers.drawWoodenCrate(
-        canvas,
-        Offset(cx + 18, cy + 2),
-        tile.kettleRecipe.outputProduct,
-        scale: 0.62,
-      );
-      if (showDetailedMeters) {
-        CanvasDrawHelpers.drawFloatingStatusPill(
-          canvas,
-          cx,
-          cy - 46,
-          '${SolvilleCatalog.productEmoji(tile.kettleRecipe.outputProduct)} ${tile.producerCrates}',
-        );
-      } else {
-        final bob = math.sin(time * 4.2).abs() * 2.5;
-        _fillPaint.color = const Color(0x44FFD54F);
-        canvas.drawCircle(Offset(cx, cy - 38 - bob), 8.0, _fillPaint);
-        _fillPaint.color = const Color(0xEEFFEE58);
-        canvas.drawCircle(Offset(cx, cy - 38 - bob), 3.6, _fillPaint);
-      }
-    }
-  }
-
-  void _drawRotarySprinkler(Canvas canvas, double cx, double cy, double time) {
-    _fillPaint.color = const Color(0x33000000);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy + 2), width: 24, height: 12),
-      _fillPaint,
-    );
-    _fillPaint.color = const Color(0xFF546E7A);
-    canvas.drawCircle(Offset(cx, cy), 9, _fillPaint);
-    _strokePaint
-      ..color = const Color(0xFFCFD8DC)
-      ..strokeWidth = 4.0
-      ..strokeCap = StrokeCap.butt;
-    canvas.drawLine(Offset(cx, cy), Offset(cx, cy - 13), _strokePaint);
-
-    final angle = time * 4.5;
-    final dx = math.cos(angle) * 11.0;
-    final dy = math.sin(angle) * 5.5;
-    _strokePaint
-      ..color = const Color(0xFF29B6F6)
-      ..strokeWidth = 3.0
-      ..strokeCap = StrokeCap.round;
-    canvas.drawLine(
-      Offset(cx - dx, cy - 13 - dy),
-      Offset(cx + dx, cy - 13 + dy),
-      _strokePaint,
-    );
-  }
-
-  void _drawSolarSprinkler(Canvas canvas, double cx, double cy, double time) {
-    _fillPaint.color = const Color(0x38000000);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy + 2), width: 30, height: 15),
-      _fillPaint,
-    );
-    _fillPaint.color = const Color(0xFFFFB300);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(center: Offset(cx, cy - 11), width: 12, height: 24),
-        const Radius.circular(5),
-      ),
-      _fillPaint,
-    );
-    _fillPaint.color = const Color(0xFF1565C0);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy - 25), width: 24, height: 11),
-      _fillPaint,
-    );
-    final pulse = (math.sin(time * 3.8) + 1) * 0.5;
-    _fillPaint.color = const Color(0x664FC3F7);
-    canvas.drawCircle(Offset(cx, cy - 16), 5.0 + pulse * 3.0, _fillPaint);
-  }
-
-  void _drawHenhouse(
-    Canvas canvas,
-    double cx,
-    double cy,
-    AnimalUnitState? state,
-    double time, {
-    bool showDetailedMeters = false,
-  }) {
-    _fillPaint.color = const Color(0x30000000);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy + 4), width: 56, height: 26),
-      _fillPaint,
-    );
-    final coop = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: Offset(cx - 6, cy - 12), width: 32, height: 22),
-      const Radius.circular(5),
-    );
-    _fillPaint.color = const Color(0xFFD7A86E);
-    canvas.drawRRect(coop, _fillPaint);
-    _pathA
-      ..reset()
-      ..moveTo(cx - 26, cy - 21)
-      ..lineTo(cx - 6, cy - 35)
-      ..lineTo(cx + 14, cy - 21)
-      ..close();
-    _fillPaint.color = const Color(0xFFE65100);
-    canvas.drawPath(_pathA, _fillPaint);
-
-    final peck = math.sin(time * 5.0).abs() * 3.0;
-    void drawHen(double ox, double oy, Color col) {
-      _fillPaint.color = col;
-      canvas.drawCircle(Offset(cx + ox, cy + oy), 5.5, _fillPaint);
-      canvas.drawCircle(
-        Offset(cx + ox + 4, cy + oy - 3 + peck),
-        3.2,
-        _fillPaint,
-      );
-      _fillPaint.color = const Color(0xFFE53935);
-      canvas.drawCircle(
-        Offset(cx + ox + 4, cy + oy - 6 + peck),
-        1.8,
-        _fillPaint,
-      );
-    }
-
-    drawHen(12.0, 2.0, const Color(0xFFFFFFFF));
-    drawHen(2.0, 8.0, const Color(0xFFFFCC80));
-
-    CanvasDrawHelpers.drawAnimalStatusBubble(
-      canvas,
-      cx,
-      cy - 44,
-      state,
-      '🥚',
-      showDetailedMeters: showDetailedMeters,
-      animTime: time,
-    );
-  }
-
-  void _drawBeehive(
-    Canvas canvas,
-    double cx,
-    double cy,
-    AnimalUnitState? state,
-    double time, {
-    bool showDetailedMeters = false,
-  }) {
-    _fillPaint.color = const Color(0x30000000);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy + 3), width: 42, height: 20),
-      _fillPaint,
-    );
-    for (var i = 0; i < 3; i++) {
-      _fillPaint.color = i.isEven
-          ? const Color(0xFFFFCA28)
-          : const Color(0xFFFFB300);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromCenter(
-            center: Offset(cx, cy - 5 - i * 8.0),
-            width: 28 - i * 4.0,
-            height: 9,
-          ),
-          const Radius.circular(5),
-        ),
-        _fillPaint,
-      );
-    }
-    _fillPaint.color = const Color(0xFF3E2723);
-    canvas.drawCircle(Offset(cx, cy - 6), 3.2, _fillPaint);
-
-    _fillPaint.color = const Color(0xFFFFEE58);
-    for (var b = 0; b < 3; b++) {
-      final a = time * 3.6 + b * 2.1;
-      final bx = cx + math.cos(a) * 18.0;
-      final by = cy - 16.0 + math.sin(a * 1.5) * 7.0;
-      canvas.drawCircle(Offset(bx, by), 2.5, _fillPaint);
-    }
-
-    CanvasDrawHelpers.drawAnimalStatusBubble(
-      canvas,
-      cx,
-      cy - 40,
-      state,
-      '🍯',
-      showDetailedMeters: showDetailedMeters,
-      animTime: time,
-    );
-  }
-
-  void _drawCowPaddock(
-    Canvas canvas,
-    double cx,
-    double cy,
-    AnimalUnitState? state,
-    double time, {
-    bool showDetailedMeters = false,
-  }) {
-    _strokePaint
-      ..color = const Color(0xFF8D6E63)
-      ..strokeWidth = 2.4
-      ..strokeCap = StrokeCap.butt;
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, cy - 2), width: 64, height: 30),
-      _strokePaint,
-    );
-
-    final sway = math.sin(time * 2.2) * 2.0;
-    final bodyRect = RRect.fromRectAndRadius(
-      Rect.fromCenter(
-        center: Offset(cx - 2 + sway, cy - 10),
-        width: 26,
-        height: 15,
-      ),
-      const Radius.circular(7),
-    );
-    _fillPaint.color = const Color(0xFFFAFAFA);
-    canvas.drawRRect(bodyRect, _fillPaint);
-    canvas.drawCircle(Offset(cx + 12 + sway, cy - 14), 6.0, _fillPaint);
-
-    _fillPaint.color = const Color(0xFF3E2723);
-    canvas.drawCircle(Offset(cx - 5 + sway, cy - 11), 4.2, _fillPaint);
-    canvas.drawCircle(Offset(cx + 4 + sway, cy - 8), 3.2, _fillPaint);
-
-    _fillPaint.color = const Color(0xFFF48FB1);
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: Offset(cx + 14 + sway, cy - 12),
-        width: 7,
-        height: 4.5,
-      ),
-      _fillPaint,
-    );
-
-    CanvasDrawHelpers.drawAnimalStatusBubble(
-      canvas,
-      cx,
-      cy - 38,
-      state,
-      '🥛',
-      showDetailedMeters: showDetailedMeters,
-      animTime: time,
-    );
-  }
-
-  void _drawSolarLantern(
-    Canvas canvas,
-    double cx,
-    double cy,
-    double dayProgress,
-    double time,
-  ) {
-    final isDusk = dayProgress > 0.55;
-    final glowStrength = isDusk ? 0.52 : 0.16;
-    _fillPaint.color = Color.fromRGBO(255, 213, 79, glowStrength);
-    canvas.drawCircle(
-      Offset(cx, cy - 20),
-      (isDusk ? 26.0 : 16.0) + math.sin(time * 3.0) * 2.5,
-      _fillPaint,
-    );
-    _strokePaint
-      ..color = const Color(0xFF4E342E)
-      ..strokeWidth = 3.2
-      ..strokeCap = StrokeCap.butt;
-    canvas.drawLine(Offset(cx, cy + 2), Offset(cx, cy - 18), _strokePaint);
-
-    _fillPaint.color = const Color(0xFFFFEE58);
-    canvas.drawCircle(Offset(cx, cy - 21), 6.5, _fillPaint);
-
-    _pathA
-      ..reset()
-      ..moveTo(cx - 9, cy - 25)
-      ..lineTo(cx, cy - 32)
-      ..lineTo(cx + 9, cy - 25)
-      ..close();
-    _fillPaint.color = const Color(0xFF5D4037);
-    canvas.drawPath(_pathA, _fillPaint);
-  }
-
-  void _drawFlowerArch(Canvas canvas, double cx, double cy, double time) {
-    _strokePaint
-      ..color = const Color(0xFF6D4C41)
-      ..strokeWidth = 4.0
-      ..strokeCap = StrokeCap.butt;
-    canvas.drawArc(
-      Rect.fromCenter(center: Offset(cx, cy - 8), width: 44, height: 56),
-      math.pi,
-      math.pi,
-      false,
-      _strokePaint,
-    );
-    for (var i = 0; i <= 6; i++) {
-      final a = math.pi + (math.pi * i / 6.0);
-      final fx = cx + math.cos(a) * 22.0;
-      final fy = cy - 8 + math.sin(a) * 28.0;
-      _fillPaint.color = const Color(0xFF43A047);
-      canvas.drawCircle(Offset(fx, fy), 5.2, _fillPaint);
-      _fillPaint.color = i.isEven
-          ? const Color(0xFFEC407A)
-          : const Color(0xFFFF80AB);
-      canvas.drawCircle(Offset(fx, fy - 1), 3.4, _fillPaint);
     }
   }
 }

@@ -5,7 +5,9 @@ import '../../l10n/app_localizations.dart';
 import '../../l10n/solville_l10n_extensions.dart';
 import '../theme/solville_theme.dart';
 import '../view_models/solville_controller.dart';
+import '../widgets/solville_buttons.dart';
 import '../widgets/solville_dialog_shell.dart';
+import '../widgets/solville_icons.dart';
 
 /// Town Shop modal offering Seed Licenses, Permanent Upgrades, and Placeable
 /// Sprinklers / Animals / Garden Decor.
@@ -27,16 +29,16 @@ class ShopModal extends StatelessWidget {
           length: 3,
           child: SolvilleDialogShell(
             emoji: '🛒',
+            leadingIcon: const SolvilleIcon(
+              kind: SolvilleIconKind.shopBasket,
+              size: 22,
+            ),
             title: l10n.shopTitle,
             maxWidth: 680,
             maxHeight: 560,
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-              decoration: BoxDecoration(
-                color: SolvilleTheme.sunAmberLight,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: SolvilleTheme.timberBorder),
-              ),
+              decoration: SolvilleTheme.goldAccentDecoration(radius: 14),
               child: Text(
                 '☀️ ${state.coins}',
                 style: const TextStyle(
@@ -48,18 +50,15 @@ class ShopModal extends StatelessWidget {
             ),
             child: Column(
               children: <Widget>[
-                TabBar(
-                  isScrollable: MediaQuery.sizeOf(context).width < 420,
-                  tabAlignment: MediaQuery.sizeOf(context).width < 420
-                      ? TabAlignment.center
-                      : TabAlignment.fill,
-                  labelColor: SolvilleTheme.timberDark,
-                  labelStyle: const TextStyle(fontWeight: FontWeight.w800),
-                  tabs: <Widget>[
-                    Tab(text: l10n.shopTabUpgrades),
-                    Tab(text: l10n.shopTabSeeds),
-                    Tab(text: l10n.shopTabBuild),
-                  ],
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
+                  child: SolvilleSegmentedTabs(
+                    labels: <String>[
+                      l10n.shopTabUpgrades,
+                      l10n.shopTabSeeds,
+                      l10n.shopTabBuild,
+                    ],
+                  ),
                 ),
                 Expanded(
                   child: TabBarView(
@@ -136,23 +135,37 @@ class _UpgradesTab extends StatelessWidget {
         SolvilleCatalog.maxExpansionTier,
       );
       final maxedTitle = l10n.upgradeMaxedTitle(track, maxGrid);
-      return Card(
+      return SolvilleMenuCard(
         margin: const EdgeInsets.only(bottom: 10),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Row(
-            children: <Widget>[
-              const Text('🌟', style: TextStyle(fontSize: 26)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  maxedTitle,
-                  style: const TextStyle(fontWeight: FontWeight.w800),
+        color: const Color(0xFFFFFBF0),
+        highlighted: true,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Row(
+          children: <Widget>[
+            const SolvilleIconMedallion(
+              size: 42,
+              radius: 13,
+              highlighted: true,
+              child: Text('🌟', style: TextStyle(fontSize: 23)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                maxedTitle,
+                style: const TextStyle(
+                  color: SolvilleTheme.timberDark,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-              Chip(label: Text(l10n.shopMaxBadge)),
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+            SolvilleBadge(
+              label: l10n.shopMaxBadge,
+              color: const Color(0xFFE8F5E9),
+              borderColor: const Color(0xFF43A047),
+              textColor: const Color(0xFF1B5E20),
+            ),
+          ],
         ),
       );
     }
@@ -166,111 +179,98 @@ class _UpgradesTab extends StatelessWidget {
       controller.state.gridSize,
     );
 
-    return Card(
+    return SolvilleMenuCard(
       margin: const EdgeInsets.only(bottom: 10),
+      highlighted: isGlovesSpotlight || (affordable && !lockedByPass),
       color: isGlovesSpotlight
           ? const Color(0xFFFFF3C4)
           : (affordable && !lockedByPass
                 ? const Color(0xFFFFFBF0)
                 : SolvilleTheme.parchment),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isGlovesSpotlight
-              ? const Color(0xFFE65100)
-              : (affordable && !lockedByPass
-                    ? SolvilleTheme.sunGold
-                    : SolvilleTheme.timberBorder.withValues(alpha: 0.45)),
-          width: isGlovesSpotlight
-              ? 2.4
-              : (affordable && !lockedByPass ? 2.0 : 1.5),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-        child: Row(
-          children: <Widget>[
-            Text(nextDef.emoji, style: const TextStyle(fontSize: 28)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: <Widget>[
-                      Text(
-                        lockedByPass
-                            ? l10n.shopItemSunPass(upgradeName)
-                            : upgradeName,
-                        style: const TextStyle(
-                          color: SolvilleTheme.timberDark,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14.5,
-                        ),
-                      ),
-                      if (isGlovesSpotlight)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFCA28),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            l10n.shopGlovesSpotlight,
-                            style: const TextStyle(
-                              color: SolvilleTheme.timberDark,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 10.5,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 5),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0x22795548),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      statBadge,
+      borderColor: isGlovesSpotlight ? const Color(0xFFE65100) : null,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      child: Row(
+        children: <Widget>[
+          SolvilleIconMedallion(
+            size: 46,
+            radius: 13,
+            highlighted: isGlovesSpotlight,
+            backgroundColor: isGlovesSpotlight
+                ? const Color(0xFFFFECB3)
+                : SolvilleTheme.warmCream,
+            child: Text(nextDef.emoji, style: const TextStyle(fontSize: 25)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: <Widget>[
+                    Text(
+                      lockedByPass
+                          ? l10n.shopItemSunPass(upgradeName)
+                          : upgradeName,
                       style: const TextStyle(
                         color: SolvilleTheme.timberDark,
                         fontWeight: FontWeight.w800,
-                        fontSize: 12,
+                        fontSize: 14.5,
                       ),
                     ),
+                    if (isGlovesSpotlight)
+                      SolvilleBadge(
+                        label: l10n.shopGlovesSpotlight,
+                        color: const Color(0xFFFFCA28),
+                        borderColor: const Color(0xFFE65100),
+                        fontSize: 10.5,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
                   ),
-                ],
-              ),
+                  decoration: SolvilleTheme.recessedSlotDecoration(radius: 8),
+                  child: Text(
+                    statBadge,
+                    style: const TextStyle(
+                      color: SolvilleTheme.timberDark,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 10),
-            lockedByPass
-                ? FilledButton.tonal(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      controller.openSunPassModal();
-                    },
-                    child: Text(l10n.shopSunPassBadge),
-                  )
-                : FilledButton(
-                    onPressed: affordable
-                        ? () => controller.purchaseUpgrade(track)
-                        : null,
-                    child: Text(l10n.shopBuyCost(nextDef.cost)),
-                  ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 10),
+          lockedByPass
+              ? SolvilleButton(
+                  tone: SolvilleButtonTone.amber,
+                  compact: true,
+                  label: l10n.shopSunPassBadge,
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    controller.openSunPassModal();
+                  },
+                )
+              : SolvilleButton(
+                  tone: SolvilleButtonTone.emerald,
+                  label: l10n.shopBuyCost(nextDef.cost),
+                  onPressed: affordable
+                      ? () => controller.purchaseUpgrade(track)
+                      : null,
+                ),
+        ],
       ),
     );
   }
@@ -353,85 +353,87 @@ class _SeedVisualCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lockedByPass = crop.requiresSunPass && !isSunPassActive;
-    return Card(
-      margin: EdgeInsets.zero,
+    return SolvilleMenuCard(
       color: lockedByPass ? const Color(0xFFFFF8E1) : SolvilleTheme.parchment,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(
-          color: SolvilleTheme.timberBorder.withValues(alpha: 0.45),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(11),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                Text(crop.emoji, style: const TextStyle(fontSize: 28)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    l10n.productName(crop.id),
-                    style: const TextStyle(
-                      color: SolvilleTheme.timberDark,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13.5,
-                    ),
+      radius: 15,
+      padding: const EdgeInsets.all(11),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              SolvilleIconMedallion(
+                size: 40,
+                radius: 12,
+                backgroundColor: lockedByPass
+                    ? const Color(0xFFFFF0C4)
+                    : SolvilleTheme.warmCream,
+                child: Text(crop.emoji, style: const TextStyle(fontSize: 23)),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l10n.productName(crop.id),
+                  style: const TextStyle(
+                    color: SolvilleTheme.timberDark,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13.5,
                   ),
                 ),
-                if (trialCount > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE8F5E9),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '🎁$trialCount',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 11,
-                        color: Color(0xFF2E7D32),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              children: <Widget>[
-                _MiniStatPill('🌱 ${crop.seedCost}☀️'),
-                _MiniStatPill('📦 ${crop.baseCrateValue}☀️'),
-                _MiniStatPill('⏱ ${crop.growthSeconds.round()}s'),
-                if (crop.maxHarvests > 1) _MiniStatPill('×${crop.maxHarvests}'),
-                if (crop.id == ProductId.lavender) const _MiniStatPill('🐝 +35%'),
-              ],
-            ),
-            const SizedBox(height: 9),
-            if (lockedByPass && trialCount == 0)
-              FilledButton.tonal(
-                onPressed: onOpenSunPass,
-                child: Text(l10n.shopSunPassBadge),
-              )
-            else if (isUnlocked || trialCount > 0)
-              OutlinedButton(
-                onPressed: onEquip,
-                child: Text(l10n.shopEquipSeed),
-              )
-            else
-              FilledButton(
-                onPressed: coins >= crop.licenseCost ? onUnlock : null,
-                child: Text(l10n.shopUnlockCost(crop.licenseCost)),
               ),
-          ],
-        ),
+              if (trialCount > 0)
+                SolvilleBadge(
+                  label: '🎁$trialCount',
+                  color: const Color(0xFFE8F5E9),
+                  borderColor: const Color(0xFF43A047),
+                  textColor: const Color(0xFF2E7D32),
+                  fontSize: 11,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  borderRadius: 8,
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: <Widget>[
+              _MiniStatPill('🌱 ${crop.seedCost}☀️'),
+              _MiniStatPill('📦 ${crop.baseCrateValue}☀️'),
+              _MiniStatPill('⏱ ${crop.growthSeconds.round()}s'),
+              if (crop.maxHarvests > 1) _MiniStatPill('×${crop.maxHarvests}'),
+              if (crop.id == ProductId.lavender) const _MiniStatPill('🐝 +35%'),
+            ],
+          ),
+          const SizedBox(height: 9),
+          if (lockedByPass && trialCount == 0)
+            SolvilleButton(
+              tone: SolvilleButtonTone.amber,
+              compact: true,
+              expand: true,
+              label: l10n.shopSunPassBadge,
+              onPressed: onOpenSunPass,
+            )
+          else if (isUnlocked || trialCount > 0)
+            SolvilleButton(
+              tone: SolvilleButtonTone.cream,
+              compact: true,
+              expand: true,
+              label: l10n.shopEquipSeed,
+              onPressed: onEquip,
+            )
+          else
+            SolvilleButton(
+              tone: SolvilleButtonTone.emerald,
+              compact: true,
+              expand: true,
+              label: l10n.shopUnlockCost(crop.licenseCost),
+              onPressed: coins >= crop.licenseCost ? onUnlock : null,
+            ),
+        ],
       ),
     );
   }
@@ -477,62 +479,70 @@ class _BuildItemsTab extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               if (nextExp != null)
-                Card(
+                SolvilleMenuCard(
                   color: const Color(0xFFFFF8E1),
+                  highlighted:
+                      !nextExp.requiresSunPass && state.coins >= nextExp.cost,
                   margin: const EdgeInsets.only(bottom: 12),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
-                    ),
-                    child: Row(
-                      children: <Widget>[
-                        Text(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      SolvilleIconMedallion(
+                        size: 44,
+                        radius: 13,
+                        highlighted: true,
+                        child: Text(
                           nextExp.emoji,
-                          style: const TextStyle(fontSize: 28),
+                          style: const TextStyle(fontSize: 24),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Text(
-                                l10n.shopCurrentIsleTitle(
-                                  l10n.upgradeName(
-                                    UpgradeTrack.farmExpansion,
-                                    nextExp.tier,
-                                  ),
-                                  state.gridSize,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              l10n.shopCurrentIsleTitle(
+                                l10n.upgradeName(
+                                  UpgradeTrack.farmExpansion,
+                                  nextExp.tier,
                                 ),
-                                style: const TextStyle(
-                                  color: SolvilleTheme.timberDark,
-                                  fontWeight: FontWeight.w900,
-                                ),
+                                state.gridSize,
                               ),
-                              const SizedBox(height: 3),
-                              _MiniStatPill(
-                                '🏝️ ${state.gridSize}×${state.gridSize} → ${SolvilleCatalog.gridSizeForExpansionTier(nextExp.tier)}×${SolvilleCatalog.gridSizeForExpansionTier(nextExp.tier)}',
+                              style: const TextStyle(
+                                color: SolvilleTheme.timberDark,
+                                fontWeight: FontWeight.w900,
                               ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(height: 3),
+                            _MiniStatPill(
+                              '🏝️ ${state.gridSize}×${state.gridSize} → ${SolvilleCatalog.gridSizeForExpansionTier(nextExp.tier)}×${SolvilleCatalog.gridSizeForExpansionTier(nextExp.tier)}',
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        (nextExp.requiresSunPass && !controller.isSunPassActive)
-                            ? FilledButton.tonal(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                  controller.openSunPassModal();
-                                },
-                                child: Text(l10n.shopSunPassBadge),
-                              )
-                            : FilledButton(
-                                onPressed: state.coins >= nextExp.cost
-                                    ? controller.expandIsle
-                                    : null,
-                                child: Text(l10n.shopExpandCost(nextExp.cost)),
-                              ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 8),
+                      (nextExp.requiresSunPass && !controller.isSunPassActive)
+                          ? SolvilleButton(
+                              tone: SolvilleButtonTone.amber,
+                              compact: true,
+                              label: l10n.shopSunPassBadge,
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                controller.openSunPassModal();
+                              },
+                            )
+                          : SolvilleButton(
+                              tone: SolvilleButtonTone.emerald,
+                              label: l10n.shopExpandCost(nextExp.cost),
+                              onPressed: state.coins >= nextExp.cost
+                                  ? controller.expandIsle
+                                  : null,
+                            ),
+                    ],
                   ),
                 ),
               Wrap(
@@ -542,76 +552,81 @@ class _BuildItemsTab extends StatelessWidget {
                   for (final item in SolvilleCatalog.buildItems.values)
                     SizedBox(
                       width: cardWidth,
-                      child: Card(
-                        margin: EdgeInsets.zero,
+                      child: SolvilleMenuCard(
                         color: (item.requiresSunPass &&
                                 !controller.isSunPassActive)
                             ? const Color(0xFFFFF8E1)
                             : SolvilleTheme.parchment,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          side: BorderSide(
-                            color: SolvilleTheme.timberBorder.withValues(
-                              alpha: 0.45,
-                            ),
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(11),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: <Widget>[
-                              Row(
-                                children: <Widget>[
-                                  Text(
+                        radius: 15,
+                        padding: const EdgeInsets.all(11),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            Row(
+                              children: <Widget>[
+                                SolvilleIconMedallion(
+                                  size: 40,
+                                  radius: 12,
+                                  backgroundColor:
+                                      (item.requiresSunPass &&
+                                          !controller.isSunPassActive)
+                                      ? const Color(0xFFFFF0C4)
+                                      : SolvilleTheme.warmCream,
+                                  child: Text(
                                     item.emoji,
-                                    style: const TextStyle(fontSize: 28),
+                                    style: const TextStyle(fontSize: 23),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      l10n.buildItemName(item.type),
-                                      style: const TextStyle(
-                                        color: SolvilleTheme.timberDark,
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 13.5,
-                                      ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    l10n.buildItemName(item.type),
+                                    style: const TextStyle(
+                                      color: SolvilleTheme.timberDark,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 13.5,
                                     ),
                                   ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 4,
-                                children: <Widget>[
-                                  _MiniStatPill('${item.cost}☀️'),
-                                  _MiniStatPill(_capabilityBadge(item.type)),
-                                ],
-                              ),
-                              const SizedBox(height: 9),
-                              (item.requiresSunPass &&
-                                      !controller.isSunPassActive)
-                                  ? FilledButton.tonal(
-                                      onPressed: () {
-                                        Navigator.of(context).pop();
-                                        controller.openSunPassModal();
-                                      },
-                                      child: Text(l10n.shopSunPassBadge),
-                                    )
-                                  : FilledButton.tonal(
-                                      onPressed: state.coins >= item.cost
-                                          ? () {
-                                              controller.selectBuildItem(
-                                                item.type,
-                                              );
-                                              Navigator.of(context).pop();
-                                            }
-                                          : null,
-                                      child: Text(l10n.shopPlaceOnFarm),
-                                    ),
-                            ],
-                          ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: <Widget>[
+                                _MiniStatPill('${item.cost}☀️'),
+                                _MiniStatPill(_capabilityBadge(item.type)),
+                              ],
+                            ),
+                            const SizedBox(height: 9),
+                            (item.requiresSunPass &&
+                                    !controller.isSunPassActive)
+                                ? SolvilleButton(
+                                    tone: SolvilleButtonTone.amber,
+                                    compact: true,
+                                    expand: true,
+                                    label: l10n.shopSunPassBadge,
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                      controller.openSunPassModal();
+                                    },
+                                  )
+                                : SolvilleButton(
+                                    tone: SolvilleButtonTone.primary,
+                                    compact: true,
+                                    expand: true,
+                                    label: l10n.shopPlaceOnFarm,
+                                    onPressed: state.coins >= item.cost
+                                        ? () {
+                                            controller.selectBuildItem(
+                                              item.type,
+                                            );
+                                            Navigator.of(context).pop();
+                                          }
+                                        : null,
+                                  ),
+                          ],
                         ),
                       ),
                     ),
@@ -634,9 +649,9 @@ class _MiniStatPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(
-        color: const Color(0x18795548),
-        borderRadius: BorderRadius.circular(8),
+      decoration: SolvilleTheme.recessedSlotDecoration(
+        radius: 8,
+        color: const Color(0xFFF3E6CA),
       ),
       child: Text(
         label,

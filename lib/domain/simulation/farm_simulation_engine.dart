@@ -67,8 +67,8 @@ class FarmSimulationEngine {
   static const GridPos barnPos = FarmMapGenerator.barnPos;
   static const GridPos marketStallPos = FarmMapGenerator.marketStallPos;
 
-  /// Duration of one full cozy daylight cycle in seconds (~3 minutes).
-  static const double dayLengthSeconds = 180.0;
+  /// Duration of one full cozy daylight cycle in seconds (~6 minutes).
+  static const double dayLengthSeconds = 360.0;
 
   final math.Random _rng;
   final AStarPathfinder pathfinder;
@@ -209,6 +209,26 @@ class FarmSimulationEngine {
           message:
               '🌦️ Sunny Surge! All plots hydrated & +25% Golden Market Boost active today!',
           toast: SolvilleToast(SolvilleToastKind.sunnySurge),
+        ),
+      ],
+    );
+  }
+
+  /// Restarts Mayor Sunny's 3-step visual onboarding without resetting the farm.
+  SimulationStepResult replayTutorial(GameState state) {
+    final nextState = state.copyWith(
+      onboardingStep: 0,
+      activeTool: ToolMode.smart,
+      actionQueue: const <QueuedAction>[],
+    );
+    return SimulationStepResult(
+      state: nextState,
+      events: const <SimEvent>[
+        SimEvent(
+          type: SimEventType.statusHint,
+          message:
+              "🎓 Tutorial restarted! Follow Mayor Sunny's glowing steps.",
+          toast: SolvilleToast(SolvilleToastKind.tutorialReplayed),
         ),
       ],
     );
@@ -767,7 +787,7 @@ class FarmSimulationEngine {
         !isSunPassActive &&
         !tile.isReadyToHarvest &&
         state.activeTool != ToolMode.remove) {
-      nextTapHint = 'Tap: Unlock via Sun Pass ☀️';
+      nextTapHint = 'Tap: Unlock Cozy Version ☀️';
     } else if (resolved != null) {
       nextTapHint = switch (resolved.kind) {
         ActionKind.refillWater => 'Tap: Refill Water Can 🪣',
@@ -1274,7 +1294,7 @@ class FarmSimulationEngine {
           if (nextCd <= 0.0) {
             writeTile(
               idx,
-              tile.copyWith(sprinklerCooldown: radius == 2 ? 4.5 : 5.5),
+              tile.copyWith(sprinklerCooldown: radius == 2 ? 8.0 : 10.0),
             );
             events.add(
               SimEvent(
@@ -1319,7 +1339,7 @@ class FarmSimulationEngine {
             final cropDef = tile.crop != null
                 ? SolvilleCatalog.crops[tile.crop!.cropId]
                 : null;
-            final baseDrain = cropDef?.waterDrainPerSec ?? 0.008;
+            final baseDrain = cropDef?.waterDrainPerSec ?? 0.003;
             final drainFactor = tile.fertilized ? 0.70 : 1.0;
             moisture = (moisture - baseDrain * drainFactor * dt).clamp(
               0.0,
@@ -1448,7 +1468,7 @@ class FarmSimulationEngine {
               var nextCrates = animal.readyCrates;
               var nextFeed = animal.feedLevel;
               if (animal.type != AnimalType.bee) {
-                nextFeed = (nextFeed - (dt / (def.cycleSeconds * 2.2))).clamp(
+                nextFeed = (nextFeed - (dt / (def.cycleSeconds * 2.5))).clamp(
                   0.0,
                   1.0,
                 );
@@ -1589,9 +1609,9 @@ class FarmSimulationEngine {
     final pathSpeedBonus =
         (currentGround == GroundType.stonePath ||
             currentGround == GroundType.cobbleLane)
-        ? 1.40
+        ? 1.20
         : 1.0;
-    final moveSpeed = 3.8 * state.speedMultiplier * pathSpeedBonus;
+    final moveSpeed = 1.25 * state.speedMultiplier * pathSpeedBonus;
     var stepBudget = moveSpeed * dt;
     var fx = farmer.x;
     var fy = farmer.y;
@@ -1637,7 +1657,7 @@ class FarmSimulationEngine {
         facingX: facingX,
         facingY: facingY,
         activePath: nextActivePath,
-        walkBobPhase: (farmer.walkBobPhase + dt * 11.0) % (math.pi * 2),
+        walkBobPhase: (farmer.walkBobPhase + dt * 4.5) % (math.pi * 2),
       ),
     );
   }
@@ -1681,7 +1701,7 @@ class FarmSimulationEngine {
     var nextState = state.copyWith(
       actionQueue: remainingQueue,
       farmer: state.farmer.copyWith(
-        workTimer: 0.24,
+        workTimer: 0.45,
         lastActionEmoji: actionEmoji,
       ),
     );
@@ -1717,9 +1737,6 @@ class FarmSimulationEngine {
             coins: nextState.coins + (wasWeeds ? 1 : 0),
             weedsClearedCount:
                 nextState.weedsClearedCount + (wasWeeds ? 1 : 0),
-            onboardingStep: nextState.onboardingStep == 2
-                ? 3
-                : nextState.onboardingStep,
           );
           events.add(SimEvent(type: SimEventType.dig, tile: pos));
           if (wasWeeds) {
@@ -1776,16 +1793,25 @@ class FarmSimulationEngine {
               harvestsLeft: def.maxHarvests,
             ),
           );
+          final wasOnboardingStep2 = nextState.onboardingStep == 2;
           nextState = nextState.copyWith(
             tiles: updatedTiles,
             coins: nextState.coins - seedCost,
             trialSeeds: updatedTrials,
             selectedSeed: nextSelectedSeed,
-            onboardingStep: nextState.onboardingStep == 2
-                ? 3
-                : nextState.onboardingStep,
+            onboardingStep: wasOnboardingStep2 ? 3 : nextState.onboardingStep,
           );
           events.add(SimEvent(type: SimEventType.plant, tile: pos));
+          if (wasOnboardingStep2) {
+            events.add(
+              SimEvent(
+                type: SimEventType.questCompleted,
+                tile: pos,
+                message: '🎉 Tutorial complete!',
+                toast: const SolvilleToast(SolvilleToastKind.tutorialComplete),
+              ),
+            );
+          }
         }
         return nextState;
 
@@ -1897,7 +1923,7 @@ class FarmSimulationEngine {
             coins: nextState.coins + extraCoins,
             lifetimeCoinsEarned: nextState.lifetimeCoinsEarned + extraCoins,
             comboStreak: nextCombo,
-            comboTimer: 3.6,
+            comboTimer: 7.0,
             onboardingStep: nextState.onboardingStep == 0
                 ? 1
                 : nextState.onboardingStep,

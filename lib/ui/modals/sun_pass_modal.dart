@@ -7,11 +7,12 @@ import '../../domain/models/entitlement_state.dart';
 import '../../l10n/app_localizations.dart';
 import '../theme/solville_theme.dart';
 import '../view_models/solville_controller.dart';
+import '../widgets/solville_buttons.dart';
 import '../widgets/solville_dialog_shell.dart';
+import '../widgets/solville_icons.dart';
 
-/// Cozy "Solville Sun Pass" dialog allowing players to:
-/// 1. Unlock the Full Game forever for 0,49€ one-time (no ads, no subscriptions)
-/// 2. Activate their daily "Sunny Surge" boost once unlocked, or restore store purchases
+/// Cozy "Solville Cozy Version" dialog allowing players to unlock the
+/// Full Game forever with a one-time purchase or restore store purchases.
 class SunPassModal extends StatelessWidget {
   const SunPassModal({super.key, required this.controller});
 
@@ -29,26 +30,21 @@ class SunPassModal extends StatelessWidget {
 
         return SolvilleDialogShell(
           emoji: '☀️',
+          leadingIcon: const SolvilleIcon(
+            kind: SolvilleIconKind.sunCoin,
+            size: 22,
+          ),
           title: l10n.sunPassTitle,
           maxWidth: 680,
           maxHeight: 620,
-          trailing: Container(
+          trailing: SolvilleBadge(
+            label: isActive ? l10n.sunPassBadgeActive : l10n.sunPassBadgeStarter,
+            color: isActive ? const Color(0xFFFFF3C4) : const Color(0xFFF3EFE6),
+            borderColor: isActive
+                ? SolvilleTheme.sunGold
+                : SolvilleTheme.timberBorder,
+            fontSize: 12.5,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: isActive
-                  ? const Color(0xFFFFF3C4)
-                  : const Color(0xFFEEEEEE),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: SolvilleTheme.timberBorder),
-            ),
-            child: Text(
-              isActive ? l10n.sunPassBadgeActive : l10n.sunPassBadgeStarter,
-              style: const TextStyle(
-                color: SolvilleTheme.timberDark,
-                fontWeight: FontWeight.w900,
-                fontSize: 13,
-              ),
-            ),
           ),
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
@@ -63,10 +59,9 @@ class SunPassModal extends StatelessWidget {
                 // What's Included visual perk grid
                 Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
+                  decoration: SolvilleTheme.cardDecoration(
                     color: SolvilleTheme.warmCream,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0x44795548)),
+                    radius: 14,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -156,120 +151,46 @@ class SunPassModal extends StatelessWidget {
 
                 const SizedBox(height: 14),
 
-                // One-Time Full Game Unlock (0,49€)
+                // One-Time Full Game Unlock
                 _OfferCard(
                   emoji: '👑',
-                  title: l10n.sunPassLifetimeTitle(
-                    l10n.entitlementLifetimePrice,
-                  ),
+                  title: l10n.sunPassLifetimeTitle,
                   badgeText: l10n.sunPassLifetimeBadge,
                   badgeColor: const Color(0xFFF8BBD0),
                   backgroundColor: const Color(0xFFFFF8F9),
                   description: l10n.sunPassLifetimeDesc,
-                  trailing: FilledButton(
+                  trailing: SolvilleButton(
+                    tone: ent.isPermanentSupporter
+                        ? SolvilleButtonTone.emerald
+                        : SolvilleButtonTone.amber,
+                    label: ent.isPermanentSupporter
+                        ? l10n.sunPassOwnedCheck
+                        : l10n.sunPassBuyOnceBtn,
                     onPressed: (!busy && !ent.isPermanentSupporter)
                         ? () => _runWithParentalGate(
                               context,
                               controller.purchaseLifetimePass,
                             )
                         : null,
-                    child: Text(
-                      ent.isPermanentSupporter
-                          ? l10n.sunPassOwnedCheck
-                          : l10n.sunPassBuyOnceBtn,
-                    ),
                   ),
                 ),
 
-                const SizedBox(height: 12),
-
-                // Daily Sunny Surge Quick Card
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8F5E9),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: SolvilleTheme.timberBorder),
-                  ),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final stackBtn = constraints.maxWidth < 380;
-                      final surgeBtn = OutlinedButton(
-                        onPressed:
-                            (!busy &&
-                                ent.isPermanentSupporter &&
-                                controller.canClaimSunnySurgeToday)
-                            ? () => controller.activateSunnySurge()
-                            : null,
-                        child: Text(
-                          !controller.canClaimSunnySurgeToday
-                              ? l10n.sunPassActiveTodayCheck
-                              : (ent.isPermanentSupporter
-                                    ? l10n.sunPassClaimFreeSurge
-                                    : l10n.shopSunPassBadge),
-                        ),
-                      );
-                      final topRow = Row(
-                        children: <Widget>[
-                          const Text('🌦️', style: TextStyle(fontSize: 24)),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Text(
-                                  l10n.sunPassSurgeCardTitle,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    color: SolvilleTheme.timberDark,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                Text(
-                                  ent.isPermanentSupporter
-                                      ? l10n.sunPassSurgeSupporterDesc
-                                      : l10n.sunPassSurgeFreeDesc,
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (!stackBtn) ...<Widget>[
-                            const SizedBox(width: 8),
-                            surgeBtn,
-                          ],
-                        ],
-                      );
-                      if (!stackBtn) return topRow;
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
-                          topRow,
-                          const SizedBox(height: 8),
-                          surgeBtn,
-                        ],
-                      );
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
 
                 // Footer: Restore Purchases
                 Align(
                   alignment: Alignment.centerRight,
-                  child: TextButton.icon(
+                  child: SolvilleButton(
+                    tone: SolvilleButtonTone.cream,
+                    compact: true,
+                    icon: Icons.restore_rounded,
+                    label: l10n.sunPassRestorePurchases,
                     onPressed: busy
                         ? null
                         : () => _runWithParentalGate(
                               context,
                               controller.restorePurchases,
                             ),
-                    icon: const Icon(Icons.restore_rounded, size: 17),
-                    label: Text(l10n.sunPassRestorePurchases),
                   ),
                 ),
               ],
@@ -335,61 +256,71 @@ class _ParentalGateDialogState extends State<_ParentalGateDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return AlertDialog(
-      backgroundColor: SolvilleTheme.parchment,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: SolvilleTheme.timberBorder, width: 2),
-      ),
-      title: Text(
-        l10n.parentalGateTitle,
-        style: const TextStyle(
-          fontWeight: FontWeight.w800,
-          color: SolvilleTheme.timberDark,
-        ),
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(l10n.parentalGateSubtitle),
-          const SizedBox(height: 10),
-          Text(
-            l10n.parentalGateQuestion(_a, _b),
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: SolvilleTheme.timberDark,
+    return SolvilleDialogShell(
+      emoji: '🔒',
+      leadingIcon: const SolvilleIcon(kind: SolvilleIconKind.padlock, size: 22),
+      title: l10n.parentalGateTitle,
+      maxWidth: 420,
+      maxHeight: 360,
+      shrinkWrap: true,
+      footer: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: <Widget>[
+            SolvilleButton(
+              tone: SolvilleButtonTone.cream,
+              compact: true,
+              label: l10n.parentalGateCancel,
+              onPressed: () => Navigator.of(context).pop(false),
             ),
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _answerController,
-            keyboardType: TextInputType.number,
-            inputFormatters: <TextInputFormatter>[
-              FilteringTextInputFormatter.digitsOnly,
-            ],
-            autofocus: true,
-            onSubmitted: (_) => _submit(),
-            decoration: InputDecoration(
-              hintText: l10n.parentalGateHint,
-              errorText: _showError ? l10n.parentalGateWrong : null,
-              border: const OutlineInputBorder(),
-              isDense: true,
+            const SizedBox(width: 8),
+            SolvilleButton(
+              tone: SolvilleButtonTone.emerald,
+              compact: true,
+              label: l10n.parentalGateContinue,
+              onPressed: _submit,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: Text(l10n.parentalGateCancel),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              l10n.parentalGateSubtitle,
+              style: const TextStyle(color: SolvilleTheme.timberDark),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              l10n.parentalGateQuestion(_a, _b),
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: SolvilleTheme.timberDark,
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _answerController,
+              keyboardType: TextInputType.number,
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.digitsOnly,
+              ],
+              autofocus: true,
+              onSubmitted: (_) => _submit(),
+              decoration: InputDecoration(
+                hintText: l10n.parentalGateHint,
+                errorText: _showError ? l10n.parentalGateWrong : null,
+                isDense: true,
+              ),
+            ),
+          ],
         ),
-        FilledButton(
-          onPressed: _submit,
-          child: Text(l10n.parentalGateContinue),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -416,13 +347,11 @@ class _StatusBanner extends StatelessWidget {
       bgColor = const Color(0xFFFFF8E1);
     }
 
-    return Container(
+    return SolvilleMenuCard(
+      color: bgColor,
+      highlighted: entitlements.isPermanentSupporter,
+      radius: 15,
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: SolvilleTheme.timberBorder),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -469,44 +398,39 @@ class _OfferCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SolvilleMenuCard(
+      color: backgroundColor,
+      highlighted: true,
+      radius: 15,
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: SolvilleTheme.timberBorder, width: 1.4),
-      ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final stackTrailing = constraints.maxWidth < 380;
           final mainRow = Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              Text(emoji, style: const TextStyle(fontSize: 30)),
+              SolvilleIconMedallion(
+                size: 46,
+                highlighted: true,
+                child: Text(emoji, style: const TextStyle(fontSize: 25)),
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 4),
+                    SolvilleBadge(
+                      label: badgeText,
+                      color: badgeColor,
+                      borderColor: const Color(0x66AD1457),
+                      fontSize: 10.5,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 7,
                         vertical: 2,
                       ),
-                      decoration: BoxDecoration(
-                        color: badgeColor,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        badgeText,
-                        style: const TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w900,
-                          color: SolvilleTheme.timberDark,
-                        ),
-                      ),
+                      borderRadius: 8,
                     ),
+                    const SizedBox(height: 4),
                     Text(
                       title,
                       style: const TextStyle(

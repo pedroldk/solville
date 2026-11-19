@@ -5,7 +5,7 @@ const bool kFullEdition = bool.fromEnvironment(
 );
 
 /// Immutable snapshot of the player's monetization entitlements in Solville:
-/// - Full Game / Lifetime Cozy Edition (0,49€ one-time purchase)
+/// - Full Game / Lifetime Cozy Edition (one-time purchase)
 /// - Daily "Sunny Surge" boost tracker (free daily claim once Full Game is unlocked)
 class EntitlementState {
   const EntitlementState({
@@ -14,13 +14,10 @@ class EntitlementState {
     this.isFullEditionBuild = kFullEdition,
   });
 
-  /// Store product identifier for the 0,49€ one-time Full Game unlock.
+  /// Store product identifier for the one-time Full Game unlock.
   static const String lifetimePassProductId = 'solville_lifetime_cozy';
 
-  /// Display price for the one-time Full Game unlock.
-  static const String lifetimePassPriceLabel = '0,49€';
-
-  /// True when the player owns the 0,49€ one-time Full Game unlock.
+  /// True when the player owns the one-time Full Game unlock.
   final bool hasLifetimePass;
 
   /// In-game day number when the daily "Sunny Surge" boost was last activated.
@@ -32,7 +29,7 @@ class EntitlementState {
   /// True when the player owns the Full Game (via one-time purchase or Steam build).
   bool get isPermanentSupporter => isFullEditionBuild || hasLifetimePass;
 
-  /// True when all Sun Pass crops, structures, animals, and upgrades are unlocked.
+  /// True when all Cozy Version crops, structures, animals, and upgrades are unlocked.
   bool isSunPassActive([DateTime? nowUtc]) => isPermanentSupporter;
 
   /// Whether the daily "Sunny Surge" (instant Sunshower + +25% Market Boost)
@@ -45,11 +42,11 @@ class EntitlementState {
 
   /// Short status text for the Top HUD pill.
   String statusPillText([DateTime? nowUtc]) =>
-      isPermanentSupporter ? 'Cozy Edition' : 'Sun Pass';
+      isPermanentSupporter ? 'Cozy Edition' : 'Cozy';
 
   /// Short status label with emoji.
   String statusPillLabel([DateTime? nowUtc]) =>
-      isPermanentSupporter ? '👑 Cozy Edition' : '☀️ Sun Pass';
+      isPermanentSupporter ? '👑 Cozy Edition' : '☀️ Cozy';
 
   EntitlementState copyWith({
     bool? hasLifetimePass,

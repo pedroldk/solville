@@ -207,12 +207,12 @@ class MarketState {
     required this.trends,
     required this.stallCrates,
     this.pricing = PricingStance.fair,
-    this.saleCooldown = 3.5,
+    this.saleCooldown = 5.5,
     this.dailyRequest,
     this.sunnySurgeActive = false,
     this.expressOrder,
     this.rushSecondsRemaining = 0.0,
-    this.expressSpawnCooldown = 28.0,
+    this.expressSpawnCooldown = 45.0,
   });
 
   static const int maxStallSlots = 8;
@@ -327,9 +327,9 @@ class MarketState {
       }
     }
 
-    final rawCooldown = (json['saleCooldown'] as num?)?.toDouble() ?? 3.5;
+    final rawCooldown = (json['saleCooldown'] as num?)?.toDouble() ?? 5.5;
     final safeCooldown = (rawCooldown.isNaN || rawCooldown.isInfinite)
-        ? 3.5
+        ? 5.5
         : rawCooldown.clamp(0.0, 60.0);
 
     VillageRequest? parsedRequest;
@@ -351,7 +351,7 @@ class MarketState {
     }
 
     final rawRush = (json['rushSecondsRemaining'] as num?)?.toDouble() ?? 0.0;
-    final rawSpawn = (json['expressSpawnCooldown'] as num?)?.toDouble() ?? 28.0;
+    final rawSpawn = (json['expressSpawnCooldown'] as num?)?.toDouble() ?? 45.0;
 
     return MarketState(
       trends: trends,
@@ -367,7 +367,7 @@ class MarketState {
           ? 0.0
           : rawRush.clamp(0.0, 120.0),
       expressSpawnCooldown: (rawSpawn.isNaN || rawSpawn.isInfinite)
-          ? 28.0
+          ? 45.0
           : rawSpawn.clamp(0.0, 180.0),
     );
   }

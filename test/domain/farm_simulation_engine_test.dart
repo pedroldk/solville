@@ -8,6 +8,7 @@ import 'package:solville/domain/models/catalog.dart';
 import 'package:solville/domain/models/game_state.dart';
 import 'package:solville/domain/models/grid_pos.dart';
 import 'package:solville/domain/models/market_state.dart';
+import 'package:solville/domain/models/solville_toast.dart';
 import 'package:solville/domain/models/tile_state.dart';
 import 'package:solville/domain/simulation/farm_simulation_engine.dart';
 
@@ -76,8 +77,8 @@ void main() {
         expect(state.actionQueue[1].kind, equals(ActionKind.plant));
         expect(state.actionQueue[2].kind, equals(ActionKind.water));
 
-        // Simulate 8 seconds so Sol walks over and executes all 3 queued actions
-        for (var i = 0; i < 80; i++) {
+        // Simulate 16 seconds so Sol walks over and executes all 3 queued actions
+        for (var i = 0; i < 160; i++) {
           state = engine.tick(state, 0.1).state;
         }
 
@@ -106,7 +107,7 @@ void main() {
       state = engine.enqueueUntillAt(state, plantedSoil).state;
       expect(state.actionQueue.length, equals(2));
 
-      for (var i = 0; i < 80; i++) {
+      for (var i = 0; i < 160; i++) {
         state = engine.tick(state, 0.1).state;
       }
 
@@ -132,7 +133,7 @@ void main() {
         state = engine.enqueueTileTap(state, soilTarget).state;
 
         // Run simulation until watering finishes
-        for (var i = 0; i < 90; i++) {
+        for (var i = 0; i < 180; i++) {
           state = engine.tick(state, 0.1).state;
         }
 
@@ -159,7 +160,7 @@ void main() {
             .state;
 
         final coinsBeforeSale = state.coins;
-        for (var i = 0; i < 120; i++) {
+        for (var i = 0; i < 240; i++) {
           state = engine.tick(state, 0.1).state;
         }
 
@@ -192,9 +193,9 @@ void main() {
         );
         expect(state.charmBonus, closeTo(0.02, 0.0001));
 
-        // Simulate 25 seconds (100 ticks * 0.25s) so both Lemon Tree (24s)
-        // and Artisan Preserves Kettle (20s) complete a full cycle.
-        for (var i = 0; i < 102; i++) {
+        // Simulate ~51 seconds (205 ticks * 0.25s) so both Lemon Tree (48s)
+        // and Artisan Preserves Kettle (40s) complete a full cycle.
+        for (var i = 0; i < 205; i++) {
           state = engine.tick(state, 0.25).state;
         }
 
@@ -245,7 +246,7 @@ void main() {
 
         // Step 0 -> 1: Harvest ripe starter tomato
         state = engine.enqueueTileTap(state, const GridPos(4, 3)).state;
-        for (var i = 0; i < 60; i++) {
+        for (var i = 0; i < 120; i++) {
           state = engine.tick(state, 0.1).state;
         }
         expect(state.onboardingStep, equals(1));
@@ -256,20 +257,50 @@ void main() {
         state = engine
             .enqueueTileTap(state, FarmSimulationEngine.marketStallPos)
             .state;
-        for (var i = 0; i < 60; i++) {
+        for (var i = 0; i < 140; i++) {
           state = engine.tick(state, 0.1).state;
         }
         expect(state.onboardingStep, equals(2));
 
-        // Step 2 -> 3: Dig & plant a new plot
+        // Step 2 -> 3: Dig alone stays on Step 2; planting completes Step 2 -> 3
         const newPlot = GridPos(7, 4);
         state = engine.enqueueTileTap(state, newPlot).state;
-        state = engine.enqueueTileTap(state, newPlot).state;
-        for (var i = 0; i < 80; i++) {
+        for (var i = 0; i < 120; i++) {
           state = engine.tick(state, 0.1).state;
+        }
+        expect(state.onboardingStep, equals(2));
+        expect(state.isOnboardingActive, isTrue);
+
+        state = engine.enqueueTileTap(state, newPlot).state;
+        final eventsSeen = <SimEvent>[];
+        for (var i = 0; i < 120; i++) {
+          final step = engine.tick(state, 0.1);
+          state = step.state;
+          eventsSeen.addAll(step.events);
         }
         expect(state.onboardingStep, equals(3));
         expect(state.isOnboardingActive, isFalse);
+        expect(
+          eventsSeen.any(
+            (e) => e.toast?.kind == SolvilleToastKind.tutorialComplete,
+          ),
+          isTrue,
+        );
+
+        // Replay tutorial resets onboardingStep to 0 without wiping coins or tiles
+        final coinsBeforeReplay = state.coins;
+        final replayStep = engine.replayTutorial(state);
+        state = replayStep.state;
+        expect(state.onboardingStep, equals(0));
+        expect(state.isOnboardingActive, isTrue);
+        expect(state.coins, equals(coinsBeforeReplay));
+        expect(state.tileAt(newPlot).crop, isNotNull);
+        expect(
+          replayStep.events.any(
+            (e) => e.toast?.kind == SolvilleToastKind.tutorialReplayed,
+          ),
+          isTrue,
+        );
 
         // Purchasing Gloves clears spotlight and raises carry capacity to 2
         state = engine.purchaseUpgrade(state, UpgradeTrack.crateStacker).state;
@@ -317,7 +348,7 @@ void main() {
         var peakCombo = 0;
         state = engine.enqueueTileTap(state, plot1).state;
         state = engine.enqueueTileTap(state, plot2).state;
-        for (var i = 0; i < 80 && state.actionQueue.isNotEmpty; i++) {
+        for (var i = 0; i < 140 && state.actionQueue.isNotEmpty; i++) {
           final step = engine.tick(state, 0.1);
           state = step.state;
           events.addAll(step.events);
@@ -335,7 +366,7 @@ void main() {
         expect(state.coins, equals(coinsBefore + expectedGoldenBonus + 2));
 
         // Combo streak resets cleanly when timer runs out
-        for (var i = 0; i < 40; i++) {
+        for (var i = 0; i < 90; i++) {
           state = engine.tick(state, 0.1).state;
         }
         expect(state.comboStreak, equals(0));
@@ -358,7 +389,7 @@ void main() {
         ]) {
           state = engine.enqueueTileTap(state, weedPos).state;
         }
-        for (var i = 0; i < 200 && state.actionQueue.isNotEmpty; i++) {
+        for (var i = 0; i < 400 && state.actionQueue.isNotEmpty; i++) {
           final step = engine.tick(state, 0.1);
           state = step.state;
           weedEvents.addAll(step.events);
@@ -380,7 +411,7 @@ void main() {
         state = engine.enqueueTileTap(state, target).state;
         state = state.copyWith(activeTool: ToolMode.seed);
         state = engine.enqueueTileTap(state, target).state;
-        for (var i = 0; i < 50 && state.actionQueue.isNotEmpty; i++) {
+        for (var i = 0; i < 90 && state.actionQueue.isNotEmpty; i++) {
           state = engine.tick(state, 0.1).state;
         }
         expect(state.tileAt(target).crop?.cropId, equals(ProductId.pumpkin));
@@ -438,7 +469,7 @@ void main() {
 
         final coinsBefore = state.coins;
         final events = <SimEvent>[];
-        for (var i = 0; i < 120; i++) {
+        for (var i = 0; i < 180; i++) {
           final step = engine.tick(state, 0.25);
           state = step.state;
           events.addAll(step.events);
@@ -476,7 +507,7 @@ void main() {
 
         final coinsBefore = state.coins;
         state = engine.enqueueTileTap(state, cachePos).state;
-        for (var i = 0; i < 160; i++) {
+        for (var i = 0; i < 300; i++) {
           state = engine.tick(state, 0.1).state;
         }
 
@@ -532,7 +563,7 @@ void main() {
 
         // 1. Harvest ripe starter tomato -> Quest 1 ready to claim
         state = engine.enqueueTileTap(state, const GridPos(4, 3)).state;
-        for (var i = 0; i < 60; i++) {
+        for (var i = 0; i < 120; i++) {
           state = engine.tick(state, 0.1).state;
         }
         expect(state.activeQuestProgress.isReadyToClaim, isTrue);
@@ -551,7 +582,7 @@ void main() {
         state = engine
             .enqueueTileTap(state, FarmSimulationEngine.marketStallPos)
             .state;
-        for (var i = 0; i < 60; i++) {
+        for (var i = 0; i < 140; i++) {
           state = engine.tick(state, 0.1).state;
         }
         expect(state.activeQuestProgress.isReadyToClaim, isTrue);
@@ -562,7 +593,7 @@ void main() {
         const newPlot = GridPos(7, 4);
         state = engine.enqueueTileTap(state, newPlot).state;
         state = engine.enqueueTileTap(state, newPlot).state;
-        for (var i = 0; i < 80; i++) {
+        for (var i = 0; i < 160; i++) {
           state = engine.tick(state, 0.1).state;
         }
         expect(state.activeQuestProgress.isReadyToClaim, isTrue);
@@ -577,7 +608,7 @@ void main() {
         ]) {
           state = engine.enqueueTileTap(state, weedPos).state;
         }
-        for (var i = 0; i < 150 && state.actionQueue.isNotEmpty; i++) {
+        for (var i = 0; i < 300 && state.actionQueue.isNotEmpty; i++) {
           state = engine.tick(state, 0.1).state;
         }
         expect(state.weedsClearedCount, equals(3));

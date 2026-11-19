@@ -465,14 +465,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hudShop => 'Shop';
 
   @override
-  String get hudPassShort => 'Pass';
+  String get hudPassShort => 'Cozy';
 
   @override
-  String get hudPassShortActive => 'Pass ✓';
+  String get hudPassShortActive => 'Cozy ✓';
 
   @override
   String get hudSunPassTooltip =>
-      'Solville Sun Pass (0,49€ one-time Full Game unlock)';
+      'Solville Cozy Version (one-time Full Game unlock)';
 
   @override
   String get hudHomesteadTooltip => 'Homestead & Cozy Soundscape';
@@ -516,15 +516,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get entitlementCozyEdition => 'Cozy Edition';
 
   @override
-  String get entitlementSunPassVip => 'Sun Pass VIP';
-
-  @override
-  String entitlementPassRemaining(String time) {
-    return 'Pass $time';
-  }
-
-  @override
-  String get entitlementSunPass => 'Sun Pass';
+  String get entitlementSunPass => 'Cozy';
 
   @override
   String get entitlementExpired => 'Expired';
@@ -538,12 +530,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String entitlementTimeMinutes(int minutes) {
     return '${minutes}m';
   }
-
-  @override
-  String get entitlementAnnualPrice => '2,99€ / year';
-
-  @override
-  String get entitlementLifetimePrice => '0,49€';
 
   @override
   String dockQueuedCount(int count) {
@@ -584,12 +570,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String dockSeedLockedLabel(String emoji, String name) {
-    return '$emoji $name (☀️ Pass)';
+    return '$emoji $name (☀️ Cozy)';
   }
 
   @override
   String dockExpandIsleLocked(int fromSize, int toSize) {
-    return '🏝️ Expand Isle $fromSize×$fromSize→$toSize×$toSize (☀️ Sun Pass)';
+    return '🏝️ Expand Isle $fromSize×$fromSize→$toSize×$toSize (☀️ Cozy)';
   }
 
   @override
@@ -599,12 +585,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String dockBuildLockedLabel(String emoji, String name) {
-    return '$emoji $name (☀️ Pass)';
+    return '$emoji $name (☀️ Cozy)';
   }
 
   @override
   String inspectorSunPassPaused(String summary) {
-    return '$summary • ☀️ Sun Pass Paused';
+    return '$summary • ☀️ Cozy Paused';
   }
 
   @override
@@ -893,11 +879,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get marketSurgeSupporterSubtitle =>
-      'Included free with your Sun Pass!';
+      'Included free with your Cozy Version!';
 
   @override
   String get marketSurgeFreeSubtitle =>
-      'Unlock the Full Game once for 0,49€ to claim free daily surges!';
+      'Unlock the Full Game once to claim free daily surges!';
 
   @override
   String get marketSurgeActiveBtn => 'Active ✓';
@@ -949,11 +935,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shopMaxBadge => 'MAX';
 
   @override
-  String get shopSunPassBadge => '☀️ Sun Pass';
+  String get shopSunPassBadge => '☀️ Cozy';
 
   @override
   String shopItemSunPass(String name) {
-    return '$name • ☀️ Sun Pass';
+    return '$name • ☀️ Cozy';
   }
 
   @override
@@ -968,7 +954,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String shopSeedBaseCrateSunPass(String name, int value) {
-    return '$name • Base Crate $value☀️ • ☀️ Sun Pass';
+    return '$name • Base Crate $value☀️ • ☀️ Cozy';
   }
 
   @override
@@ -1005,14 +991,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String shopBuildItemTitleSunPass(String name, int cost) {
-    return '$name ($cost☀️ each • ☀️ Sun Pass)';
+    return '$name ($cost☀️ each • ☀️ Cozy)';
   }
 
   @override
   String get shopPlaceOnFarm => 'Place on Farm';
 
   @override
-  String get sunPassTitle => 'Solville Sun Pass';
+  String get sunPassTitle => 'Solville Cozy Version';
 
   @override
   String get sunPassBadgeActive => '☀️ Active';
@@ -1021,69 +1007,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sunPassBadgeStarter => 'Starter Tier';
 
   @override
-  String get sunPassIncludedHeading => '✨ Everything Included in Sun Pass:';
+  String get sunPassIncludedHeading => '✨ Everything Included in Cozy Version:';
 
   @override
   String get sunPassIncludedBody =>
-      '• 🌽🪻🎃 Gourmet Crops: Golden Corn, Fragrant Lavender (+35% Bee speed) & Solville Pumpkin\n• 🍋🫙🐝🐄 Artisan & Ranch: Lemon Trees, Artisan Preserves Kettle, Wildflower Apiary, Sunny Cow Paddock, Solar Mist Tower (5×5) & Blossom Arch\n• 🏝️🛠️ Grand Expansions & Master Tools: Expand your isle up to 35×35 + Tier 2 Tool Upgrades\n• 💚 Cozy Promise: Zero ads, zero subscriptions—one 0,49€ unlock keeps your full farm forever!';
-
-  @override
-  String get sunPassAdTitle => 'Watch 1 Short Ad • +24 Hours Unlock';
-
-  @override
-  String get sunPassAdBadge => 'FREE • STACK UP TO 48H';
-
-  @override
-  String get sunPassAdDesc =>
-      'Unlock the entire Solville catalog for 24 hours. Watch 2 ads back-to-back to stack up to 48 hours of uninterrupted play!';
-
-  @override
-  String get sunPassUnlockedForever => 'Unlocked Forever';
-
-  @override
-  String get sunPassMaxed48h => 'Maxed (48h)';
-
-  @override
-  String get sunPassWatchAdTopUp => 'Watch Ad (+24h Top-Up)';
-
-  @override
-  String get sunPassWatchAd24h => 'Watch Ad (+24h)';
-
-  @override
-  String sunPassAnnualTitle(String price) {
-    return 'Annual Sun Pass • $price';
-  }
-
-  @override
-  String get sunPassAnnualBadge => 'MOST POPULAR • ~0,25€/MO';
-
-  @override
-  String get sunPassAnnualDesc =>
-      'Full year of ad-free access to all crops, animals & island expansions + Free 1-tap Daily Sunny Surge (+25% Market Boost & instant Sunshower)!';
+      '• 🌽🪻🎃 Gourmet Crops: Golden Corn, Fragrant Lavender (+35% Bee speed) & Solville Pumpkin\n• 🍋🫙🐝🐄 Artisan & Ranch: Lemon Trees, Artisan Preserves Kettle, Wildflower Apiary, Sunny Cow Paddock, Solar Mist Tower (5×5) & Blossom Arch\n• 🏝️🛠️ Grand Expansions & Master Tools: Expand your isle up to 35×35 + Tier 2 Tool Upgrades\n• 💚 Cozy Promise: Zero subscriptions—a single one-time unlock keeps your full farm forever!';
 
   @override
   String get sunPassActiveCheck => 'Active ✓';
 
   @override
-  String get sunPassSubscribeBtn => 'Subscribe 2,99€/yr';
-
-  @override
-  String sunPassLifetimeTitle(String price) {
-    return 'Lifetime Cozy Edition • $price';
-  }
+  String get sunPassLifetimeTitle => 'Lifetime Cozy Edition';
 
   @override
   String get sunPassLifetimeBadge => 'ONE-TIME PAYMENT • OWN FOREVER';
 
   @override
   String get sunPassLifetimeDesc =>
-      'No subscriptions, no timers, no ads—ever. Own all of Solville and daily Sunny Surge boosts forever with a single purchase.';
+      'No subscriptions, no timers—ever. Own all of Solville forever with a single purchase.';
 
   @override
   String get sunPassOwnedCheck => 'Owned ✓';
 
   @override
-  String get sunPassBuyOnceBtn => 'Buy Once 0,49€';
+  String get sunPassBuyOnceBtn => 'Buy Once';
 
   @override
   String get sunPassSurgeCardTitle =>
@@ -1091,20 +1038,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sunPassSurgeSupporterDesc =>
-      'Included free every day with your supporter pass!';
+      'Included free every day with your Cozy Version!';
 
   @override
   String get sunPassSurgeFreeDesc =>
-      'Included free every day once you unlock the Full Game for 0,49€!';
+      'Included free every day once you unlock the Full Game!';
 
   @override
   String get sunPassActiveTodayCheck => 'Active Today ✓';
 
   @override
   String get sunPassClaimFreeSurge => 'Claim Free Surge';
-
-  @override
-  String get sunPassWatchAdSurge => 'Watch Ad (Surge)';
 
   @override
   String get sunPassRestorePurchases => 'Restore Purchases';
@@ -1115,24 +1059,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sunPassStatusLifetimeSubtext =>
-      'All crops, animals, expansions, and free daily Sunny Surges are yours forever!';
-
-  @override
-  String get sunPassStatusAnnualHeadline =>
-      '🌻 Annual Sun Pass Active (2,99€ / year)';
-
-  @override
-  String get sunPassStatusAnnualSubtext =>
-      'All Sun Pass content and free daily Sunny Surges are unlocked!';
-
-  @override
-  String sunPassStatusAdHeadline(String remaining) {
-    return '☀️ Ad Pass Active — $remaining remaining';
-  }
-
-  @override
-  String get sunPassStatusAdSubtext =>
-      'All crops, builds, and upgrades are unlocked! You can stack up to 48 hours max.';
+      'All crops, animals, artisan goods, and island expansions are yours forever!';
 
   @override
   String get sunPassStatusStarterHeadline =>
@@ -1140,7 +1067,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sunPassStatusStarterSubtext =>
-      'Unlock the entire Solville experience forever with a single 0,49€ purchase—no ads, no subscriptions!';
+      'Unlock the entire Solville experience forever with a single one-time purchase—no subscriptions!';
 
   @override
   String trophyCabinetTitle(int unlocked, int total) {
@@ -1361,10 +1288,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Welcome to Solville! Tap plots 1–3x to combo-queue Dig → Sow → Water!';
 
   @override
-  String get toastSunPassEnded =>
-      '☀️ Your Sun Pass timer ended! Watch 1 ad for +24h anytime.';
-
-  @override
   String toastQueuedUntill(int x, int y) {
     return '🌿 Queued restoring plot ($x, $y) back to grass!';
   }
@@ -1381,19 +1304,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String toastPromptSunPass(String item) {
-    return '☀️ $item is part of the Full Game! Unlock everything forever for 0,49€.';
-  }
-
-  @override
-  String get toastSunPassMaxed =>
-      '☀️ Sun Pass is already topped up to the 48-hour maximum!';
-
-  @override
-  String get toastAdCancelled => 'Ad cancelled or unavailable right now.';
-
-  @override
-  String toastSunPassUnlocked(String remaining) {
-    return '☀️ Sun Pass unlocked! ($remaining active)';
+    return '☀️ $item is part of the Cozy Version! Unlock everything forever with a one-time purchase.';
   }
 
   @override
@@ -1402,15 +1313,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get toastAdCancelledSurge =>
-      'Ad cancelled — Sunny Surge was not activated.';
-
-  @override
   String get toastPurchaseCancelled => 'Purchase cancelled.';
-
-  @override
-  String get toastAnnualPassActivated =>
-      '🌻 Thank you! Annual Sun Pass (2,99€/yr) is now active!';
 
   @override
   String get toastLifetimePassActivated =>
@@ -1418,7 +1321,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get toastPurchasesRestored =>
-      '✅ Restored your Solville Sun Pass purchases!';
+      '✅ Restored your Solville Cozy Version purchase!';
 
   @override
   String get toastNoPreviousPurchases =>
@@ -1834,7 +1737,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inspectorTapOpenMarket => 'Tap: Open Market & Barn 📈';
 
   @override
-  String get inspectorTapSunPass => 'Tap: Unlock via Sun Pass ☀️';
+  String get inspectorTapSunPass => 'Tap: Unlock Cozy Version ☀️';
 
   @override
   String get inspectorTapRefill => 'Tap: Refill Water Can 🪣';
@@ -1943,6 +1846,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get inspectorTapInteract => 'Tap to interact';
+
+  @override
+  String get spotlightStepDig => '👇 1/3: Tap to Dig ⛏️';
+
+  @override
+  String get spotlightStepPlant => '👇 2/3: Tap to Plant 🌱';
+
+  @override
+  String get spotlightStepWater => '👇 3/3: Tap to Water 💧';
+
+  @override
+  String get tutorialMayorBadge => '🌻 Mayor Sunny\'s Guide';
+
+  @override
+  String get tutorialShowMeBtn => '👇 Show Me';
+
+  @override
+  String get helpReplayTutorial => 'Replay Tutorial';
+
+  @override
+  String get toastTutorialComplete =>
+      '🎉 Tutorial complete! Your full farm & village quests are ready!';
+
+  @override
+  String get toastTutorialReplayed =>
+      '🎓 Tutorial restarted! Follow Mayor Sunny\'s glowing steps.';
 }
 
 /// The translations for English, as used in the United Kingdom (`en_GB`).
@@ -1989,12 +1918,10 @@ class AppLocalizationsEnGb extends AppLocalizationsEn {
 
   @override
   String get sunPassIncludedBody =>
-      '• 🌽🪻🎃 Gourmet Crops: Golden Corn, Fragrant Lavender (+35% Bee speed) & Solville Pumpkin\n• 🍋🫙🐝🐄 Artisan & Ranch: Lemon Trees, Artisan Preserves Kettle, Wildflower Apiary, Sunny Cow Paddock, Solar Mist Tower (5×5) & Blossom Arch\n• 🏝️🛠️ Grand Expansions & Master Tools: Expand your isle up to 35×35 + Tier 2 Tool Upgrades\n• 💚 Cosy Promise: Zero ads, zero subscriptions—one 0,49€ unlock keeps your full farm forever!';
+      '• 🌽🪻🎃 Gourmet Crops: Golden Corn, Fragrant Lavender (+35% Bee speed) & Solville Pumpkin\n• 🍋🫙🐝🐄 Artisan & Ranch: Lemon Trees, Artisan Preserves Kettle, Wildflower Apiary, Sunny Cow Paddock, Solar Mist Tower (5×5) & Blossom Arch\n• 🏝️🛠️ Grand Expansions & Master Tools: Expand your isle up to 35×35 + Tier 2 Tool Upgrades\n• 💚 Cosy Promise: Zero subscriptions—a single one-time unlock keeps your full farm forever!';
 
   @override
-  String sunPassLifetimeTitle(String price) {
-    return 'Lifetime Cosy Edition • $price';
-  }
+  String get sunPassLifetimeTitle => 'Lifetime Cosy Edition';
 
   @override
   String get sunPassStatusLifetimeHeadline =>

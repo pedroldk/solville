@@ -312,8 +312,8 @@ abstract final class SolvilleCatalog {
   static const int expansionStepSize = 3;
   static const int maxExpansionTier = 8;
   static const int compostCost = 18;
-  static const double lemonTreeCycleSeconds = 24.0;
-  static const double artisanPressCycleSeconds = 20.0;
+  static const double lemonTreeCycleSeconds = 48.0;
+  static const double artisanPressCycleSeconds = 40.0;
 
   static const Map<ProductId, CropDef> crops = <ProductId, CropDef>{
     ProductId.tomato: CropDef(
@@ -324,8 +324,8 @@ abstract final class SolvilleCatalog {
       licenseCost: 0,
       seedCost: 6,
       baseCrateValue: 20,
-      growthSeconds: 18.0,
-      waterDrainPerSec: 0.026,
+      growthSeconds: 38.0,
+      waterDrainPerSec: 0.009,
       maxHarvests: 3,
       primaryColorHex: 0xFFE53935,
       accentColorHex: 0xFFFF8A65,
@@ -338,8 +338,8 @@ abstract final class SolvilleCatalog {
       licenseCost: 0,
       seedCost: 4,
       baseCrateValue: 16,
-      growthSeconds: 13.0,
-      waterDrainPerSec: 0.018,
+      growthSeconds: 28.0,
+      waterDrainPerSec: 0.007,
       maxHarvests: 1,
       primaryColorHex: 0xFFFB8C00,
       accentColorHex: 0xFFFFCC80,
@@ -352,8 +352,8 @@ abstract final class SolvilleCatalog {
       licenseCost: 65,
       seedCost: 10,
       baseCrateValue: 30,
-      growthSeconds: 22.0,
-      waterDrainPerSec: 0.028,
+      growthSeconds: 46.0,
+      waterDrainPerSec: 0.010,
       maxHarvests: 3,
       primaryColorHex: 0xFFD81B60,
       accentColorHex: 0xFFF48FB1,
@@ -366,8 +366,8 @@ abstract final class SolvilleCatalog {
       licenseCost: 110,
       seedCost: 14,
       baseCrateValue: 44,
-      growthSeconds: 26.0,
-      waterDrainPerSec: 0.024,
+      growthSeconds: 55.0,
+      waterDrainPerSec: 0.008,
       maxHarvests: 1,
       primaryColorHex: 0xFFFDD835,
       accentColorHex: 0xFFFFF59D,
@@ -382,8 +382,8 @@ abstract final class SolvilleCatalog {
       licenseCost: 160,
       seedCost: 18,
       baseCrateValue: 48,
-      growthSeconds: 24.0,
-      waterDrainPerSec: 0.014,
+      growthSeconds: 50.0,
+      waterDrainPerSec: 0.005,
       maxHarvests: 2,
       primaryColorHex: 0xFF8E24AA,
       accentColorHex: 0xFFCE93D8,
@@ -397,8 +397,8 @@ abstract final class SolvilleCatalog {
       licenseCost: 240,
       seedCost: 26,
       baseCrateValue: 82,
-      growthSeconds: 34.0,
-      waterDrainPerSec: 0.025,
+      growthSeconds: 72.0,
+      waterDrainPerSec: 0.008,
       maxHarvests: 1,
       primaryColorHex: 0xFFF4511E,
       accentColorHex: 0xFFFFAB91,
@@ -483,7 +483,7 @@ abstract final class SolvilleCatalog {
       shopCost: 135,
       tendCost: 5,
       product: ProductId.eggs,
-      cycleSeconds: 24.0,
+      cycleSeconds: 48.0,
     ),
     AnimalType.bee: AnimalDef(
       type: AnimalType.bee,
@@ -494,7 +494,7 @@ abstract final class SolvilleCatalog {
       shopCost: 210,
       tendCost: 0,
       product: ProductId.honey,
-      cycleSeconds: 28.0,
+      cycleSeconds: 56.0,
     ),
     AnimalType.cow: AnimalDef(
       type: AnimalType.cow,
@@ -504,7 +504,7 @@ abstract final class SolvilleCatalog {
       shopCost: 330,
       tendCost: 8,
       product: ProductId.milk,
-      cycleSeconds: 32.0,
+      cycleSeconds: 64.0,
     ),
   };
 
@@ -903,8 +903,8 @@ abstract final class SolvilleCatalog {
 
   static double speedMultiplierForTier(int tier) => switch (tier) {
     0 => 1.0,
-    1 => 1.28,
-    _ => 1.55,
+    1 => 1.15,
+    _ => 1.30,
   };
 
   static int gridSizeForExpansionTier(int tier) =>

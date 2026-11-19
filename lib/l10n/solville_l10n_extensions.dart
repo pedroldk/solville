@@ -466,6 +466,10 @@ extension SolvilleL10nX on AppLocalizations {
           toast.coins ?? 0,
           seedBonus,
         );
+      case SolvilleToastKind.tutorialComplete:
+        return toastTutorialComplete;
+      case SolvilleToastKind.tutorialReplayed:
+        return toastTutorialReplayed;
     }
   }
 
@@ -790,4 +794,114 @@ extension SolvilleL10nX on AppLocalizations {
       willHaveCrates: raw.willHaveCrates,
     );
   }
+
+  String get _langCode => localeName.split(RegExp(r'[_-]')).first;
+
+  String dayStatsTitle(int day) => switch (_langCode) {
+    'pt' => 'Dia $day!',
+    'fr' => 'Jour $day !',
+    'es' => '¡Día $day!',
+    'de' => 'Tag $day!',
+    _ => 'Day $day!',
+  };
+
+  String dayStatsSubtitle(int completedDay) => switch (_langCode) {
+    'pt' => 'O Dia $completedDay acabou! Hora da dança feliz!',
+    'fr' => 'Le Jour $completedDay est fini ! Place à la danse joyeuse !',
+    'es' => '¡El Día $completedDay terminó! ¡A hacer el baile feliz!',
+    'de' => 'Tag $completedDay ist geschafft! Zeit für einen Freudentanz!',
+    _ => 'Day $completedDay is done! Time for a happy dance!',
+  };
+
+  String get dayStatsPiggyBankLabel => switch (_langCode) {
+    'pt' => 'Mealheiro',
+    'fr' => 'Tirelire',
+    'es' => 'Hucha',
+    'de' => 'Sparschwein',
+    _ => 'Piggy Bank',
+  };
+
+  String dayStatsTodayPlus(int amount) => switch (_langCode) {
+    'pt' => '+$amount☀️ hoje!',
+    'fr' => '+$amount☀️ aujourd’hui !',
+    'es' => '¡+$amount☀️ hoy!',
+    'de' => '+$amount☀️ heute!',
+    _ => '+$amount☀️ today!',
+  };
+
+  String get dayStatsHarvestedLabel => switch (_langCode) {
+    'pt' => 'Caixas Deliciosas',
+    'fr' => 'Caisses Miam',
+    'es' => 'Cajas Ricas',
+    'de' => 'Leckere Kisten',
+    _ => 'Yummy Crates',
+  };
+
+  String dayStatsFunnyAwardTitle(int index) {
+    final i = index.abs() % 4;
+    return switch ((_langCode, i)) {
+      ('pt', 0) => '🍅 Cócegas nos Tomates',
+      ('fr', 0) => '🍅 Chatouilleur de Tomates',
+      ('es', 0) => '🍅 Cosquillas al Tomate',
+      ('de', 0) => '🍅 Tomaten-Kitzler',
+      (_, 0) => '🍅 Captain Tomato Tickler',
+      ('pt', 1) => '🐝 Melhor Amigo das Abelhas',
+      ('fr', 1) => '🐝 Copain des Abeilles',
+      ('es', 1) => '🐝 Amigo de las Abejas',
+      ('de', 1) => '🐝 Bienen-Bester-Freund',
+      (_, 1) => '🐝 Buzzy Bee Bestie',
+      ('pt', 2) => '🌻 Superestrela do Sol',
+      ('fr', 2) => '🌻 Superstar du Soleil',
+      ('es', 2) => '🌻 Superestrella del Sol',
+      ('de', 2) => '🌻 Sonnenschein-Superstar',
+      (_, 2) => '🌻 Sunshine Superstar',
+      ('pt', _) => '🌈 Campeão das Botas com Lama',
+      ('fr', _) => '🌈 Champion des Bottes Rigolotes',
+      ('es', _) => '🌈 Campeón de Botas con Barro',
+      ('de', _) => '🌈 Matschstiefel-Meister',
+      (_, _) => '🌈 Muddy Boots Champion',
+    };
+  }
+
+  String dayStatsFunnyAwardBody(int index) {
+    final i = index.abs() % 4;
+    return switch ((_langCode, i)) {
+      ('pt', 0) => 'Os legumes não param de rir!',
+      ('fr', 0) => 'Les légumes rigolent tout doux !',
+      ('es', 0) => '¡Las verduritas no paran de reír!',
+      ('de', 0) => 'Das Gemüse kichert vergnügt!',
+      (_, 0) => 'The veggies are giggling!',
+      ('pt', 1) => 'Até as borboletas bateram palmas!',
+      ('fr', 1) => 'Même les papillons ont applaudi !',
+      ('es', 1) => '¡Hasta las mariposas aplaudieron!',
+      ('de', 1) => 'Sogar die Schmetterlinge haben geklatscht!',
+      (_, 1) => 'Even the butterflies clapped!',
+      ('pt', 2) => 'As galinhas deram 10/10 cacarejos!',
+      ('fr', 2) => 'Les poules te donnent 10/10 cot-cot !',
+      ('es', 2) => '¡Las gallinas te dieron 10/10 cacareos!',
+      ('de', 2) => 'Die Hühner geben dir 10/10 Gackern!',
+      (_, 2) => 'The chickens gave you 10/10 clucks!',
+      ('pt', _) => 'As minhocas felizes deram mais-cinco!',
+      ('fr', _) => 'Les vers tout contents t’ont fait un check !',
+      ('es', _) => '¡Los gusanitos felices chocaron los cinco!',
+      ('de', _) => 'Glückliche Würmer gaben dir High-Five!',
+      (_, _) => 'Happy worms gave you high-fives!',
+    };
+  }
+
+  String dayStatsFunnyCounterLabel(int count) => switch (_langCode) {
+    'pt' => '🐔 Cacarejos Felizes: $count',
+    'fr' => '🐔 Cot-Cot Joyeux : $count',
+    'es' => '🐔 Cacareos Felices: $count',
+    'de' => '🐔 Fröhliches Gackern: $count',
+    _ => '🐔 Happy Chicken Clucks: $count',
+  };
+
+  String dayStatsContinueBtn(int day) => switch (_langCode) {
+    'pt' => '☀️ Jogar Dia $day!',
+    'fr' => '☀️ Jouer Jour $day !',
+    'es' => '☀️ ¡Jugar Día $day!',
+    'de' => '☀️ Tag $day spielen!',
+    _ => '☀️ Play Day $day!',
+  };
 }

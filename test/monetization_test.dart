@@ -19,15 +19,14 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
-  group('EntitlementState & 0,49€ One-Time Unlock', () {
+  group('EntitlementState & One-Time Cozy Version Unlock', () {
     test(
-      'One-time 0,49€ unlock and FULL_EDITION grant permanent Full Game access',
+      'One-time unlock and FULL_EDITION grant permanent Full Game access',
       () {
         const starter = EntitlementState(isFullEditionBuild: false);
         expect(starter.isSunPassActive(), isFalse);
         expect(starter.isPermanentSupporter, isFalse);
-        expect(EntitlementState.lifetimePassPriceLabel, equals('0,49€'));
-        expect(starter.statusPillText(), equals('Sun Pass'));
+        expect(starter.statusPillText(), equals('Cozy'));
 
         final purchased = starter.copyWith(hasLifetimePass: true);
         expect(purchased.isSunPassActive(), isTrue);
@@ -185,7 +184,7 @@ void main() {
     );
 
     testWidgets(
-      'Sun Pass Modal shows only 0,49€ one-time purchase (no ads/subscriptions), gates behind Parental Gate, and unlocks free Sunny Surge',
+      'Cozy Version Modal shows one-time purchase without price, ads, or daily solar boost, and gates behind Parental Gate',
       (WidgetTester tester) async {
         tester.view.physicalSize = const Size(1280, 720);
         tester.view.devicePixelRatio = 1.0;
@@ -203,24 +202,22 @@ void main() {
         await tester.pumpWidget(SolvilleApp(controller: controller));
         await tester.pump(const Duration(milliseconds: 50));
 
-        // Expand secondary '⋯' menu and open Sun Pass Modal
-        await tester.tap(find.byIcon(Icons.more_horiz_rounded));
-        await tester.pump();
-        expect(find.text('Sun Pass'), findsOneWidget);
-        await tester.tap(find.text('Sun Pass'));
+        // Open Cozy Version Modal directly from top menu
+        expect(find.text('Cozy'), findsOneWidget);
+        await tester.tap(find.text('Cozy'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 250));
 
-        expect(find.text('Solville Sun Pass'), findsOneWidget);
-        expect(find.text('Buy Once 0,49€'), findsOneWidget);
-        expect(find.text('Watch Ad (+24h)'), findsNothing);
-        expect(find.text('Subscribe 2,99€/yr'), findsNothing);
-        expect(find.text('Watch Ad (Surge)'), findsNothing);
+        expect(find.text('Solville Cozy Version'), findsOneWidget);
+        expect(find.text('Buy Once'), findsOneWidget);
+        expect(find.textContaining('0,49'), findsNothing);
+        expect(find.textContaining('2,99'), findsNothing);
+        expect(find.textContaining('Ad'), findsNothing);
 
-        // Tap Buy Once 0,49€ -> Parental Gate blocks until solved
-        await tester.ensureVisible(find.text('Buy Once 0,49€'));
+        // Tap Buy Once -> Parental Gate blocks until solved
+        await tester.ensureVisible(find.text('Buy Once'));
         await tester.pump();
-        await tester.tap(find.text('Buy Once 0,49€'));
+        await tester.tap(find.text('Buy Once'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 250));
         expect(find.text('Grown-Up Check'), findsOneWidget);
@@ -257,14 +254,7 @@ void main() {
         expect(controller.entitlements.hasLifetimePass, isTrue);
         expect(controller.isSunPassActive, isTrue);
         expect(find.text('Owned ✓'), findsOneWidget);
-
-        // Daily Sunny Surge is now claimable for free
-        await tester.ensureVisible(find.text('Claim Free Surge'));
-        await tester.pump();
-        await tester.tap(find.text('Claim Free Surge'));
-        await tester.pump();
-        expect(controller.state.market.sunnySurgeActive, isTrue);
-        expect(find.text('Active Today ✓'), findsOneWidget);
+        expect(find.text('Claim Free Surge'), findsNothing);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();

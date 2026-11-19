@@ -13,7 +13,7 @@ enum MonetizationResult {
   bool get isSuccess => this == MonetizationResult.success;
 }
 
-/// Service coordinating the 0,49€ one-time Full Game In-App Purchase
+/// Service coordinating the one-time Full Game In-App Purchase
 /// (`solville_lifetime_cozy`) and purchase restoration.
 ///
 /// Automatically wires `in_app_purchase` on Android/iOS (when `!kFullEdition`),
@@ -49,7 +49,7 @@ class MonetizationService {
     await _bridge.initialize(onOwnedProductRestored: onOwnedProductRestored);
   }
 
-  /// Initiates purchase of the 0,49€ one-time Full Game unlock.
+  /// Initiates purchase of the one-time Full Game unlock.
   Future<MonetizationResult> purchaseLifetimePass() =>
       _purchaseProduct(EntitlementState.lifetimePassProductId);
 

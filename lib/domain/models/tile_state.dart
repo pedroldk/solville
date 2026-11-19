@@ -104,7 +104,7 @@ class PlantedCrop {
   final bool isGolden;
 
   bool get isRipe => growth >= 1.0;
-  bool get isDrooping => !isRipe && thirstySeconds > 4.0;
+  bool get isDrooping => !isRipe && thirstySeconds > 10.0;
 
   PlantedCrop copyWith({
     ProductId? cropId,
@@ -263,7 +263,7 @@ class TileState {
       ground == GroundType.soil &&
       crop != null &&
       !crop!.isRipe &&
-      moisture < 0.65;
+      moisture < 0.50;
 
   /// Whether this tile can be restored to grass or have its structure removed.
   bool get canUntillOrRemove =>

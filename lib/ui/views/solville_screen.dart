@@ -12,6 +12,7 @@ import '../../l10n/solville_l10n_extensions.dart';
 import '../hud/bottom_tool_dock.dart';
 import '../hud/game_viewport_surface.dart';
 import '../hud/top_status_bar.dart';
+import '../modals/day_stats_modal.dart';
 import '../modals/help_modal.dart';
 import '../modals/homestead_modal.dart';
 import '../modals/market_and_barn_modal.dart';
@@ -20,6 +21,8 @@ import '../modals/sun_pass_modal.dart';
 import '../modals/trophy_cabinet_modal.dart';
 import '../theme/solville_theme.dart';
 import '../view_models/solville_controller.dart';
+import '../widgets/solville_buttons.dart';
+import '../widgets/solville_pill_button.dart';
 
 /// Root playable screen combining the Flame 2.5D Isometric Diorama and adaptive
 /// Flutter HUD overlays.
@@ -38,16 +41,28 @@ class SolvilleScreen extends StatefulWidget {
 class _SolvilleScreenState extends State<SolvilleScreen>
     with WidgetsBindingObserver {
   late final SolvilleGame _game;
-  bool _questPinCollapsed = true;
+  late bool _questPinCollapsed;
+  bool _isDayStatsOpen = false;
+
+  void _handleTutorialReplayed() {
+    if (mounted) {
+      setState(() => _questPinCollapsed = false);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _questPinCollapsed =
+        !widget.controller.state.isOnboardingActive &&
+        widget.controller.state.claimedQuestsCount >= 3;
     _game = SolvilleGame(controller: widget.controller);
     widget.controller.onRequestOpenMarketModal = _openMarket;
     widget.controller.onRequestOpenHomesteadModal = _openAudioAndHomestead;
     widget.controller.onRequestOpenSunPassModal = _openSunPass;
+    widget.controller.onRequestOpenDayStatsModal = _openDayStats;
+    widget.controller.onTutorialReplayed = _handleTutorialReplayed;
   }
 
   @override
@@ -64,15 +79,37 @@ class _SolvilleScreenState extends State<SolvilleScreen>
     if (identical(widget.controller.onRequestOpenSunPassModal, _openSunPass)) {
       widget.controller.onRequestOpenSunPassModal = null;
     }
+    if (identical(
+      widget.controller.onRequestOpenDayStatsModal,
+      _openDayStats,
+    )) {
+      widget.controller.onRequestOpenDayStatsModal = null;
+    }
+    if (identical(
+      widget.controller.onTutorialReplayed,
+      _handleTutorialReplayed,
+    )) {
+      widget.controller.onTutorialReplayed = null;
+    }
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Auto-save cleanly and pause/resume BGM across all Android/iOS lifecycle states!
+    // Auto-save cleanly and pause/resume BGM across lifecycle states, keeping
+    // desktop music playing when the window merely loses focus (inactive).
+    final isDesktop =
+        !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.macOS ||
+            defaultTargetPlatform == TargetPlatform.linux);
     switch (state) {
       case AppLifecycleState.inactive:
+        if (!isDesktop) {
+          widget.controller.onAppBackgrounded();
+        }
+        unawaited(widget.controller.saveNow(showToast: false));
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
@@ -96,6 +133,7 @@ class _SolvilleScreenState extends State<SolvilleScreen>
     widget.controller.notifyUserGestureForAudio();
     showDialog<void>(
       context: context,
+      barrierColor: const Color(0x7A24160E),
       builder: (_) => ShopModal(
         controller: widget.controller,
         initialTab: initialTab,
@@ -107,6 +145,7 @@ class _SolvilleScreenState extends State<SolvilleScreen>
     widget.controller.notifyUserGestureForAudio();
     showDialog<void>(
       context: context,
+      barrierColor: const Color(0x7A24160E),
       builder: (_) => MarketAndBarnModal(controller: widget.controller),
     );
   }
@@ -115,6 +154,7 @@ class _SolvilleScreenState extends State<SolvilleScreen>
     widget.controller.notifyUserGestureForAudio();
     showDialog<void>(
       context: context,
+      barrierColor: const Color(0x7A24160E),
       builder: (_) => TrophyCabinetModal(controller: widget.controller),
     );
   }
@@ -123,6 +163,7 @@ class _SolvilleScreenState extends State<SolvilleScreen>
     widget.controller.notifyUserGestureForAudio();
     showDialog<void>(
       context: context,
+      barrierColor: const Color(0x7A24160E),
       builder: (_) => HomesteadAndAudioModal(controller: widget.controller),
     );
   }
@@ -131,6 +172,7 @@ class _SolvilleScreenState extends State<SolvilleScreen>
     widget.controller.notifyUserGestureForAudio();
     showDialog<void>(
       context: context,
+      barrierColor: const Color(0x7A24160E),
       builder: (_) => HelpAndControlsModal(controller: widget.controller),
     );
   }
@@ -139,8 +181,30 @@ class _SolvilleScreenState extends State<SolvilleScreen>
     widget.controller.notifyUserGestureForAudio();
     showDialog<void>(
       context: context,
+      barrierColor: const Color(0x7A24160E),
       builder: (_) => SunPassModal(controller: widget.controller),
     );
+  }
+
+  void _openDayStats() {
+    if (!mounted || _isDayStatsOpen) return;
+    _isDayStatsOpen = true;
+    widget.controller.notifyUserGestureForAudio();
+    final wasAlreadyPaused = widget.controller.isPaused;
+    if (!wasAlreadyPaused) {
+      widget.controller.togglePause();
+    }
+    showDialog<void>(
+      context: context,
+      barrierColor: const Color(0x7A24160E),
+      builder: (_) => DayStatsModal(controller: widget.controller),
+    ).whenComplete(() {
+      if (!mounted) return;
+      _isDayStatsOpen = false;
+      if (!wasAlreadyPaused && widget.controller.isPaused) {
+        widget.controller.togglePause();
+      }
+    });
   }
 
   @override
@@ -170,6 +234,9 @@ class _SolvilleScreenState extends State<SolvilleScreen>
                       spotlightHarvest: l10n.spotlightHarvest,
                       spotlightSell: l10n.spotlightSell,
                       spotlightPlant: l10n.spotlightPlant,
+                      spotlightStepDig: l10n.spotlightStepDig,
+                      spotlightStepPlant: l10n.spotlightStepPlant,
+                      spotlightStepWater: l10n.spotlightStepWater,
                       landmarkHomestead: l10n.landmarkHomesteadPill,
                       landmarkRefill: l10n.landmarkRefillPill,
                       landmarkBarn: l10n.landmarkBarnPill,
@@ -205,6 +272,7 @@ class _SolvilleScreenState extends State<SolvilleScreen>
                     Widget buildQuestPill({required bool compact}) {
                       if (activeQuest == null) return const SizedBox.shrink();
                       final radius = compact ? 12.0 : 16.0;
+                      final isOnboarding = state.isOnboardingActive;
                       return ConstrainedBox(
                         constraints: BoxConstraints(
                           maxWidth: compact
@@ -213,14 +281,49 @@ class _SolvilleScreenState extends State<SolvilleScreen>
                         ),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 180),
-                          decoration: SolvilleTheme.panelDecoration(
-                            color: questProg.isReadyToClaim
-                                ? const Color(0xF5FFE082)
-                                : const Color(0xEEFFFDF6),
-                            borderColor: questProg.isReadyToClaim
-                                ? const Color(0xFFE65100)
-                                : SolvilleTheme.timberBorder,
-                            radius: radius,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              stops: const <double>[0.0, 0.16, 1.0],
+                              colors: questProg.isReadyToClaim
+                                  ? const <Color>[
+                                      Color(0xFFFFFDF0),
+                                      Color(0xFFFFF3C4),
+                                      Color(0xFFFFE082),
+                                    ]
+                                  : (isOnboarding
+                                        ? const <Color>[
+                                            Color(0xFFFFFFFE),
+                                            Color(0xFFFFFAEB),
+                                            Color(0xFFFFEEBD),
+                                          ]
+                                        : const <Color>[
+                                            Color(0xFFFFFFFE),
+                                            Color(0xFFFFFBF0),
+                                            Color(0xFFFFF0CF),
+                                          ]),
+                            ),
+                            borderRadius: BorderRadius.circular(radius),
+                            border: Border.all(
+                              color:
+                                  (questProg.isReadyToClaim || isOnboarding)
+                                  ? const Color(0xFFE65100)
+                                  : const Color(0xFF6D442B),
+                              width: 1.9,
+                            ),
+                            boxShadow: const <BoxShadow>[
+                              BoxShadow(
+                                color: SolvilleTheme.cedarDark,
+                                offset: Offset(0, 2.8),
+                                blurRadius: 0,
+                              ),
+                              BoxShadow(
+                                color: Color(0x2E261412),
+                                offset: Offset(0, 5),
+                                blurRadius: 10,
+                              ),
+                            ],
                           ),
                           child: Material(
                             color: Colors.transparent,
@@ -239,36 +342,63 @@ class _SolvilleScreenState extends State<SolvilleScreen>
                                     child: Padding(
                                       padding: compact
                                           ? const EdgeInsets.fromLTRB(
-                                              8,
-                                              3,
+                                              7,
                                               4,
-                                              3,
+                                              4,
+                                              4,
                                             )
                                           : const EdgeInsets.symmetric(
-                                              horizontal: 12,
+                                              horizontal: 10,
                                               vertical: 6,
                                             ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: <Widget>[
-                                          Text(
-                                            activeQuest.emoji,
-                                            style: TextStyle(
-                                              fontSize: compact ? 13 : 18,
+                                          SolvilleIconMedallion(
+                                            size: compact ? 26 : 34,
+                                            highlighted:
+                                                questProg.isReadyToClaim,
+                                            child: Text(
+                                              activeQuest.emoji,
+                                              style: TextStyle(
+                                                fontSize: compact ? 13.5 : 17,
+                                              ),
                                             ),
                                           ),
-                                          SizedBox(width: compact ? 5 : 7),
+                                          SizedBox(width: compact ? 5 : 8),
                                           Flexible(
                                             child: Column(
                                               mainAxisSize: MainAxisSize.min,
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
                                               children: <Widget>[
+                                                if (!compact && isOnboarding)
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                          bottom: 2,
+                                                        ),
+                                                    child: Text(
+                                                      l10n.tutorialMayorBadge,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: const TextStyle(
+                                                        color: Color(
+                                                          0xFFE65100,
+                                                        ),
+                                                        fontWeight:
+                                                            FontWeight.w900,
+                                                        fontSize: 10.5,
+                                                      ),
+                                                    ),
+                                                  ),
                                                 Text(
                                                   compact
                                                       ? '${activeQuest.stepNumber}/${SolvilleCatalog.quests.length}: ${l10n.questTitle(activeQuest.id)}'
                                                       : l10n.questGoalHeader(
-                                                          activeQuest.stepNumber,
+                                                          activeQuest
+                                                              .stepNumber,
                                                           SolvilleCatalog
                                                               .quests
                                                               .length,
@@ -288,47 +418,78 @@ class _SolvilleScreenState extends State<SolvilleScreen>
                                                         : 12.5,
                                                   ),
                                                 ),
-                                                if (!compact)
-                                                  Text(
-                                                    l10n.questHint(
-                                                      activeQuest.id,
-                                                    ),
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    style: TextStyle(
-                                                      color: SolvilleTheme
-                                                          .timberDark
-                                                          .withValues(
-                                                            alpha: 0.78,
-                                                          ),
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                      fontSize: 11,
-                                                    ),
+                                                Text(
+                                                  l10n.questHint(
+                                                    activeQuest.id,
                                                   ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    color: SolvilleTheme
+                                                        .timberDark
+                                                        .withValues(
+                                                          alpha: 0.78,
+                                                        ),
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: compact
+                                                        ? 10.0
+                                                        : 11.0,
+                                                  ),
+                                                ),
                                               ],
                                             ),
                                           ),
                                           SizedBox(width: compact ? 6 : 8),
                                           Container(
                                             padding: EdgeInsets.symmetric(
-                                              horizontal: compact ? 6 : 8,
-                                              vertical: compact ? 2 : 3,
+                                              horizontal: compact ? 7 : 10,
+                                              vertical: compact ? 3 : 4,
                                             ),
-                                            decoration: BoxDecoration(
-                                              color: questProg.isReadyToClaim
-                                                  ? const Color(0xFFE65100)
-                                                  : const Color(0x22795548),
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                            ),
+                                            decoration: questProg.isReadyToClaim
+                                                ? BoxDecoration(
+                                                    gradient:
+                                                        const LinearGradient(
+                                                          begin: Alignment
+                                                              .topCenter,
+                                                          end: Alignment
+                                                              .bottomCenter,
+                                                          colors: <Color>[
+                                                            Color(0xFF66BB6A),
+                                                            Color(0xFF2E7D32),
+                                                          ],
+                                                        ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          10,
+                                                        ),
+                                                    border: Border.all(
+                                                      color: const Color(
+                                                        0xFF144418,
+                                                      ),
+                                                      width: 1.3,
+                                                    ),
+                                                    boxShadow: const <BoxShadow>[
+                                                      BoxShadow(
+                                                        color: Color(
+                                                          0xFF1B5E20,
+                                                        ),
+                                                        offset: Offset(0, 2.0),
+                                                        blurRadius: 0,
+                                                      ),
+                                                    ],
+                                                  )
+                                                : SolvilleTheme.recessedSlotDecoration(
+                                                    radius: 10,
+                                                  ),
                                             child: Text(
                                               questProg.isReadyToClaim
                                                   ? l10n.questClaimBtn(
                                                       activeQuest.rewardCoins,
                                                     )
-                                                  : '${questProg.current}/${questProg.required} • +${activeQuest.rewardCoins}☀️',
+                                                  : (compact
+                                                        ? '${questProg.current}/${questProg.required} 👇'
+                                                        : '${questProg.current}/${questProg.required} • +${activeQuest.rewardCoins}☀️ • ${l10n.tutorialShowMeBtn}'),
                                               style: TextStyle(
                                                 color: questProg.isReadyToClaim
                                                     ? Colors.white
@@ -343,20 +504,21 @@ class _SolvilleScreenState extends State<SolvilleScreen>
                                     ),
                                   ),
                                 ),
-                                if (compact)
-                                  InkWell(
-                                    onTap: () => setState(() {
+                                Padding(
+                                  padding: EdgeInsets.only(
+                                    right: compact ? 5 : 7,
+                                  ),
+                                  child: SolvilleIconButton(
+                                    tone: SolvilleButtonTone.cream,
+                                    icon: Icons.expand_less_rounded,
+                                    size: compact ? 26 : 30,
+                                    iconSize: compact ? 15 : 17,
+                                    borderRadius: compact ? 13 : 15,
+                                    onPressed: () => setState(() {
                                       _questPinCollapsed = true;
                                     }),
-                                    child: const Padding(
-                                      padding: EdgeInsets.fromLTRB(4, 5, 7, 5),
-                                      child: Icon(
-                                        Icons.expand_less_rounded,
-                                        size: 16,
-                                        color: SolvilleTheme.timberDark,
-                                      ),
-                                    ),
                                   ),
+                                ),
                               ],
                             ),
                           ),
@@ -375,76 +537,49 @@ class _SolvilleScreenState extends State<SolvilleScreen>
 
                     final eventBadgeWidgets = <Widget>[
                       if (showDailyReq)
-                        InkWell(
-                          borderRadius: BorderRadius.circular(badgeRadius),
-                          onTap: _openMarket,
-                          child: Container(
-                            padding: compactBadgePad,
-                            decoration: SolvilleTheme.panelDecoration(
-                              color: const Color(0xF2FFF8E1),
-                              radius: badgeRadius,
-                            ),
-                            child: Text(
+                        SolvillePillButton(
+                          emoji: '',
+                          label:
                               '💌 ${SolvilleCatalog.productEmoji(dailyReq.product)} ${dailyReq.deliveredCount}/${dailyReq.requiredCount} +${dailyReq.bonusReward}☀️',
-                              style: TextStyle(
-                                color: SolvilleTheme.timberDark,
-                                fontWeight: FontWeight.w800,
-                                fontSize: badgeFontSize,
-                              ),
-                            ),
-                          ),
+                          backgroundColor: const Color(0xFFFFF8E1),
+                          padding: compactBadgePad,
+                          borderRadius: badgeRadius,
+                          fontSize: badgeFontSize,
+                          emojiSize: badgeFontSize + 1,
+                          onTap: _openMarket,
                         ),
                       if (express != null)
-                        InkWell(
-                          borderRadius: BorderRadius.circular(badgeRadius),
-                          onTap: _openMarket,
-                          child: Container(
-                            padding: compactBadgePad,
-                            decoration: SolvilleTheme.panelDecoration(
-                              color: const Color(0xF2FFF3E0),
-                              radius: badgeRadius,
-                            ),
-                            child: Text(
+                        SolvillePillButton(
+                          emoji: '',
+                          label:
                               '⚡ ${SolvilleCatalog.productEmoji(express.product)} ${express.deliveredCount}/${express.requiredCount} +${express.bonusCoins}☀️ • ${express.remainingSeconds.ceil()}s',
-                              style: TextStyle(
-                                color: SolvilleTheme.timberDark,
-                                fontWeight: FontWeight.w800,
-                                fontSize: badgeFontSize,
-                              ),
-                            ),
-                          ),
+                          highlighted: true,
+                          backgroundColor: const Color(0xFFFFF3E0),
+                          padding: compactBadgePad,
+                          borderRadius: badgeRadius,
+                          fontSize: badgeFontSize,
+                          emojiSize: badgeFontSize + 1,
+                          onTap: _openMarket,
                         ),
                       if (state.market.isRushActive)
-                        Container(
+                        SolvilleBadge(
+                          label:
+                              '${l10n.hudRushBadge} ${state.market.rushSecondsRemaining.ceil()}s',
+                          color: const Color(0xFFFFE082),
+                          borderColor: const Color(0xFFE65100),
                           padding: compactBadgePad,
-                          decoration: SolvilleTheme.panelDecoration(
-                            color: const Color(0xF2FFE082),
-                            radius: badgeRadius,
-                          ),
-                          child: Text(
-                            '${l10n.hudRushBadge} ${state.market.rushSecondsRemaining.ceil()}s',
-                            style: TextStyle(
-                              color: SolvilleTheme.timberDark,
-                              fontWeight: FontWeight.w900,
-                              fontSize: badgeFontSize,
-                            ),
-                          ),
+                          borderRadius: badgeRadius,
+                          fontSize: badgeFontSize,
                         ),
                       if (state.comboStreak >= 2)
-                        Container(
+                        SolvilleBadge(
+                          label: '✨ ${state.comboStreak}×',
+                          color: const Color(0xFFE8F5E9),
+                          borderColor: const Color(0xFF2E7D32),
+                          textColor: const Color(0xFF1B5E20),
                           padding: compactBadgePad,
-                          decoration: SolvilleTheme.panelDecoration(
-                            color: const Color(0xF2E8F5E9),
-                            radius: badgeRadius,
-                          ),
-                          child: Text(
-                            '✨ ${state.comboStreak}×',
-                            style: TextStyle(
-                              color: const Color(0xFF2E7D32),
-                              fontWeight: FontWeight.w900,
-                              fontSize: badgeFontSize,
-                            ),
-                          ),
+                          borderRadius: badgeRadius,
+                          fontSize: badgeFontSize,
                         ),
                     ];
 
@@ -480,7 +615,7 @@ class _SolvilleScreenState extends State<SolvilleScreen>
                                         right: 8,
                                       ),
                                       child: Align(
-                                        alignment: Alignment.centerLeft,
+                                        alignment: Alignment.center,
                                         child: SingleChildScrollView(
                                           scrollDirection: Axis.horizontal,
                                           child: Row(
@@ -544,8 +679,7 @@ class _SolvilleScreenState extends State<SolvilleScreen>
                                         horizontal: 14,
                                         vertical: 7,
                                       ),
-                                      decoration: SolvilleTheme.panelDecoration(
-                                        color: const Color(0xF5FFF8E1),
+                                      decoration: SolvilleTheme.hudBarDecoration(
                                         radius: 18,
                                       ),
                                       child: Text(

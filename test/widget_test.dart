@@ -36,12 +36,16 @@ void main() {
       await tester.pumpWidget(SolvilleApp(controller: controller));
       await tester.pump(const Duration(milliseconds: 50));
 
-      // Verify Zen HUD initial state, collapsed secondary controls, and openable trays
+      // Verify live Coins & Water pills are visible, while legacy top-left & Next Morning chips stay hidden
       expect(find.text('90'), findsOneWidget);
+      expect(find.text('5/5'), findsOneWidget);
+      expect(find.text('0/1'), findsNothing);
+      expect(find.text('🌅 Next Morning'), findsNothing);
       expect(find.text('Shop'), findsOneWidget);
       expect(find.text('Smart'), findsOneWidget);
-      expect(find.text('Lullaby'), findsNothing);
-      expect(find.text('0/12'), findsNothing);
+      expect(find.text('Lullaby'), findsOneWidget);
+      expect(find.text('0/12'), findsOneWidget);
+      expect(find.byIcon(Icons.more_horiz_rounded), findsNothing);
       expect(find.textContaining('Simmering'), findsNothing);
 
       // Tap Dig (Manual Tools) to reveal the Untill (Clear) tool chip
@@ -54,10 +58,6 @@ void main() {
       await tester.pump();
       expect(find.textContaining('Expand Isle 11×11→14×14'), findsOneWidget);
       await tester.tap(find.byIcon(Icons.close_rounded));
-      await tester.pump();
-
-      // Expand '⋯' menu to access Cozy Soundscape, Trophies, Sun Pass & Help
-      await tester.tap(find.byIcon(Icons.more_horiz_rounded));
       await tester.pump();
 
       // Open Cozy Soundscape & Homestead Modal and switch to Cozy Rain
@@ -114,6 +114,8 @@ void main() {
       final seededState = FarmSimulationEngine().createNewGame().copyWith(
         totalCratesHarvested: 1,
         coins: 110,
+        onboardingStep: 3,
+        claimedQuestsCount: 3,
       );
       await SaveGameRepository().saveGame(seededState);
 
@@ -122,6 +124,7 @@ void main() {
       );
       await controller.initialize();
       expect(controller.state.shouldSpotlightGloves, isTrue);
+      expect(controller.state.onboardingStep, equals(3));
 
       await tester.pumpWidget(SolvilleApp(controller: controller));
       await tester.pump(const Duration(milliseconds: 50));
@@ -139,9 +142,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
 
-      // Expand secondary '⋯' menu and open Help Modal
-      await tester.tap(find.byIcon(Icons.more_horiz_rounded));
-      await tester.pump();
+      // Open Help Modal directly from top menu and test Replay Tutorial
       await tester.tap(find.byIcon(Icons.help_outline_rounded));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
@@ -153,6 +154,15 @@ void main() {
         find.descendant(of: find.byType(Dialog), matching: find.text('Sell')),
         findsOneWidget,
       );
+      expect(find.text('Replay Tutorial'), findsOneWidget);
+
+      final coinsBeforeReplay = controller.state.coins;
+      await tester.tap(find.text('Replay Tutorial'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(find.byType(Dialog), findsNothing);
+      expect(controller.state.onboardingStep, equals(0));
+      expect(controller.state.coins, equals(coinsBeforeReplay));
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
@@ -226,7 +236,7 @@ void main() {
   );
 
   testWidgets(
-    'Mobile viewport (<600dp) renders compact single-row Day Info & Market/Shop/Pass cards with collapsible secondary controls',
+    'Mobile viewport (<600dp) renders compact single-row Day Info & Market/Shop/Cozy cards with collapsible secondary controls',
     (WidgetTester tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1.0;
@@ -241,23 +251,27 @@ void main() {
       await tester.pumpWidget(SolvilleApp(controller: controller));
       await tester.pump(const Duration(milliseconds: 50));
 
-      // Verify Zen mobile labels in top clusters and collapsed Quest/Pass/Trophies
-      expect(find.textContaining('D1 '), findsOneWidget);
-      expect(find.text('🌅 Next'), findsOneWidget);
+      // Verify simplified mobile HUD omits Day/Weather/Next & overflow toggle while showing all top controls
+      expect(find.textContaining('D1 '), findsNothing);
+      expect(find.text('🌅 Next'), findsNothing);
       expect(find.text('Shop'), findsOneWidget);
       expect(find.text('1/10'), findsOneWidget);
-      expect(find.byIcon(Icons.more_horiz_rounded), findsOneWidget);
-      expect(find.text('Pass'), findsNothing);
-      expect(find.text('0/12'), findsNothing);
-      expect(find.text('1/10: First Harvest'), findsNothing);
-
-      // Expand and collapse the Quest Journal pin from the top bar
-      await tester.tap(find.text('1/10'));
-      await tester.pump();
+      expect(find.byIcon(Icons.more_horiz_rounded), findsNothing);
+      expect(find.byIcon(Icons.chevron_left_rounded), findsNothing);
+      expect(find.text('Cozy'), findsOneWidget);
+      expect(find.text('0/12'), findsOneWidget);
+      // Onboarding starts expanded so kids immediately see the first goal & hint
       expect(find.text('1/10: First Harvest'), findsOneWidget);
+
+      // Collapse and re-expand the Quest Journal pin from the top bar
       await tester.tap(find.byIcon(Icons.expand_less_rounded));
       await tester.pump();
       expect(find.text('1/10: First Harvest'), findsNothing);
+      await tester.ensureVisible(find.text('1/10'));
+      await tester.pump();
+      await tester.tap(find.text('1/10'));
+      await tester.pump();
+      expect(find.text('1/10: First Harvest'), findsOneWidget);
 
       // Omits +/- zoom buttons and hides Seeds strip until Seeds tool is tapped
       expect(find.byIcon(Icons.add_rounded), findsNothing);
@@ -279,13 +293,6 @@ void main() {
       await tester.pump();
       expect(find.text('🪣 Water'), findsOneWidget);
       expect(find.textContaining('Compost'), findsOneWidget);
-
-      // Expand secondary controls via '⋯' button
-      await tester.tap(find.byIcon(Icons.more_horiz_rounded));
-      await tester.pump();
-      expect(find.text('0/12'), findsOneWidget);
-      expect(find.text('Pass'), findsOneWidget);
-      expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
@@ -309,10 +316,15 @@ void main() {
       await tester.pumpWidget(SolvilleApp(controller: controller));
       await tester.pump(const Duration(milliseconds: 50));
 
-      // 1. Zen initial state shows top-bar quest step '1/10' with full banner hidden until tapped
+      // 1. New game starts with Mayor Sunny's Tutorial / Quest Banner expanded
       expect(find.text('1/10'), findsOneWidget);
-      expect(find.text('Goal 1/10: First Harvest'), findsNothing);
+      expect(find.text('Goal 1/10: First Harvest'), findsOneWidget);
+      expect(find.text('🌻 Mayor Sunny\'s Guide'), findsOneWidget);
       expect(find.text('Sweep'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.expand_less_rounded));
+      await tester.pump();
+      expect(find.text('Goal 1/10: First Harvest'), findsNothing);
 
       await tester.tap(find.text('1/10'));
       await tester.pump();
@@ -358,6 +370,44 @@ void main() {
       expect(controller.state.coins, equals(coinsBeforeClaim + 15));
       expect(find.text('Goal 2/10: Open for Business'), findsOneWidget);
       expect(find.text('2/10'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      controller.dispose();
+    },
+  );
+
+  testWidgets(
+    'Opens kid-friendly End-of-Day Stats modal when a day ends and closes on continue',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1280, 720);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final controller = SolvilleController(
+        soundService: CozySoundService(silentPlatformOutput: true),
+      );
+      await controller.initialize();
+
+      await tester.pumpWidget(SolvilleApp(controller: controller));
+      await tester.pump(const Duration(milliseconds: 50));
+
+      controller.restToNextMorning();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+
+      expect(find.text('Day 2!'), findsOneWidget);
+      expect(find.text('☀️ 90'), findsOneWidget);
+      expect(find.textContaining('Happy Chicken Clucks:'), findsOneWidget);
+      expect(find.text('☀️ Play Day 2!'), findsOneWidget);
+
+      await tester.tap(find.text('☀️ Play Day 2!'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+
+      expect(find.text('Day 2!'), findsNothing);
+      expect(controller.isPaused, isFalse);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();

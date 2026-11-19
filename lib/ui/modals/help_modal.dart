@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../theme/solville_theme.dart';
 import '../view_models/solville_controller.dart';
+import '../widgets/solville_buttons.dart';
 import '../widgets/solville_dialog_shell.dart';
+import '../widgets/solville_icons.dart';
 
 /// Visual quick-start loop diagram, keycap controls, and Save/New Game panel.
 class HelpAndControlsModal extends StatelessWidget {
@@ -17,57 +19,72 @@ class HelpAndControlsModal extends StatelessWidget {
     final isMobile = MediaQuery.sizeOf(context).shortestSide < 600;
     final keycaps =
         (isMobile ? l10n.helpTouchControls : l10n.helpPcControls).split('  •  ');
-    final steps = <(String, String)>[
-      ('⛏️', l10n.helpLoopStep1),
-      ('🌱', l10n.helpLoopStep2),
-      ('💧', l10n.helpLoopStep3),
-      ('🏪', l10n.helpLoopStep4),
+    final steps = <(SolvilleIconKind, String)>[
+      (SolvilleIconKind.trowel, l10n.helpLoopStep1),
+      (SolvilleIconKind.seeds, l10n.helpLoopStep2),
+      (SolvilleIconKind.waterCan, l10n.helpLoopStep3),
+      (SolvilleIconKind.marketStall, l10n.helpLoopStep4),
     ];
 
     return SolvilleDialogShell(
       emoji: '🌻',
+      leadingIcon: const SolvilleIcon(
+        kind: SolvilleIconKind.helpBook,
+        size: 22,
+      ),
       title: l10n.helpTitle,
       maxWidth: 620,
       maxHeight: 520,
       shrinkWrap: true,
       footer: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 6, 20, 16),
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
         child: Wrap(
           spacing: 10,
           runSpacing: 8,
           alignment: WrapAlignment.end,
           children: <Widget>[
-            OutlinedButton.icon(
+            SolvilleButton(
+              tone: SolvilleButtonTone.cream,
+              compact: true,
+              icon: Icons.school_rounded,
+              label: l10n.helpReplayTutorial,
+              onPressed: () async {
+                await controller.replayTutorial();
+                if (context.mounted) Navigator.of(context).pop();
+              },
+            ),
+            SolvilleButton(
+              tone: SolvilleButtonTone.coral,
+              compact: true,
+              icon: Icons.restart_alt_rounded,
+              label: l10n.helpStartFresh,
               onPressed: () async {
                 await controller.resetNewFarm();
                 if (context.mounted) Navigator.of(context).pop();
               },
-              icon: const Icon(Icons.restart_alt_rounded),
-              label: Text(l10n.helpStartFresh),
             ),
-            FilledButton.icon(
+            SolvilleButton(
+              tone: SolvilleButtonTone.emerald,
+              compact: true,
+              icon: Icons.save_rounded,
+              label: l10n.helpSaveNow,
               onPressed: () async {
                 await controller.saveNow();
                 if (context.mounted) Navigator.of(context).pop();
               },
-              icon: const Icon(Icons.save_rounded),
-              label: Text(l10n.helpSaveNow),
             ),
           ],
         ),
       ),
       child: ListView(
         shrinkWrap: true,
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
         children: <Widget>[
           // Visual 4-step farm loop diagram
-          Container(
+          SolvilleMenuCard(
+            color: const Color(0xFFFFF8E1),
+            radius: 16,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF8E1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: SolvilleTheme.timberBorder),
-            ),
             child: Wrap(
               spacing: 6,
               runSpacing: 8,
@@ -75,24 +92,21 @@ class HelpAndControlsModal extends StatelessWidget {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: <Widget>[
                 for (var i = 0; i < steps.length; i++) ...<Widget>[
-                  Container(
+                  SolvilleMenuCard(
+                    color: SolvilleTheme.parchment,
+                    radius: 12,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
                       vertical: 7,
                     ),
-                    decoration: BoxDecoration(
-                      color: SolvilleTheme.parchment,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0x44795548)),
-                    ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        Text(
-                          steps[i].$1,
-                          style: const TextStyle(fontSize: 22),
+                        SolvilleIconMedallion(
+                          size: 32,
+                          child: SolvilleIcon(kind: steps[i].$1, size: 18),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 4),
                         Text(
                           steps[i].$2,
                           style: const TextStyle(
@@ -145,9 +159,23 @@ class HelpAndControlsModal extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: SolvilleTheme.warmCream,
+                    gradient: const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: <Color>[Color(0xFFFFFFFF), Color(0xFFF6EAD0)],
+                    ),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0x55795548)),
+                    border: Border.all(
+                      color: const Color(0x886D4C41),
+                      width: 1.3,
+                    ),
+                    boxShadow: const <BoxShadow>[
+                      BoxShadow(
+                        color: Color(0xFFB8A98E),
+                        offset: Offset(0, 2.5),
+                        blurRadius: 0,
+                      ),
+                    ],
                   ),
                   child: Text(
                     cap,
@@ -179,16 +207,17 @@ class _TipBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SolvilleMenuCard(
+      color: backgroundColor,
+      radius: 13,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0x33795548)),
-      ),
       child: Row(
         children: <Widget>[
-          Text(emoji, style: const TextStyle(fontSize: 20)),
+          SolvilleIconMedallion(
+            size: 32,
+            backgroundColor: Color.lerp(backgroundColor, Colors.white, 0.5)!,
+            child: Text(emoji, style: const TextStyle(fontSize: 17)),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(

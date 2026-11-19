@@ -1,10 +1,10 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
-import 'package:flutter/painting.dart' show Alignment, LinearGradient;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show KeyEventResult;
 
@@ -14,6 +14,7 @@ import '../domain/models/grid_pos.dart';
 import '../domain/simulation/farm_simulation_engine.dart';
 import '../ui/view_models/solville_controller.dart';
 import 'components/isometric_diorama_world.dart';
+import 'painters/atmosphere_painter.dart';
 import 'painters/characters_and_fx_painter.dart';
 
 /// Flame 2.5D Isometric Game hosting the Solville diorama world, responsive
@@ -36,141 +37,37 @@ class SolvilleGame extends FlameGame with KeyboardEvents {
   double? _cameraTargetY;
   double? _zoomTarget;
 
-  final ui.Paint _skyPaint = ui.Paint();
-  double _cachedSkyWidth = -1;
-  double _cachedSkyHeight = -1;
-  int _cachedSkyStep = -1;
-  WeatherType? _cachedSkyWeather;
+  final AtmospherePainter _atmospherePainter = AtmospherePainter();
+  bool _dioramaLoaded = false;
 
   @override
   void render(ui.Canvas canvas) {
-    _drawSkyGradient(canvas);
+    final state = controller.state;
+    final animT = _dioramaLoaded ? _diorama.animTime : 0.0;
+    _atmospherePainter.drawSkyDome(
+      canvas,
+      ui.Size(size.x, size.y),
+      state.dayProgress,
+      state.weather,
+      animT,
+    );
+    final camPos = camera.viewfinder.position;
+    _atmospherePainter.drawSkyArchipelago(
+      canvas,
+      ui.Size(size.x, size.y),
+      camPos.x,
+      camPos.y,
+      state.dayProgress,
+      state.weather,
+      animT,
+    );
     super.render(canvas);
-  }
-
-  void _drawSkyGradient(ui.Canvas canvas) {
-    final w = size.x;
-    final h = size.y;
-    if (w <= 0 || h <= 0) return;
-
-    final p = controller.state.dayProgress;
-    final weather = controller.state.weather;
-    // Quantize dayProgress to 60 steps so the gradient shader is only rebuilt
-    // when the sky visibly shifts or the viewport resizes.
-    final skyStep = (p * 60.0).round();
-    if (_skyPaint.shader == null ||
-        _cachedSkyWidth != w ||
-        _cachedSkyHeight != h ||
-        _cachedSkyStep != skyStep ||
-        _cachedSkyWeather != weather) {
-      _cachedSkyWidth = w;
-      _cachedSkyHeight = h;
-      _cachedSkyStep = skyStep;
-      _cachedSkyWeather = weather;
-
-      final ({Color top, Color mid, Color horizon}) colors = _resolveSkyColors(
-        p,
-        weather,
-      );
-      _skyPaint.shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: <Color>[colors.top, colors.mid, colors.horizon],
-        stops: const <double>[0.0, 0.56, 1.0],
-      ).createShader(ui.Rect.fromLTWH(0, 0, w, h));
-    }
-
-    canvas.drawRect(ui.Rect.fromLTWH(0, 0, w, h), _skyPaint);
-  }
-
-  ({Color top, Color mid, Color horizon}) _resolveSkyColors(
-    double p,
-    WeatherType weather,
-  ) {
-    if (weather == WeatherType.gentleRain) {
-      return (
-        top: const Color(0xFF546E7A),
-        mid: const Color(0xFF78909C),
-        horizon: const Color(0xFFB0BEC5),
-      );
-    }
-    if (p < 0.25) {
-      final t = (p / 0.25).clamp(0.0, 1.0);
-      return (
-        top: Color.lerp(
-          const Color(0xFF4FC3F7),
-          const Color(0xFF29B6F6),
-          t,
-        )!,
-        mid: Color.lerp(
-          const Color(0xFF81D4FA),
-          const Color(0xFF81D4FA),
-          t,
-        )!,
-        horizon: Color.lerp(
-          const Color(0xFFFFE0B2),
-          const Color(0xFFE1F5FE),
-          t,
-        )!,
-      );
-    }
-    if (p < 0.60) {
-      final t = ((p - 0.25) / 0.35).clamp(0.0, 1.0);
-      return (
-        top: Color.lerp(
-          const Color(0xFF29B6F6),
-          const Color(0xFF42A5F5),
-          t,
-        )!,
-        mid: Color.lerp(
-          const Color(0xFF81D4FA),
-          const Color(0xFF90CAF9),
-          t,
-        )!,
-        horizon: Color.lerp(
-          const Color(0xFFE1F5FE),
-          const Color(0xFFFFF3E0),
-          t,
-        )!,
-      );
-    }
-    if (p < 0.85) {
-      final t = ((p - 0.60) / 0.25).clamp(0.0, 1.0);
-      return (
-        top: Color.lerp(
-          const Color(0xFF42A5F5),
-          const Color(0xFF3949AB),
-          t,
-        )!,
-        mid: Color.lerp(
-          const Color(0xFF90CAF9),
-          const Color(0xFFFF8A65),
-          t,
-        )!,
-        horizon: Color.lerp(
-          const Color(0xFFFFF3E0),
-          const Color(0xFFFFCC80),
-          t,
-        )!,
-      );
-    }
-    final t = ((p - 0.85) / 0.15).clamp(0.0, 1.0);
-    return (
-      top: Color.lerp(
-        const Color(0xFF3949AB),
-        const Color(0xFF1A237E),
-        t,
-      )!,
-      mid: Color.lerp(
-        const Color(0xFFFF8A65),
-        const Color(0xFF3949AB),
-        t,
-      )!,
-      horizon: Color.lerp(
-        const Color(0xFFFFCC80),
-        const Color(0xFF7986CB),
-        t,
-      )!,
+    _atmospherePainter.drawAtmosphericOverlay(
+      canvas,
+      ui.Size(size.x, size.y),
+      state.dayProgress,
+      state.weather,
+      animT,
     );
   }
 
@@ -197,7 +94,13 @@ class SolvilleGame extends FlameGame with KeyboardEvents {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    _diorama = IsometricDioramaWorldComponent(controller: controller, iso: iso);
+    unawaited(_atmospherePainter.loadShaders());
+    _diorama = IsometricDioramaWorldComponent(
+      controller: controller,
+      iso: iso,
+      atmospherePainter: _atmospherePainter,
+    );
+    _dioramaLoaded = true;
     await world.add(_diorama);
 
     camera.viewfinder.anchor = Anchor.center;
